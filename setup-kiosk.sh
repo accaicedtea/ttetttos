@@ -44,13 +44,11 @@ echo ""
 info "Aggiornamento pacchetti..."
 apt-get update -qq
 
-info "Installazione pacchetti necessari..."
+info "Installazione pacchetti obbligatori..."
 apt-get install -y --no-install-recommends \
     default-jre \
     cage \
     libgl1-mesa-dri \
-
-    mesa-vulkan-drivers \
     libinput-tools \
     dbus \
     dbus-user-session \
@@ -59,8 +57,15 @@ apt-get install -y --no-install-recommends \
     fonts-dejavu-core \
     fonts-noto-color-emoji \
     ca-certificates \
-    curl \
-    > /dev/null
+    curl
+
+info "Installazione pacchetti opzionali (GPU/Vulkan)..."
+# Questi pacchetti potrebbero non esistere su tutte le versioni — non bloccano
+for pkg in mesa-vulkan-drivers libvulkan1; do
+    apt-get install -y --no-install-recommends "$pkg" 2>/dev/null \
+        && info "  Installato: $pkg" \
+        || info "  Non disponibile (ignorato): $pkg"
+done
 
 ok "Pacchetti installati."
 
