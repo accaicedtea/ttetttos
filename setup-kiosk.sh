@@ -46,7 +46,7 @@ apt-get update -qq
 
 info "Installazione pacchetti necessari..."
 apt-get install -y --no-install-recommends \
-    openjdk-17-jre-headless \
+    default-jre-headless \
     cage \
     libgl1-mesa-dri \
     mesa-vulkan-drivers \
@@ -164,10 +164,35 @@ else
 fi
 
 # ═══════════════════════════════════════════════════════════════════════
-#  7. DISABILITA SERVIZI INUTILI
+#  7. DISABILITA GUI E SERVIZI INUTILI
 # ═══════════════════════════════════════════════════════════════════════
+info "Disabilitazione GUI (se installata)..."
+
+# Porta il target di default a multi-user (niente grafica systemd)
+systemctl set-default multi-user.target
+ok "Default target impostato a multi-user.target."
+
+# Rimuove i display manager se presenti
+for dm in gdm3 lightdm sddm xdm wdm nodm; do
+    if dpkg -l "$dm" &>/dev/null; then
+        info "  Rimozione display manager: $dm"
+        apt-get remove --purge -y "$dm" 2>/dev/null || true
+    fi
+done
+
+# Rimuove pacchetti desktop environment comuni se presenti
+for de in task-gnome-desktop task-kde-desktop task-xfce-desktop \
+          task-lxde-desktop task-lxqt-desktop task-cinnamon-desktop \
+          gnome-shell plasma-desktop xfce4 lxde lxqt; do
+    if dpkg -l "$de" &>/dev/null; then
+        info "  Rimozione DE: $de"
+        apt-get remove --purge -y "$de" 2>/dev/null || true
+    fi
+done
+apt-get autoremove --purge -y 2>/dev/null || true
+
 info "Disabilitazione servizi non necessari..."
-for svc in gdm3 lightdm sddm ModemManager bluetooth cups avahi-daemon; do
+for svc in ModemManager bluetooth cups avahi-daemon; do
     systemctl disable "$svc" 2>/dev/null && \
         info "  Disabilitato: $svc" || true
 done
