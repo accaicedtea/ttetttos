@@ -46,7 +46,7 @@ apt-get update -qq
 
 info "Installazione pacchetti necessari..."
 apt-get install -y --no-install-recommends \
-    default-jre-headless \
+    default-jre \
     cage \
     libgl1-mesa-dri \
     mesa-vulkan-drivers \
@@ -140,17 +140,30 @@ if [ "$(tty)" = "/dev/tty1" ]; then
     echo "╚═══════════════════════════════════════════════╝"
     echo ""
 
-    # Dai 2 secondi per interrompere e entrare nel terminale
-    sleep 2 && {
-        # Imposta XDG_RUNTIME_DIR (necessario per Wayland/Cage)
-        export XDG_RUNTIME_DIR="/run/user/$(id -u)"
-        mkdir -p "$XDG_RUNTIME_DIR"
-        chmod 0700 "$XDG_RUNTIME_DIR"
+    sleep 2 || true
 
-        # Avvia Cage tramite dbus-run-session per avere un bus D-Bus valido
-        # necessario a JavaFX/GTK per inizializzare correttamente il display
-        exec dbus-run-session cage -d -- /opt/kiosk/run-kiosk.sh
-    }
+    # Imposta XDG_RUNTIME_DIR (necessario per Wayland/Cage)
+    export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+    mkdir -p "$XDG_RUNTIME_DIR"
+    chmod 0700 "$XDG_RUNTIME_DIR"
+
+    LOG="/opt/kiosk/kiosk.log"
+    echo "[$(date)] Avvio cage..." >> "$LOG"
+
+    # NON usare exec: se l'app crasha non deve fare loop di auto-login
+    dbus-run-session cage -d -- /opt/kiosk/run-kiosk.sh >> "$LOG" 2>&1
+    EXIT_CODE=$?
+
+    echo "[$(date)] Cage terminato con codice: $EXIT_CODE" >> "$LOG"
+    echo ""
+    echo "*** KIOSK TERMINATO (codice: $EXIT_CODE) ***"
+    echo "    Log salvato in: $LOG"
+    echo ""
+    cat "$LOG"
+    echo ""
+    echo "Premi Invio per aprire il terminale oppure: sudo reboot"
+    # read blocca il loop di auto-login
+    read -r _
 fi
 PROFILE
 chown "$KIOSK_USER:$KIOSK_USER" "$KIOSK_HOME/.bash_profile"
