@@ -1,0 +1,19 @@
+# Maven build output
+target/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+*.classpath
+*.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# dist/ è tracciato — contiene il JAR finale e le librerie JavaFX bundled

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.TilePane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.example.ShopPageController"
+            stylesheets="@styles/dark-theme.css"
+            style="-fx-background-color: #18181e;">
+
+    <!-- ══ HEADER ══ -->
+    <top>
+        <HBox styleClass="shop-header" alignment="CENTER_LEFT" spacing="20">
+            <Label text="🛒 TouchMenu" styleClass="shop-header-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="categoryTitleLabel" text="Seleziona una categoria →"
+                   styleClass="shop-header-hint"/>
+        </HBox>
+    </top>
+
+    <!-- ══ CENTER: prodotti ══ -->
+    <center>
+        <ScrollPane fx:id="productsScroll"
+                    fitToWidth="true"
+                    hbarPolicy="NEVER"
+                    vbarPolicy="NEVER"
+                    focusTraversable="false"
+                    style="-fx-background-color: #18181e; -fx-background: #18181e; -fx-border-color: transparent;">
+            <TilePane fx:id="productsPane"
+                      prefColumns="4"
+                      hgap="20" vgap="20"
+                      style="-fx-padding: 24; -fx-background-color: #18181e;"/>
+        </ScrollPane>
+    </center>
+
+    <!-- ══ RIGHT: categorie ══ -->
+    <right>
+        <ScrollPane fx:id="categoriesScroll"
+                    fitToWidth="true"
+                    hbarPolicy="NEVER"
+                    vbarPolicy="NEVER"
+                    prefWidth="210"
+                    focusTraversable="false"
+                    style="-fx-background-color: #13131c; -fx-background: #13131c; -fx-border-color: transparent transparent transparent #2a2a3a; -fx-border-width: 0 0 0 1;">
+            <VBox fx:id="categoriesPane" spacing="0"
+                  style="-fx-padding: 12 0; -fx-background-color: #13131c; -fx-min-width: 210;"/>
+        </ScrollPane>
+    </right>
+
+</BorderPane>
