@@ -59,9 +59,9 @@ apt-get install -y --no-install-recommends \
     ca-certificates \
     curl
 
-info "Installazione pacchetti opzionali (GPU/Vulkan)..."
+info "Installazione pacchetti opzionali (GPU/Vulkan/VMware)..."
 # Questi pacchetti potrebbero non esistere su tutte le versioni — non bloccano
-for pkg in mesa-vulkan-drivers libvulkan1; do
+for pkg in mesa-vulkan-drivers libvulkan1 open-vm-tools; do
     apt-get install -y --no-install-recommends "$pkg" 2>/dev/null \
         && info "  Installato: $pkg" \
         || info "  Non disponibile (ignorato): $pkg"
@@ -114,7 +114,8 @@ exec java \
     -Dglass.platform=gtk \
     -Djdk.gtk.version=3 \
     -Djavafx.animation.fullspeed=true \
-    -jar /opt/kiosk/demo-1.jar
+    -cp /opt/kiosk/demo-1.jar \
+    com.example.App
 LAUNCHER
 chmod +x "$APP_DIR/run-kiosk.sh"
 chown "$KIOSK_USER:$KIOSK_USER" "$APP_DIR/run-kiosk.sh"
