@@ -51,6 +51,7 @@ apt-get install -y --no-install-recommends \
     libgl1-mesa-dri \
     mesa-vulkan-drivers \
     libinput-tools \
+    dbus \
     dbus-user-session \
     libgtk-3-0 \
     xwayland \
@@ -97,10 +98,16 @@ info "Creazione script di lancio..."
 
 cat > "$APP_DIR/run-kiosk.sh" << 'LAUNCHER'
 #!/usr/bin/env bash
-# Avvio kiosk app — Java + JavaFX bundled
+# Avvio kiosk app — Java + JavaFX bundled (Wayland/Cage)
 exec java \
     --module-path /opt/kiosk/lib \
     --add-modules javafx.controls,javafx.fxml \
+    -Djava.awt.headless=false \
+    -Dprism.order=es2,sw \
+    -Dprism.verbose=false \
+    -Dglass.platform=gtk \
+    -Djdk.gtk.version=3 \
+    -Djavafx.animation.fullspeed=true \
     -jar /opt/kiosk/demo-1.jar
 LAUNCHER
 chmod +x "$APP_DIR/run-kiosk.sh"
@@ -135,10 +142,14 @@ if [ "$(tty)" = "/dev/tty1" ]; then
 
     # Dai 2 secondi per interrompere e entrare nel terminale
     sleep 2 && {
-        # Avvia Cage (compositor Wayland kiosk)
-        # -d = no decorazioni
-        # L'app è l'unica cosa sullo schermo
-        exec cage -d -- /opt/kiosk/run-kiosk.sh
+        # Imposta XDG_RUNTIME_DIR (necessario per Wayland/Cage)
+        export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+        mkdir -p "$XDG_RUNTIME_DIR"
+        chmod 0700 "$XDG_RUNTIME_DIR"
+
+        # Avvia Cage tramite dbus-run-session per avere un bus D-Bus valido
+        # necessario a JavaFX/GTK per inizializzare correttamente il display
+        exec dbus-run-session cage -d -- /opt/kiosk/run-kiosk.sh
     }
 fi
 PROFILE
