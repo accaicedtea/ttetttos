@@ -49,6 +49,7 @@ apt-get install -y --no-install-recommends \
     default-jre \
     cage \
     libgl1-mesa-dri \
+
     mesa-vulkan-drivers \
     libinput-tools \
     dbus \
@@ -149,6 +150,12 @@ if [ "$(tty)" = "/dev/tty1" ]; then
 
     LOG="/opt/kiosk/kiosk.log"
     echo "[$(date)] Avvio cage..." >> "$LOG"
+
+    # Forza renderer software (necessario su VM senza GPU/3D, es. VMware)
+    export LIBGL_ALWAYS_SOFTWARE=1
+    export WLR_RENDERER=pixman
+    export WLR_RENDERER_ALLOW_SOFTWARE=1
+    export WLR_NO_HARDWARE_CURSORS=1
 
     # NON usare exec: se l'app crasha non deve fare loop di auto-login
     dbus-run-session cage -d -- /opt/kiosk/run-kiosk.sh >> "$LOG" 2>&1
