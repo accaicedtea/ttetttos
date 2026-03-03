@@ -298,19 +298,37 @@ if [ "$(tty)" = "/dev/tty1" ]; then
         echo "[$(date)] VM rilevata — renderer software attivato" >> "$LOG"
     fi
 
-    # NON usare exec: se l'app crasha non deve fare loop di auto-login
-    dbus-run-session cage -d -- /opt/kiosk/run-kiosk.sh >> "$LOG" 2>&1
-    EXIT_CODE=$?
+    # Loop di riavvio automatico 24/7
+    # Ctrl+Alt+H nell'app crea /opt/kiosk/.stop → uscita pulita senza restart
+    rm -f /opt/kiosk/.stop
+    RESTART_DELAY=3
 
-    echo "[$(date)] Cage terminato con codice: $EXIT_CODE" >> "$LOG"
+    while true; do
+        # Rotazione log: se supera 5MB tronca tenendo gli ultimi 500 righe
+        if [ -f "$LOG" ] && [ "$(wc -c < "$LOG")" -gt 5242880 ]; then
+            tail -500 "$LOG" > "${LOG}.tmp" && mv "${LOG}.tmp" "$LOG"
+            echo "[$(date)] Log ruotato." >> "$LOG"
+        fi
+
+        echo "[$(date)] --- Avvio kiosk ---" >> "$LOG"
+        dbus-run-session cage -d -- /opt/kiosk/run-kiosk.sh >> "$LOG" 2>&1
+        EXIT_CODE=$?
+        echo "[$(date)] Cage terminato (codice: $EXIT_CODE)" >> "$LOG"
+
+        # Se esiste il flag di stop (è stato premuto Ctrl+Alt+H) → esci
+        if [ -f /opt/kiosk/.stop ]; then
+            rm -f /opt/kiosk/.stop
+            echo "[$(date)] Uscita intenzionale." >> "$LOG"
+            break
+        fi
+
+        # Altrimenti è un crash: aspetta e riavvia
+        echo "[$(date)] Crash rilevato — riavvio tra ${RESTART_DELAY}s..." >> "$LOG"
+        sleep "$RESTART_DELAY"
+    done
+
     echo ""
-    echo "*** KIOSK TERMINATO (codice: $EXIT_CODE) ***"
-    echo "    Log salvato in: $LOG"
-    echo ""
-    cat "$LOG"
-    echo ""
-    echo "Premi Invio per aprire il terminale oppure: sudo reboot"
-    # read blocca il loop di auto-login
+    echo "Kiosk fermato. Premi Invio per il terminale."
     read -r _
 fi
 PROFILE
