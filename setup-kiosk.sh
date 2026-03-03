@@ -160,6 +160,78 @@ chown -R "$KIOSK_USER:$KIOSK_USER" "$APP_DIR"
 ok "App copiata in $APP_DIR."
 
 # ═══════════════════════════════════════════════════════════════════════
+#  3b. TEMA CURSORE TRASPARENTE
+# ═══════════════════════════════════════════════════════════════════════
+info "Creazione tema cursore trasparente..."
+mkdir -p /usr/share/icons/blank-cursor/cursors
+
+# Genera un file XCursor 1x1 completamente trasparente con Python3
+python3 - << 'PYEOF'
+import struct, os
+
+# Formato XCursor: file_header + TOC + image_chunk
+# File header (16 bytes)
+magic       = b'Xcur'
+header_size = struct.pack('<I', 16)
+file_ver    = struct.pack('<I', 0x10000)
+ntoc        = struct.pack('<I', 1)
+
+# Chunk per immagine 1x1 trasparente
+CHUNK_TYPE    = 0xFFFD0002
+nominal_size  = 24
+chunk_offset  = 16 + 12  # dopo header (16) e una voce TOC (12)
+
+# TOC entry (12 bytes)
+toc = struct.pack('<III', CHUNK_TYPE, nominal_size, chunk_offset)
+
+# Image chunk (9 * uint32 + 1 pixel ARGB)
+img = struct.pack('<IIIIIIIII',
+    9 * 4,         # header_size del chunk
+    CHUNK_TYPE,    # type
+    nominal_size,  # subtype = dimensione nominale
+    1,             # version
+    1,             # width
+    1,             # height
+    0,             # xhot
+    0,             # yhot
+    50,            # delay (ms)
+) + b'\x00\x00\x00\x00'  # 1 pixel ARGB trasparente
+
+data = magic + header_size + file_ver + ntoc + toc + img
+
+# Cursore di base
+cursor_path = '/usr/share/icons/blank-cursor/cursors/left_ptr'
+with open(cursor_path, 'wb') as f:
+    f.write(data)
+
+# Symlink per tutti i nomi cursore comuni
+names = [
+    'default', 'arrow', 'pointer', 'hand', 'hand1', 'hand2',
+    'crosshair', 'cross', 'text', 'xterm', 'wait', 'watch',
+    'grabbing', 'grab', 'fleur', 'move',
+    'n-resize', 's-resize', 'e-resize', 'w-resize',
+    'ne-resize', 'nw-resize', 'se-resize', 'sw-resize',
+    'col-resize', 'row-resize', 'all-scroll',
+    'X_cursor', 'right_ptr', 'top_left_arrow',
+]
+for name in names:
+    dst = f'/usr/share/icons/blank-cursor/cursors/{name}'
+    if not os.path.exists(dst):
+        os.symlink('left_ptr', dst)
+print('Tema cursore trasparente creato.')
+PYEOF
+
+# index.theme necessario perché Wayland lo cerchi
+cat > /usr/share/icons/blank-cursor/index.theme << 'THEME'
+[Icon Theme]
+Name=blank-cursor
+Comment=Transparent cursor theme
+Inherits=hicolor
+THEME
+
+ok "Tema cursore trasparente installato."
+
+# ═══════════════════════════════════════════════════════════════════════
 #  4. SCRIPT DI LANCIO
 # ═══════════════════════════════════════════════════════════════════════
 info "Creazione script di lancio..."
@@ -202,19 +274,17 @@ KIOSK_HOME=$(eval echo ~$KIOSK_USER)
 cat > "$KIOSK_HOME/.bash_profile" << 'PROFILE'
 # Se siamo su TTY1 (auto-login), avvia il kiosk
 if [ "$(tty)" = "/dev/tty1" ]; then
-    echo ""
-    echo "╔═══════════════════════════════════════════════╗"
-    echo "║        Avvio kiosk tra 2 secondi...           ║"
-    echo "║    Premi Ctrl+C per accedere al terminale     ║"
-    echo "╚═══════════════════════════════════════════════╝"
-    echo ""
-
+    # 2 secondi silenzioso: premi Ctrl+C per entrare nel terminale
     sleep 2 || true
 
     # Imposta XDG_RUNTIME_DIR (necessario per Wayland/Cage)
     export XDG_RUNTIME_DIR="/run/user/$(id -u)"
     mkdir -p "$XDG_RUNTIME_DIR"
     chmod 0700 "$XDG_RUNTIME_DIR"
+
+    # Cursore trasparente a livello di sistema (Wayland/Cage)
+    export XCURSOR_THEME=blank-cursor
+    export XCURSOR_SIZE=24
 
     LOG="/opt/kiosk/kiosk.log"
     echo "[$(date)] Avvio cage..." >> "$LOG"
