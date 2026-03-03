@@ -5,6 +5,7 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCombination;
 import javafx.stage.Screen;
@@ -70,6 +71,9 @@ public class App extends Application {
         stage.setFullScreen(true);
         stage.setFullScreenExitHint("");
         stage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
+
+        // Nasconde il cursore del mouse
+        scene.setCursor(Cursor.NONE);
 
         // Blocca solo ESC; Alt+F4 e Ctrl+C rimangono funzionanti
         scene.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {

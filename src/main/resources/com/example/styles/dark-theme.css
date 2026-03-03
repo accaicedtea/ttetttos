@@ -786,9 +786,44 @@
     -fx-text-fill: #7878a0;
     -fx-wrap-text: true;
 }
-.prod-price {
-    -fx-font-size: 22px;
+/* ── Status bar ──────────────────────────────────────────────────────── */
+.status-bar {
+    -fx-background-color: #0f0f18;
+    -fx-padding: 5 20;
+    -fx-border-color: #2a2a3a transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-min-height: 32px;
+}
+.status-clock {
+    -fx-text-fill: #e0e0ea;
+    -fx-font-size: 14px;
     -fx-font-weight: bold;
-    -fx-text-fill: #5b9cf5;
-    -fx-padding: 6 0 0 0;
+    -fx-font-family: monospace;
+}
+.status-date {
+    -fx-text-fill: #8888aa;
+    -fx-font-size: 13px;
+    -fx-font-family: monospace;
+}
+.status-text {
+    -fx-text-fill: #8888aa;
+    -fx-font-size: 13px;
+}
+.status-dot-online {
+    -fx-background-color: #44dd66;
+    -fx-background-radius: 50%;
+    -fx-min-width: 10px;
+    -fx-min-height: 10px;
+    -fx-max-width: 10px;
+    -fx-max-height: 10px;
+    -fx-effect: dropshadow(gaussian, rgba(68,221,102,0.6), 4, 0, 0, 0);
+}
+.status-dot-offline {
+    -fx-background-color: #dd4444;
+    -fx-background-radius: 50%;
+    -fx-min-width: 10px;
+    -fx-min-height: 10px;
+    -fx-max-width: 10px;
+    -fx-max-height: 10px;
+    -fx-effect: dropshadow(gaussian, rgba(221,68,68,0.6), 4, 0, 0, 0);
 }

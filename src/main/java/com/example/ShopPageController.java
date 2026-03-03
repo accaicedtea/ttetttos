@@ -1,6 +1,11 @@
 package com.example;
 
 import com.util.Animations;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.application.Platform;
+import javafx.concurrent.ScheduledService;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
@@ -8,7 +13,15 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
+import javafx.util.Duration;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +33,18 @@ public class ShopPageController {
     @FXML private TilePane   productsPane;
     @FXML private VBox       categoriesPane;
     @FXML private Label      categoryTitleLabel;
+
+    // ── Status bar ───────────────────────────────────────────────
+    @FXML private Label clockLabel;
+    @FXML private Label dateLabel;
+    @FXML private Label internetDot;
+    @FXML private Label internetLabel;
+    @FXML private Label batteryIcon;
+    @FXML private Label batteryLabel;
+
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm:ss");
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("EEEE d MMMM",
+            java.util.Locale.ITALIAN);
 
     // ── Data model ───────────────────────────────────────────────
     record Product(String emoji, String name, String description, String price) {}
@@ -34,6 +59,9 @@ public class ShopPageController {
         selectCategory(catalog.keySet().iterator().next());
         Animations.inertiaScroll(productsScroll);
         Animations.inertiaScroll(categoriesScroll);
+        startClock();
+        startInternetCheck();
+        startBatteryCheck();
 
         // Calcola dimensioni tile in base al viewport (larghezza e altezza)
         productsScroll.viewportBoundsProperty().addListener((obs, old, bounds) -> {
@@ -45,6 +73,90 @@ public class ShopPageController {
             if (tileW > 80)  productsPane.setPrefTileWidth(tileW);
             if (tileH > 80)  productsPane.setPrefTileHeight(tileH);
         });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  STATUS BAR
+    // ─────────────────────────────────────────────────────────────
+
+    private void startClock() {
+        Timeline clock = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
+            LocalDateTime now = LocalDateTime.now();
+            clockLabel.setText(now.format(TIME_FMT));
+            dateLabel.setText(now.format(DATE_FMT));
+        }));
+        clock.setCycleCount(Timeline.INDEFINITE);
+        clock.play();
+        // Aggiorna subito senza aspettare 1 secondo
+        LocalDateTime now = LocalDateTime.now();
+        clockLabel.setText(now.format(TIME_FMT));
+        dateLabel.setText(now.format(DATE_FMT));
+    }
+
+    private void startInternetCheck() {
+        ScheduledService<Boolean> svc = new ScheduledService<>() {
+            @Override protected Task<Boolean> createTask() {
+                return new Task<>() {
+                    @Override protected Boolean call() {
+                        try (Socket s = new Socket()) {
+                            s.connect(new InetSocketAddress("8.8.8.8", 53), 1500);
+                            return true;
+                        } catch (IOException e) {
+                            return false;
+                        }
+                    }
+                };
+            }
+        };
+        svc.setPeriod(Duration.seconds(10));
+        svc.setOnSucceeded(e -> {
+            boolean online = (Boolean) svc.getValue();
+            internetDot.getStyleClass().setAll(online ? "status-dot-online" : "status-dot-offline");
+            internetLabel.setText(online ? "Online" : "Offline");
+        });
+        svc.start();
+    }
+
+    private void startBatteryCheck() {
+        Timeline bat = new Timeline(new KeyFrame(Duration.seconds(30), e -> updateBattery()));
+        bat.setCycleCount(Timeline.INDEFINITE);
+        bat.play();
+        updateBattery();
+    }
+
+    private void updateBattery() {
+        // Cerca la prima batteria disponibile in /sys/class/power_supply/
+        try {
+            Path base = Path.of("/sys/class/power_supply");
+            if (!Files.exists(base)) { setBatteryNoHardware(); return; }
+            var batDir = Files.list(base)
+                .filter(p -> p.getFileName().toString().startsWith("BAT"))
+                .findFirst();
+            if (batDir.isEmpty()) { setBatteryNoHardware(); return; }
+
+            Path capacityFile = batDir.get().resolve("capacity");
+            Path statusFile   = batDir.get().resolve("status");
+            int  pct    = Integer.parseInt(Files.readString(capacityFile).trim());
+            String stat = Files.readString(statusFile).trim(); // Charging / Discharging / Full
+
+            String icon;
+            if (stat.equalsIgnoreCase("Charging"))    icon = "⚡";
+            else if (pct >= 80)                        icon = "🔋";
+            else if (pct >= 40)                        icon = "🔋";
+            else if (pct >= 15)                        icon = "🪫";
+            else                                       icon = "🪫";
+
+            batteryIcon.setText(icon);
+            batteryLabel.setText(pct + "%");
+            batteryLabel.setStyle(pct <= 15 ? "-fx-text-fill: #ff5555;" : "");
+        } catch (Exception ex) {
+            setBatteryNoHardware();
+        }
+    }
+
+    private void setBatteryNoHardware() {
+        batteryIcon.setText("🔌");
+        batteryLabel.setText("AC");
     }
 
     // ─────────────────────────────────────────────────────────────

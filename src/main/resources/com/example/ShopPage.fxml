@@ -16,12 +16,31 @@
 
     <!-- ══ HEADER ══ -->
     <top>
-        <HBox styleClass="shop-header" alignment="CENTER_LEFT" spacing="20">
-            <Label text="🛒 TouchMenu" styleClass="shop-header-title"/>
-            <Region HBox.hgrow="ALWAYS"/>
-            <Label fx:id="categoryTitleLabel" text="Seleziona una categoria →"
-                   styleClass="shop-header-hint"/>
-        </HBox>
+        <VBox>
+            <HBox styleClass="shop-header" alignment="CENTER_LEFT" spacing="20">
+                <Label text="🛒 TouchMenu" styleClass="shop-header-title"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="categoryTitleLabel" text="Seleziona una categoria →"
+                       styleClass="shop-header-hint"/>
+            </HBox>
+            <!-- ══ STATUS BAR ══ -->
+            <HBox styleClass="status-bar" alignment="CENTER_LEFT" spacing="20">
+                <!-- Data e ora -->
+                <Label fx:id="dateLabel"  styleClass="status-date"/>
+                <Label fx:id="clockLabel" styleClass="status-clock"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <!-- Internet -->
+                <HBox alignment="CENTER" spacing="8">
+                    <Label fx:id="internetDot"   styleClass="status-dot-offline"/>
+                    <Label fx:id="internetLabel" styleClass="status-text" text="Internet"/>
+                </HBox>
+                <!-- Batteria -->
+                <HBox alignment="CENTER" spacing="8">
+                    <Label fx:id="batteryIcon"  styleClass="status-text"/>
+                    <Label fx:id="batteryLabel" styleClass="status-text"/>
+                </HBox>
+            </HBox>
+        </VBox>
     </top>
 
     <!-- ══ CENTER: prodotti ══ -->

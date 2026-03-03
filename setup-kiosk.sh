@@ -57,15 +57,77 @@ apt-get install -y --no-install-recommends \
     fonts-dejavu-core \
     fonts-noto-color-emoji \
     ca-certificates \
-    curl
+    curl \
+    pciutils
 
-info "Installazione pacchetti opzionali (GPU/Vulkan/VMware)..."
-# Questi pacchetti potrebbero non esistere su tutte le versioni — non bloccano
-for pkg in mesa-vulkan-drivers libvulkan1 open-vm-tools; do
+info "Installazione pacchetti opzionali (VMware/VirtualBox)..."
+for pkg in open-vm-tools virtualbox-guest-utils unclutter; do
     apt-get install -y --no-install-recommends "$pkg" 2>/dev/null \
         && info "  Installato: $pkg" \
         || info "  Non disponibile (ignorato): $pkg"
 done
+
+# ═══════════════════════════════════════════════════════════════════════
+#  1b. DRIVER GPU — rilevamento automatico hardware
+# ═══════════════════════════════════════════════════════════════════════
+info "Rilevamento GPU in corso..."
+GPU_VENDOR=""
+if lspci 2>/dev/null | grep -qi "vmware\|virtualbox\|qxl\|virtio"; then
+    GPU_VENDOR="vm"
+elif lspci 2>/dev/null | grep -qi "nvidia"; then
+    GPU_VENDOR="nvidia"
+elif lspci 2>/dev/null | grep -qi "intel.*graphics\|intel.*uhd\|intel.*hd\|intel.*iris"; then
+    GPU_VENDOR="intel"
+elif lspci 2>/dev/null | grep -qi "amd\|ati\|radeon"; then
+    GPU_VENDOR="amd"
+fi
+
+info "GPU rilevata: ${GPU_VENDOR:-sconosciuta}"
+
+case "$GPU_VENDOR" in
+    nvidia)
+        info "Installazione driver NVIDIA..."
+        # Abilita contrib e non-free per firmware NVIDIA
+        apt-get install -y --no-install-recommends \
+            nvidia-driver nvidia-vulkan-icd 2>/dev/null \
+        || apt-get install -y --no-install-recommends \
+            xserver-xorg-video-nouveau mesa-vulkan-drivers 2>/dev/null \
+        || info "  Driver NVIDIA non installati — usando nouveau/software"
+        ok "Driver NVIDIA configurati."
+        ;;
+    intel)
+        info "Installazione driver Intel..."
+        apt-get install -y --no-install-recommends \
+            xserver-xorg-video-intel \
+            intel-media-va-driver \
+            mesa-vulkan-drivers \
+            libvulkan1 2>/dev/null \
+        || apt-get install -y --no-install-recommends \
+            mesa-vulkan-drivers libvulkan1 2>/dev/null \
+        || true
+        ok "Driver Intel configurati."
+        ;;
+    amd)
+        info "Installazione driver AMD..."
+        apt-get install -y --no-install-recommends \
+            xserver-xorg-video-amdgpu \
+            firmware-amd-graphics \
+            mesa-vulkan-drivers \
+            libvulkan1 2>/dev/null \
+        || apt-get install -y --no-install-recommends \
+            mesa-vulkan-drivers libvulkan1 2>/dev/null \
+        || true
+        ok "Driver AMD configurati."
+        ;;
+    vm)
+        info "VM rilevata — verrà usato renderer software (nessun driver GPU necessario)."
+        ;;
+    *)
+        info "GPU sconosciuta — installazione driver generici Mesa..."
+        apt-get install -y --no-install-recommends \
+            mesa-vulkan-drivers libvulkan1 2>/dev/null || true
+        ;;
+esac
 
 ok "Pacchetti installati."
 
@@ -157,11 +219,14 @@ if [ "$(tty)" = "/dev/tty1" ]; then
     LOG="/opt/kiosk/kiosk.log"
     echo "[$(date)] Avvio cage..." >> "$LOG"
 
-    # Forza renderer software (necessario su VM senza GPU/3D, es. VMware)
-    export LIBGL_ALWAYS_SOFTWARE=1
-    export WLR_RENDERER=pixman
-    export WLR_RENDERER_ALLOW_SOFTWARE=1
-    export WLR_NO_HARDWARE_CURSORS=1
+    # Rileva se siamo su VM (VMware/VirtualBox) e forza software rendering
+    if lspci 2>/dev/null | grep -qi "vmware\|virtualbox\|qxl\|virtio"; then
+        export LIBGL_ALWAYS_SOFTWARE=1
+        export WLR_RENDERER=pixman
+        export WLR_RENDERER_ALLOW_SOFTWARE=1
+        export WLR_NO_HARDWARE_CURSORS=1
+        echo "[$(date)] VM rilevata — renderer software attivato" >> "$LOG"
+    fi
 
     # NON usare exec: se l'app crasha non deve fare loop di auto-login
     dbus-run-session cage -d -- /opt/kiosk/run-kiosk.sh >> "$LOG" 2>&1
