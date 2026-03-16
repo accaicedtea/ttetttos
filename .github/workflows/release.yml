@@ -21,20 +21,24 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build
-        run: mvn package -B -q
+      - name: Build JAR e dipendenze
+        run: mvn clean package -B -DskipTests
 
-      - name: List artifacts
-        run: ls -lh target/
+      - name: Crea lib.tar.gz
+        run: |
+          cd target
+          tar -czf lib.tar.gz lib/
+          echo "=== Artifacts ==="
+          ls -lh demo-1.jar lib.tar.gz || true
+          ls -lh totem-fat.jar || true
 
-      - name: Release
+      - name: Release su GitHub
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             target/demo-1.jar
             target/lib.tar.gz
-            target/totem-fat.jar
+          fail_on_unmatched_files: false
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
