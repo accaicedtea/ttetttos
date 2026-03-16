@@ -313,51 +313,9 @@ case "$GPU_VENDOR" in
 esac
 ok "GPU configurata."
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  FASE 2b — llama.cpp (AI traduzioni, opzionale)
-# ═══════════════════════════════════════════════════════════════════════════════
-step "llama.cpp (traduzioni AI locali — opzionale)"
 
-MODELS_DIR="${APP_DIR}/models"
-MODEL_FILE="${MODELS_DIR}/tinyllama.gguf"
-MODEL_URL="https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
-
-mkdir -p "${MODELS_DIR}"
-
-if ! python3 -c "import llama_cpp" 2>/dev/null; then
-    info "Installazione llama-cpp-python..."
-    pip3 install "llama-cpp-python[server]" --break-system-packages \
-        --quiet 2>/dev/null \
-        && ok "llama-cpp-python installato." \
-        || warn "Fallito — le traduzioni useranno i valori predefiniti."
-fi
-
-if [[ ! -f "${MODEL_FILE}" ]]; then
-    info "Download TinyLlama Q4 (~670MB, opzionale)..."
-    curl -fsSL --progress-bar "${MODEL_URL}" -o "${MODEL_FILE}" 2>/dev/null \
-        && ok "Modello scaricato." \
-        || { warn "Download fallito — salta AI, usa fallback."; rm -f "${MODEL_FILE}"; }
-fi
-
-if python3 -c "import llama_cpp" 2>/dev/null && [[ -f "${MODEL_FILE}" ]]; then
-    cat > /etc/systemd/system/llamacpp.service << LLMSVC
-[Unit]
-Description=llama.cpp AI server (traduzioni locali)
-After=network.target
-
-[Service]
-Type=simple
-User=${KIOSK_USER}
-ExecStart=python3 -m llama_cpp.server --model ${MODEL_FILE} --port 8080 --n_ctx 2048 --n_threads 2
-Restart=on-failure
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-LLMSVC
-    systemctl enable llamacpp.service 2>/dev/null || true
-    ok "Servizio llama.cpp configurato."
-fi
+# FASE 2b — llama.cpp SALTATO (traduzioni predefinite in I18n.java)
+mkdir -p "${APP_DIR}/models"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  FASE 3 — Utente kiosk
