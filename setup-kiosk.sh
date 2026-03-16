@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# ═══════════════════════════════════════════════════════════════════════════════
-#  setup-kiosk.sh — Sistema kiosk JavaFX 24/7
+# ===============================================================================
+#  setup-kiosk.sh  Sistema kiosk JavaFX 24/7
 #
 #  Uso:
 #    curl -fsSL https://raw.githubusercontent.com/accaicedtea/ttetttos/main/setup-kiosk.sh | sudo bash
 #    sudo bash setup-kiosk.sh          # installazione
 #    sudo bash setup-kiosk.sh reset    # reset completo e reinstalla
 #    sudo bash setup-kiosk.sh update   # aggiorna solo il JAR
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
 set -euo pipefail
 
-# ─── Config ───────────────────────────────────────────────────────────────────
+# --- Config -------------------------------------------------------------------
 GITHUB_USER="accaicedtea"
 GITHUB_REPO="ttetttos"
 RELEASE_TAG="v1.0.0"
@@ -25,19 +25,19 @@ LOG_FILE="/var/log/kiosk-setup.log"
 JAVA_OPTS="-Xms64m -Xmx256m"
 API_KEY="${TOTEM_API_KEY:-api_key_totem_1}"
 
-# ─── Colori ───────────────────────────────────────────────────────────────────
+# --- Colori -------------------------------------------------------------------
 RED='\033[0;31m'; GRN='\033[0;32m'; CYN='\033[0;36m'; YLW='\033[0;33m'; NC='\033[0m'
 info() { echo -e "${CYN}[INFO]${NC} $*" | tee -a "${LOG_FILE}"; }
 ok()   { echo -e "${GRN}[ OK ]${NC} $*" | tee -a "${LOG_FILE}"; }
 warn() { echo -e "${YLW}[WARN]${NC} $*" | tee -a "${LOG_FILE}"; }
 fail() { echo -e "${RED}[FAIL]${NC} $*" | tee -a "${LOG_FILE}"; exit 1; }
-step() { echo -e "\n${CYN}━━━ $* ━━━${NC}" | tee -a "${LOG_FILE}"; }
+step() { echo -e "\n${CYN}--- $* ---${NC}" | tee -a "${LOG_FILE}"; }
 
 mkdir -p "$(dirname "${LOG_FILE}")"
 echo "=== Setup avviato $(date) MODE=${1:-install} ===" >> "${LOG_FILE}"
 [[ $EUID -eq 0 ]] || fail "Eseguire come root: sudo bash $0"
 
-# ─── Rilevamento distro ───────────────────────────────────────────────────────
+# --- Rilevamento distro -------------------------------------------------------
 detect_distro() {
     if [[ -f /etc/os-release ]]; then
         source /etc/os-release
@@ -76,7 +76,7 @@ pkg_update() {
     esac
 }
 
-# ─── Rilevamento GPU / VM ─────────────────────────────────────────────────────
+# --- Rilevamento GPU / VM -----------------------------------------------------
 detect_gpu() {
     if lspci 2>/dev/null | grep -qi "vmware\|virtualbox\|qxl\|virtio-vga\|virgl"; then
         echo "vm"
@@ -91,9 +91,9 @@ detect_gpu() {
     fi
 }
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
 #  MODALITA RESET
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
 if [[ "${1:-}" == "reset" ]]; then
     step "RESET COMPLETO"
     for svc in kiosk kiosk-logclean kiosk-nightly-restart kiosk-network-watchdog; do
@@ -125,9 +125,9 @@ if [[ "${1:-}" == "reset" ]]; then
     echo ""
 fi
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
 #  MODALITA UPDATE
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
 if [[ "${1:-}" == "update" ]]; then
     step "Aggiornamento JAR"
     systemctl stop kiosk.service 2>/dev/null || true
@@ -141,17 +141,17 @@ if [[ "${1:-}" == "update" ]]; then
 fi
 
 echo ""
-echo "╔═══════════════════════════════════════════════════════════════╗"
-echo "║     KIOSK SETUP — $(echo $DISTRO | tr '[:lower:]' '[:upper:]') — $(date '+%Y-%m-%d')                ║"
-echo "╚═══════════════════════════════════════════════════════════════╝"
+echo "+===============================================================+"
+echo "|     KIOSK SETUP  $(echo $DISTRO | tr '[:lower:]' '[:upper:]')  $(date '+%Y-%m-%d')                |"
+echo "+===============================================================+"
 echo ""
 
 GPU=$(detect_gpu)
 info "Distro: $DISTRO | GPU: $GPU"
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  FASE 1 — Kernel
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
+#  FASE 1  Kernel
+# ===============================================================================
 step "Ottimizzazione kernel"
 cat > /etc/sysctl.d/99-kiosk.conf << 'SYSCTL'
 kernel.panic                    = 30
@@ -193,9 +193,9 @@ WDOG
 }
 ok "Kernel configurato."
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  FASE 2 — Pacchetti
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
+#  FASE 2  Pacchetti
+# ===============================================================================
 step "Installazione pacchetti"
 pkg_update
 
@@ -262,9 +262,9 @@ case "$GPU" in
 esac
 ok "Pacchetti installati."
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  FASE 3 — Utente kiosk
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
+#  FASE 3  Utente kiosk
+# ===============================================================================
 step "Utente kiosk"
 if ! id "${KIOSK_USER}" &>/dev/null; then
     useradd -m -s /bin/bash -G video,input,render,audio "${KIOSK_USER}" 2>/dev/null || \
@@ -278,9 +278,9 @@ fi
 KIOSK_HOME=$(eval echo ~"${KIOSK_USER}")
 KIOSK_UID=$(id -u "${KIOSK_USER}")
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  FASE 4 — Download app e JavaFX
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
+#  FASE 4  Download app e JavaFX
+# ===============================================================================
 step "Download applicazione"
 mkdir -p "${APP_DIR}/lib" "${APP_DIR}/logs" "${APP_DIR}/models"
 
@@ -310,7 +310,7 @@ else
         || warn "Nessuna libreria trovata."
 fi
 
-# ─── JavaFX SDK (nativi Linux — necessari per JavaFX su sistemi senza desktop) ─
+# --- JavaFX SDK (nativi Linux  necessari per JavaFX su sistemi senza desktop) -
 step "Download JavaFX SDK ${JAVAFX_VERSION}"
 JAVAFX_DIR="${APP_DIR}/javafx-sdk"
 
@@ -369,15 +369,15 @@ fi
 chown -R "${KIOSK_USER}:${KIOSK_USER}" "${APP_DIR}"
 chmod 755 "${APP_DIR}"
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  FASE 5 — Script di lancio
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
+#  FASE 5  Script di lancio
+# ===============================================================================
 step "Script di lancio"
 
 cat > "${APP_DIR}/run-kiosk.sh" << 'LAUNCHER_EOF'
 #!/usr/bin/env bash
-# ═══════════════════════════════════════════════════════════════════════════════
-#  run-kiosk.sh — Launcher auto-healing JavaFX
+# ===============================================================================
+#  run-kiosk.sh  Launcher auto-healing JavaFX
 #
 #  Logica:
 #    1. Legge il profilo di avvio salvato (config/profile.conf)
@@ -385,7 +385,7 @@ cat > "${APP_DIR}/run-kiosk.sh" << 'LAUNCHER_EOF'
 #    3. Se fallisce, analizza l'errore e sceglie il profilo successivo
 #    4. Dopo 3 fallimenti dello stesso tipo, passa alla strategia successiva
 #    5. Salva il profilo che ha funzionato per i prossimi avvii
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
 
 APP_DIR="/opt/kiosk"
 LOG="${APP_DIR}/logs/kiosk.log"
@@ -399,7 +399,7 @@ mkdir -p "${APP_DIR}/logs" "${APP_DIR}/config"
 log()  { echo "[$(date '+%H:%M:%S')] $*" | tee -a "${LOG}"; }
 fail() { echo "[$(date '+%H:%M:%S')] FAIL: $*" | tee -a "${FAIL_LOG}"; }
 
-# ── Determina module path ──────────────────────────────────────────────────────
+# -- Determina module path ------------------------------------------------------
 find_fx_path() {
     if [[ -d "${APP_DIR}/javafx-sdk" ]] && \
        ls "${APP_DIR}/javafx-sdk/"*.jar &>/dev/null 2>&1; then
@@ -414,7 +414,7 @@ find_fx_path() {
     fi
 }
 
-# ── Classpath completo ─────────────────────────────────────────────────────────
+# -- Classpath completo ---------------------------------------------------------
 build_cp() {
     local cp="${APP_DIR}/demo-1.jar"
     for jar in "${APP_DIR}/lib/"*.jar; do
@@ -423,7 +423,7 @@ build_cp() {
     echo "${cp}"
 }
 
-# ── Carica/salva profilo ───────────────────────────────────────────────────────
+# -- Carica/salva profilo -------------------------------------------------------
 load_profile() {
     [[ -f "${PROFILE_FILE}" ]] && source "${PROFILE_FILE}" || true
     PROFILE="${PROFILE:-default}"
@@ -434,7 +434,7 @@ save_profile() {
     log "Profilo salvato: ${1}"
 }
 
-# ── Conta fallimenti recenti ───────────────────────────────────────────────────
+# -- Conta fallimenti recenti ---------------------------------------------------
 count_recent_fails() {
     local pattern="${1}"
     local minutes="${2:-10}"
@@ -444,7 +444,7 @@ count_recent_fails() {
     grep -c "${pattern}" "${FAIL_LOG}" 2>/dev/null | tr -d '[:space:]' || echo 0
 }
 
-# ── Analizza errore dall'output ────────────────────────────────────────────────
+# -- Analizza errore dall'output ------------------------------------------------
 detect_error() {
     local output="${1}"
     if echo "${output}" | grep -qi "Module javafx.*not found\|boot layer"; then
@@ -468,14 +468,14 @@ detect_error() {
     fi
 }
 
-# ── Profili di avvio (dal piu compatibile al piu ottimizzato) ──────────────────
+# -- Profili di avvio (dal piu compatibile al piu ottimizzato) ------------------
 #
-#  default    → software rendering, GTK3, tutte le opzioni sicure
-#  sw_pixman  → renderer pixman esplicito (VM senza virgl)
-#  sw_mesa    → softpipe Mesa (VM con driver virtio)
-#  gtk2       → fallback GTK2 per sistemi vecchi
-#  xwayland   → usa DISPLAY X11 invece di Wayland
-#  headless   → test senza display (diagnostica)
+#  default    -> software rendering, GTK3, tutte le opzioni sicure
+#  sw_pixman  -> renderer pixman esplicito (VM senza virgl)
+#  sw_mesa    -> softpipe Mesa (VM con driver virtio)
+#  gtk2       -> fallback GTK2 per sistemi vecchi
+#  xwayland   -> usa DISPLAY X11 invece di Wayland
+#  headless   -> test senza display (diagnostica)
 #
 apply_profile() {
     local profile="${1}"
@@ -575,7 +575,7 @@ apply_profile() {
     esac
 }
 
-# ── Strategia di riparazione automatica ───────────────────────────────────────
+# -- Strategia di riparazione automatica ---------------------------------------
 #  Data la tipologia di errore, suggerisce il profilo successivo da provare.
 next_profile() {
     local current="${1}" error="${2}"
@@ -643,13 +643,13 @@ next_profile() {
     esac
 }
 
-# ── Loop principale ────────────────────────────────────────────────────────────
+# -- Loop principale ------------------------------------------------------------
 load_profile
 FX_PATH=$(find_fx_path)
 CP=$(build_cp)
 
 log "======================================="
-log "Avvio kiosk — profilo: ${PROFILE}"
+log "Avvio kiosk  profilo: ${PROFILE}"
 log "FX_PATH: ${FX_PATH}"
 log "======================================="
 
@@ -732,7 +732,7 @@ LAUNCHER_EOF
 chmod +x "${APP_DIR}/run-kiosk.sh"
 chmod +x "${APP_DIR}/run-kiosk.sh"
 
-# ─── Script controllo ─────────────────────────────────────────────────────────
+# --- Script controllo ---------------------------------------------------------
 cat > "${APP_DIR}/kiosk-control.sh" << 'CTRL'
 #!/usr/bin/env bash
 case "${1:-help}" in
@@ -763,9 +763,9 @@ ln -sf "${APP_DIR}/kiosk-control.sh" /usr/local/bin/kiosk-control
 chown -R "${KIOSK_USER}:${KIOSK_USER}" "${APP_DIR}"
 ok "Script configurati."
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  FASE 6 — Cursore trasparente
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
+#  FASE 6  Cursore trasparente
+# ===============================================================================
 step "Cursore trasparente"
 mkdir -p /usr/share/icons/blank-cursor/cursors
 python3 - << 'PYEOF'
@@ -791,9 +791,9 @@ Inherits=hicolor
 THEME
 ok "Cursore trasparente."
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  FASE 7 — Servizio systemd
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
+#  FASE 7  Servizio systemd
+# ===============================================================================
 step "Servizio systemd"
 
 # Crea XDG runtime dir persistente
@@ -825,7 +825,7 @@ Environment="XCURSOR_THEME=blank-cursor"
 Environment="XCURSOR_SIZE=24"
 Environment="TOTEM_API_KEY=${API_KEY}"
 
-# Software rendering — compatibile con VM e hardware senza GPU
+# Software rendering  compatibile con VM e hardware senza GPU
 Environment="LIBGL_ALWAYS_SOFTWARE=1"
 Environment="MESA_GL_VERSION_OVERRIDE=3.3"
 Environment="GALLIUM_DRIVER=softpipe"
@@ -895,9 +895,9 @@ N
 
 ok "Servizi systemd creati."
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  FASE 8 — Auto-login TTY1
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
+#  FASE 8  Auto-login TTY1
+# ===============================================================================
 step "Auto-login TTY1"
 mkdir -p /etc/systemd/system/getty@tty1.service.d
 cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
@@ -934,9 +934,9 @@ SUDO
 chmod 440 /etc/sudoers.d/kiosk
 ok "Auto-login configurato."
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  FASE 9 — Boot veloce
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
+#  FASE 9  Boot veloce
+# ===============================================================================
 step "Ottimizzazione boot"
 for svc in ModemManager bluetooth cups avahi-daemon \
            apt-daily.timer apt-daily-upgrade.timer \
@@ -956,9 +956,9 @@ if [[ -f /etc/default/grub ]]; then
 fi
 ok "Boot ottimizzato."
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  FASE 10 — Permessi e abilitazione
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
+#  FASE 10  Permessi e abilitazione
+# ===============================================================================
 step "Permessi hardware e abilitazione servizi"
 cat > /etc/udev/rules.d/99-kiosk.rules << 'UDEV'
 SUBSYSTEM=="drm",   TAG+="uaccess", GROUP="video"
@@ -982,21 +982,21 @@ systemctl enable kiosk-logclean.timer
 systemctl enable kiosk-nightly-restart.timer
 ok "Servizi abilitati."
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
 #  RIEPILOGO
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
 echo ""
-echo "╔═══════════════════════════════════════════════════════════════════╗"
-echo "║                  SETUP COMPLETATO                                ║"
-echo "╠═══════════════════════════════════════════════════════════════════╣"
-echo "║  Distro: ${DISTRO} | GPU: ${GPU}                                 ║"
-echo "║                                                                   ║"
-echo "║  Avvia subito:   systemctl start kiosk.service                   ║"
-echo "║  Oppure:         reboot                                           ║"
-echo "║                                                                   ║"
-echo "║  Diagnostica:    kiosk-control status                            ║"
-echo "║                  journalctl -u kiosk -f                          ║"
-echo "║                  tail -f /opt/kiosk/logs/kiosk.log               ║"
-echo "║                  tail -f /opt/kiosk/logs/kiosk-err.log           ║"
-echo "╚═══════════════════════════════════════════════════════════════════╝"
+echo "+===================================================================+"
+echo "|                  SETUP COMPLETATO                                |"
+echo "+===================================================================+"
+echo "|  Distro: ${DISTRO} | GPU: ${GPU}                                 |"
+echo "|                                                                   |"
+echo "|  Avvia subito:   systemctl start kiosk.service                   |"
+echo "|  Oppure:         reboot                                           |"
+echo "|                                                                   |"
+echo "|  Diagnostica:    kiosk-control status                            |"
+echo "|                  journalctl -u kiosk -f                          |"
+echo "|                  tail -f /opt/kiosk/logs/kiosk.log               |"
+echo "|                  tail -f /opt/kiosk/logs/kiosk-err.log           |"
+echo "+===================================================================+"
 echo ""
