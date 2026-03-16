@@ -427,16 +427,23 @@ JAVAFX_ZIP="/tmp/javafx-sdk.zip"
 JAVAFX_DIR="${APP_DIR}/javafx-sdk"
 
 if [[ ! -d "${JAVAFX_DIR}" ]]; then
-    info "Download JavaFX SDK ${JAVAFX_VERSION} (nativi Linux inclusi)..."
+    info "Download JavaFX SDK ${JAVAFX_VERSION}..."
+    pkg_install unzip 2>/dev/null || true
+    mkdir -p "${JAVAFX_DIR}"
+
     if curl -fsSL "${JAVAFX_URL}" -o "${JAVAFX_ZIP}"; then
-        pkg_install unzip 2>/dev/null || true
-        unzip -q "${JAVAFX_ZIP}" -d "/tmp/javafx-extract/"
-        mv /tmp/javafx-extract/javafx-sdk-${JAVAFX_VERSION}/lib "${JAVAFX_DIR}"
+        # Estrai SOLO i JAR e i .so necessari — salta libjfxwebkit.so (~50MB inutile)
+        unzip -q "${JAVAFX_ZIP}"             "javafx-sdk-${JAVAFX_VERSION}/lib/*.jar"             "javafx-sdk-${JAVAFX_VERSION}/lib/libglass.so"             "javafx-sdk-${JAVAFX_VERSION}/lib/libjavafx_font*.so"             "javafx-sdk-${JAVAFX_VERSION}/lib/libjavafx_iio.so"             "javafx-sdk-${JAVAFX_VERSION}/lib/libprism_es2.so"             "javafx-sdk-${JAVAFX_VERSION}/lib/libprism_sw.so"             "javafx-sdk-${JAVAFX_VERSION}/lib/libdecora_sse.so"             -d "/tmp/javafx-extract/" 2>/dev/null || true
+
+        # Copia solo i file estratti
+        cp /tmp/javafx-extract/javafx-sdk-${JAVAFX_VERSION}/lib/*.jar            /tmp/javafx-extract/javafx-sdk-${JAVAFX_VERSION}/lib/*.so            "${JAVAFX_DIR}/" 2>/dev/null || true
+
         rm -rf "${JAVAFX_ZIP}" /tmp/javafx-extract/
         chown -R "${KIOSK_USER}:${KIOSK_USER}" "${JAVAFX_DIR}"
-        ok "JavaFX SDK installato in ${JAVAFX_DIR}."
+        ok "JavaFX SDK installato ($(du -sh ${JAVAFX_DIR} | cut -f1))."
     else
-        warn "Download JavaFX SDK fallito — verifica la connessione."
+        warn "Download JavaFX SDK fallito."
+        rmdir "${JAVAFX_DIR}" 2>/dev/null || true
     fi
 else
     info "JavaFX SDK gia presente: ${JAVAFX_DIR}"
