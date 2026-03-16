@@ -34,8 +34,17 @@
 #    hardware watchdog timer  →  reboot fisico se il sistema si blocca
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 set -euo pipefail
 IFS=$'\n\t'
+
+# ─── Colori e log ─────────────────────────────────────────────────────────────
+RED='\033[0;31m'; GRN='\033[0;32m'; CYN='\033[0;36m'; YLW='\033[0;33m'; NC='\033[0m'
+info()  { echo -e "${CYN}[INFO]${NC} $*" | tee -a "$LOG_FILE"; }
+ok()    { echo -e "${GRN}[ OK ]${NC} $*" | tee -a "$LOG_FILE"; }
+warn()  { echo -e "${YLW}[WARN]${NC} $*" | tee -a "$LOG_FILE"; }
+fail()  { echo -e "${RED}[FAIL]${NC} $*" | tee -a "$LOG_FILE"; exit 1; }
+step()  { echo -e "\n${CYN}━━━ $* ━━━${NC}" | tee -a "$LOG_FILE"; }
 
 # ─── Modalità reset: cancella /opt/kiosk e reinstalla tutto ───────────────
 if [[ "${1:-}" == "reset" ]]; then
