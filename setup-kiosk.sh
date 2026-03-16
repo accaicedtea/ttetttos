@@ -11,35 +11,49 @@
 #  Requisiti:
 #    - Sistema MINIMALE (no desktop environment)
 #    - Java 17+ installato o installabile via package manager
-#    - dist/demo-1.jar  +  dist/lib/*.jar  (JavaFX bundled) nella stessa dir
+#    - Connessione internet per scaricare l'applicazione e le dipendenze
 #
-#  Uso:
+#  Uso (installazione automatica da GitHub):
+#    ssh root@target 'bash -c "curl -fsSL https://raw.githubusercontent.com/accaicedtea/ttetttos/main/setup-kiosk.sh | bash"'
+#    # oppure copia locale:
 #    scp -r <progetto> root@target:/tmp/kiosk-app
 #    ssh root@target 'bash /tmp/kiosk-app/setup-kiosk.sh'
+#
+#  Reset completo:
+#    ssh root@target 'bash /tmp/kiosk-app/setup-kiosk.sh reset'
+#    # oppure:
+#    curl -fsSL https://raw.githubusercontent.com/accaicedtea/ttetttos/main/setup-kiosk.sh | bash -s reset
+#  Questo cancella /opt/kiosk e reinstalla tutto da zero.
+#
+#  Il setup scarica sempre l'ultima release stabile da:
+#    https://github.com/accaicedtea/ttetttos/releases/latest
 #
 #  Architettura di robustezza:
 #    systemd service (non bash loop) → watchdog → OOM killer → kernel panic reboot
 #    filesystem read-only su /  →  /opt/kiosk su overlay tmpfs  →  no corruzione
 #    hardware watchdog timer  →  reboot fisico se il sistema si blocca
 # ═══════════════════════════════════════════════════════════════════════════════
+
 set -euo pipefail
 IFS=$'\n\t'
 
-# ─── Download app se richiesto ─────────────────────────────────────────────
-DOWNLOAD_URL=""
-if [[ -n "${KIOSK_APP_URL:-}" ]]; then
-    DOWNLOAD_URL="$KIOSK_APP_URL"
-elif [[ -n "${1:-}" && "${1}" =~ ^https?:// ]]; then
-    DOWNLOAD_URL="$1"
+# ─── Modalità reset: cancella /opt/kiosk e reinstalla tutto ───────────────
+if [[ "${1:-}" == "reset" ]]; then
+    echo -e "\033[0;33m[RESET]\033[0m Rimozione completa di /opt/kiosk..."
+    systemctl stop kiosk.service 2>/dev/null || true
+    rm -rf /opt/kiosk
+    echo -e "\033[0;32m[ OK ]\033[0m Directory /opt/kiosk rimossa."
 fi
 
-if [[ -n "$DOWNLOAD_URL" ]]; then
-    step "Download applicazione da $DOWNLOAD_URL"
-    mkdir -p "$SRC_DIR/dist/lib"
-    curl -L "$DOWNLOAD_URL/demo-1.jar" -o "$SRC_DIR/dist/demo-1.jar"
-    curl -L "$DOWNLOAD_URL/lib.tar.gz" | tar -xz -C "$SRC_DIR/dist/lib"
-    ok "Applicazione scaricata."
-fi
+# ─── Download app automatico ────────────────────────────────────────────────
+KIOSK_APP_URL="https://github.com/accaicedtea/ttetttos/releases/download/v1.0.0"
+DOWNLOAD_URL="$KIOSK_APP_URL"
+
+step "Download applicazione da $DOWNLOAD_URL"
+mkdir -p "$SRC_DIR/dist/lib"
+curl -L "$DOWNLOAD_URL/demo-1.jar" -o "$SRC_DIR/dist/demo-1.jar"
+curl -L "$DOWNLOAD_URL/lib.tar.gz" | tar -xz -C "$SRC_DIR/dist/lib"
+ok "Applicazione scaricata."
 
 # ─── Configurazione ────────────────────────────────────────────────────────────
 KIOSK_USER="kiosk"
@@ -362,37 +376,35 @@ chmod 755 "$APP_DIR"
 ok "App installata."
 
 # ── Script di lancio ottimizzato ───────────────────────────────────────
-cat > "$APP_DIR/run-kiosk.sh" << LAUNCHER
+cat > "$APP_DIR/run-kiosk.sh" << 'LAUNCHER'
 #!/usr/bin/env bash
 # Script di lancio Java — ottimizzato per totem 24/7
 
 # Renderer: prova prima hardware, poi software
-export PRISM_ORDER="\${PRISM_ORDER:-es2,sw}"
+export PRISM_ORDER="${PRISM_ORDER:-es2,sw}"
+# Forza sempre rendering software per compatibilità VM e fallback
+export LIBGL_ALWAYS_SOFTWARE=1
+export WLR_RENDERER_ALLOW_SOFTWARE=1
+export WLR_NO_HARDWARE_CURSORS=1
+export GDK_BACKEND=wayland
+export QT_QPA_PLATFORM=wayland
 
-# Rilevamento VM: forza software rendering
-if lspci 2>/dev/null | grep -qi "vmware\|virtualbox\|qxl\|virtio"; then
-    export LIBGL_ALWAYS_SOFTWARE=1
-    export WLR_RENDERER=pixman
-    export WLR_RENDERER_ALLOW_SOFTWARE=1
-    export WLR_NO_HARDWARE_CURSORS=1
-fi
-
-exec java \\
-    ${JAVA_OPTS} \\
-    --module-path "$APP_DIR/lib" \\
-    --add-modules javafx.controls,javafx.fxml \\
-    -Djava.awt.headless=false \\
-    -Dprism.order=es2,sw \\
-    -Dprism.verbose=false \\
-    -Dglass.platform=gtk \\
-    -Djdk.gtk.version=3 \\
-    -Djavafx.animation.fullspeed=true \\
-    -XX:+UseG1GC \\
-    -XX:MaxGCPauseMillis=50 \\
-    -XX:+DisableExplicitGC \\
-    -Dsun.java2d.opengl=false \\
-    -Dfile.encoding=UTF-8 \\
-    -cp "$APP_DIR/demo-1.jar" \\
+exec java \
+    ${JAVA_OPTS} \
+    --module-path "$APP_DIR/lib" \
+    --add-modules javafx.controls,javafx.fxml \
+    -Djava.awt.headless=false \
+    -Dprism.order=es2,sw \
+    -Dprism.verbose=false \
+    -Dglass.platform=gtk \
+    -Djdk.gtk.version=3 \
+    -Djavafx.animation.fullspeed=true \
+    -XX:+UseG1GC \
+    -XX:MaxGCPauseMillis=50 \
+    -XX:+DisableExplicitGC \
+    -Dsun.java2d.opengl=false \
+    -Dfile.encoding=UTF-8 \
+    -cp "$APP_DIR/demo-1.jar" \
     com.example.App
 LAUNCHER
 chmod +x "$APP_DIR/run-kiosk.sh"
@@ -493,12 +505,19 @@ StartLimitBurst=10
 Type=simple
 User=${KIOSK_USER}
 WorkingDirectory=${APP_DIR}
+
+# Ambiente grafico e compatibilità software rendering
 Environment="XCURSOR_THEME=blank-cursor"
 Environment="XCURSOR_SIZE=24"
 Environment="XDG_RUNTIME_DIR=/run/user/$(id -u ${KIOSK_USER})"
 Environment="HOME=${KIOSK_HOME}"
 Environment="DISPLAY="
 Environment="WAYLAND_DISPLAY=wayland-0"
+Environment="LIBGL_ALWAYS_SOFTWARE=1"
+Environment="WLR_RENDERER_ALLOW_SOFTWARE=1"
+Environment="WLR_NO_HARDWARE_CURSORS=1"
+Environment="GDK_BACKEND=wayland"
+Environment="QT_QPA_PLATFORM=wayland"
 
 # Cage avvia Wayland compositor + app in un unico processo
 ExecStart=/usr/bin/dbus-run-session /usr/bin/cage -d -- ${APP_DIR}/run-kiosk.sh
