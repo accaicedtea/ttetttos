@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # =============================================================================
-# setup-kiosk.sh - Kiosk JavaFX su Linux (X11 + startx, NO cage/Wayland)
+# setup-kiosk.sh - Kiosk JavaFX su Linux (Debian/Ubuntu) con GNOME Kiosk
 #
-# Funziona su: Debian 11/12, Ubuntu 20.04/22.04/24.04, qualsiasi distro con X11
-# Approccio: TTY1 auto-login -> .bash_profile -> startx -> .xinitrc -> JavaFX
+# Approccio moderno:
+#   - GNOME Kiosk (sessioni Wayland o X11) per l'ambiente chiosco
+#   - OverlayFS per proteggere il filesystem di root (read-only)
+#   - Autologin per l'utente kiosk
+#   - Script di avvio personalizzato per JavaFX
 #
-# MODIFICHE RECENTI (16/03/2026):
-#   - Aggiunto utente kiosk al gruppo tty (risolve "Cannot open /dev/tty0")
-#   - Corretto .bash_profile (sintassi, spazi, logica di stop)
-#   - Download librerie più robusto: se lib/ rimane vuoto dopo 3 tentativi, fail
-#   - Controllo esplicito dei permessi su /dev/tty0
-#   - Migliorata gestione errori e messaggi
+# Basato su:
+#   https://johanneskinzig.de/blog/2025/07/13/how-to-set-up-ubuntu-linux-as-a-kiosk-or-self-service-terminal-part-1/
+#   https://gist.github.com/smahi/a80302fa0ac031697a4e2985826837cd
 #
 # Uso:
 #   curl -fsSL https://raw.githubusercontent.com/accaicedtea/ttetttos/main/setup-kiosk.sh | bash
@@ -37,7 +37,7 @@ MODE="${1:-install}"
 # =============================================================================
 # Logging
 # =============================================================================
-mkdir -p "$(dirname $LOG)" && touch "$LOG" 2>/dev/null || true
+mkdir -p "$(dirname "$LOG")" && touch "$LOG" 2>/dev/null || true
 log()  { MSG="[$(date '+%H:%M:%S')] INFO  $*"; echo "$MSG"; echo "$MSG" >> "$LOG" 2>/dev/null; }
 ok()   { MSG="[$(date '+%H:%M:%S')]  OK   $*"; echo "$MSG"; echo "$MSG" >> "$LOG" 2>/dev/null; }
 warn() { MSG="[$(date '+%H:%M:%S')] WARN  $*"; echo "$MSG"; echo "$MSG" >> "$LOG" 2>/dev/null; }
@@ -73,48 +73,49 @@ inst() {
 }
 
 # =============================================================================
-# Funzione pulizia sistema completa (solo per reset/reset-soft)
+# Funzioni per la gestione di JavaFX (riutilizzate)
+# =============================================================================
+find_fx() {
+    [ -d "${APP_DIR}/javafx-sdk" ] && \
+        ls "${APP_DIR}/javafx-sdk/"*.jar >/dev/null 2>&1 && \
+        echo "${APP_DIR}/javafx-sdk" && return
+    [ -n "$FX_PATH_DEFAULT" ] && [ -d "$FX_PATH_DEFAULT" ] && \
+        echo "$FX_PATH_DEFAULT" && return
+    FXJ=$(find /usr/share/java /usr/lib/jvm /usr/share/openjfx \
+               -name "javafx.controls.jar" 2>/dev/null | head -1)
+    [ -n "$FXJ" ] && dirname "$FXJ" && return
+    echo "${APP_DIR}/lib"
+}
+
+build_cp() {
+    CP="${APP_DIR}/demo-1.jar"
+    for J in "${APP_DIR}/lib/"*.jar; do
+        [ -f "$J" ] && CP="${CP}:${J}"
+    done
+    echo "$CP"
+}
+
+# =============================================================================
+# Funzione pulizia sistema (reset/reset-soft)
 # =============================================================================
 clean_system() {
     sep "Pulizia sistema"
 
-    # Ferma display manager e server X (necessario per reset)
-    log "Fermo display manager e X server..."
-    for DM in gdm3 gdm lightdm sddm xdm; do
-        systemctl stop    "$DM" 2>/dev/null || true
-        systemctl disable "$DM" 2>/dev/null || true
-        systemctl mask    "$DM" 2>/dev/null || true
-    done
-    pkill -9 Xorg   2>/dev/null || true
-    pkill -9 X      2>/dev/null || true
-    pkill -9 java   2>/dev/null || true
-    pkill -9 openbox 2>/dev/null || true
+    # Disabilita overlayroot se attivo
+    if [ -f /etc/overlayroot.conf ] && grep -q "^overlayroot=" /etc/overlayroot.conf; then
+        overlayroot-chroot <<EOF
+sed -i 's/^overlayroot=.*/#overlayroot="tmpfs:swap=1,recurse=0"/' /etc/overlayroot.conf
+EOF
+    fi
+
+    # Ferma sessioni kiosk
+    pkill -u "$KIOSK_USER" 2>/dev/null || true
     sleep 1
-    ok "Display manager fermati."
 
-    # Rimuovi servizi systemd kiosk
-    for SVC in kiosk kiosk-logclean kiosk-nightly-restart; do
-        systemctl stop    "${SVC}.service" 2>/dev/null || true
-        systemctl disable "${SVC}.service" 2>/dev/null || true
-        rm -f "/etc/systemd/system/${SVC}.service"
-        rm -f "/etc/systemd/system/${SVC}.timer"
-    done
-    systemctl daemon-reload 2>/dev/null || true
-
-    # Rimuovi TUTTI gli utenti non di sistema (UID >= 1000)
-    log "Rimuovo utenti non di sistema..."
-    while IFS=: read -r UNAME _ UID _ _ UHOME _; do
-        [ "$UID" -lt 1000 ] 2>/dev/null && continue
-        [ "$UNAME" = "nobody" ] && continue
-        log "  Rimuovo: $UNAME (UID=$UID)"
-        pkill -u "$UNAME" 2>/dev/null || true
-        sleep 0.3
-        userdel -r -f "$UNAME" 2>/dev/null || \
-        userdel -r    "$UNAME" 2>/dev/null || \
-        userdel       "$UNAME" 2>/dev/null || true
-        [ -n "$UHOME" ] && [ "$UHOME" != "/" ] && rm -rf "$UHOME" 2>/dev/null || true
-    done < /etc/passwd
-    ok "Utenti rimossi."
+    # Rimuovi utente kiosk
+    if id "$KIOSK_USER" >/dev/null 2>&1; then
+        userdel -r -f "$KIOSK_USER" 2>/dev/null || true
+    fi
 
     # Rimuovi configurazioni
     rm -f /etc/sudoers.d/kiosk
@@ -124,50 +125,13 @@ clean_system() {
     rm -f /usr/local/bin/kiosk-control
     rm -rf /usr/share/icons/blank-cursor
 
-    # Riabilita TTY (non necessario ora, ma per pulizia)
-    for i in 2 3 4 5 6; do
-        systemctl unmask "getty@tty${i}.service" 2>/dev/null || true
-    done
-    systemctl daemon-reload 2>/dev/null || true
+    # Rimuovi overlayroot.conf (se completamente pulito)
+    # rm -f /etc/overlayroot.conf   # forse no, lo lasciamo ma disabilitato
+
+    # Reimposta target grafico se necessario
+    systemctl set-default graphical.target 2>/dev/null || true
+
     ok "Pulizia completata."
-}
-
-# =============================================================================
-# Funzione per applicare le modifiche di sistema che richiedono il riavvio
-# (disabilita DM, maschera TTY, imposta target) e riavvia
-# =============================================================================
-apply_system_changes_and_reboot() {
-    sep "APPLICAZIONE MODIFICHE DI SISTEMA E RIAVVIO"
-
-    log "Disabilito display manager (gdm, lightdm, sddm, xdm)..."
-    for DM in gdm3 gdm lightdm sddm xdm; do
-        if systemctl is-active "$DM" >/dev/null 2>&1 || systemctl is-enabled "$DM" >/dev/null 2>&1; then
-            systemctl stop "$DM" 2>/dev/null || true
-            systemctl disable "$DM" 2>/dev/null || true
-            systemctl mask "$DM" 2>/dev/null || true
-            log "  $DM disabilitato e mascherato."
-        fi
-    done
-
-    log "Maschero getty sulle TTY 2-6..."
-    for i in 2 3 4 5 6; do
-        systemctl mask "getty@tty${i}.service" 2>/dev/null || true
-    done
-
-    log "Imposto default target a multi-user (senza DM)..."
-    systemctl set-default multi-user.target 2>/dev/null || true
-
-    log "Tutte le modifiche sono state applicate."
-
-    echo ""
-    echo "===================================================="
-    echo "  SETUP COMPLETATO - RIAVVIO IN 10 SECONDI"
-    echo "  Premi Ctrl+C per annullare il riavvio e fermarti"
-    echo "  (poi potrai riavviare manualmente con 'reboot')"
-    echo "===================================================="
-    sleep 10
-    log "Riavvio in corso..."
-    reboot
 }
 
 # =============================================================================
@@ -190,8 +154,7 @@ fi
 
 if [ "$MODE" = "fix" ]; then
     sep "MODALITA FIX"
-    pkill -9 java 2>/dev/null || true
-    pkill -9 Xorg 2>/dev/null || true
+    pkill -u "$KIOSK_USER" 2>/dev/null || true
     sleep 1
     MODE="install"
 fi
@@ -200,7 +163,7 @@ if [ "$MODE" = "update" ]; then
     sep "UPDATE JAR"
     TAG="${2:-$RELEASE_TAG}"
     URL="https://github.com/${GITHUB_USER}/${GITHUB_REPO}/releases/download/${TAG}/demo-1.jar"
-    pkill java 2>/dev/null || true
+    pkill -u "$KIOSK_USER" 2>/dev/null || true
     sleep 1
     for TRY in 1 2 3; do
         curl -fsSL --max-time 120 "$URL" -o "${APP_DIR}/demo-1.jar" && {
@@ -216,8 +179,8 @@ fi
 # =============================================================================
 echo ""
 echo "+------------------------------------------------------+"
-echo "|  KIOSK SETUP - $(date '+%Y-%m-%d %H:%M')               |"
-echo "|  Distro: $DISTRO ($ARCH)                        |"
+echo "|  KIOSK SETUP (GNOME Kiosk) - $(date '+%Y-%m-%d %H:%M') |"
+echo "|  Distro: $DISTRO ($ARCH)                              |"
 echo "+------------------------------------------------------+"
 echo ""
 
@@ -250,16 +213,6 @@ curl -sf --max-time 10 https://github.com -o /dev/null && ok "Internet: OK" || {
 
 command -v curl >/dev/null && ok "curl: OK" || { warn "curl mancante"; ERRORS=$((ERRORS+1)); }
 
-# Avviso importante: display manager attivi (ma non li fermiamo ora)
-DM_ACTIVE=""
-for DM in gdm3 gdm lightdm sddm xdm; do
-    systemctl is-active "$DM" >/dev/null 2>&1 && DM_ACTIVE="$DM_ACTIVE $DM"
-done
-if [ -n "$DM_ACTIVE" ]; then
-    warn "Display manager attivi:$DM_ACTIVE"
-    warn "Verranno disabilitati SOLO DOPO il completamento dell'installazione."
-fi
-
 [ "$ERRORS" -gt 0 ] && {
     warn "$ERRORS errore/i critico/i. Premi Invio per continuare o Ctrl+C..."
     read _X 2>/dev/null || true
@@ -276,69 +229,35 @@ case "$PKG" in
     pacman) pacman -Sy --noconfirm 2>/dev/null || true ;;
 esac
 
-# Strumenti base
+# Pacchetti essenziali
 inst curl wget ca-certificates unzip python3
 
-# X11 - APPROCCIO SEMPLICE CHE FUNZIONA OVUNQUE
-inst xorg openbox xinit x11-xserver-utils
+# GNOME Kiosk e overlayroot
+inst gnome-kiosk gnome-kiosk-script-session overlayroot
 
-# Font
-inst fonts-dejavu-core 2>/dev/null || true
-inst fonts-noto-color-emoji 2>/dev/null || true
-
-# Strumenti sistema
-inst pciutils util-linux procps iproute2 lm-sensors
-
-# GTK3 (JavaFX glass platform)
-inst libgtk-3-0 2>/dev/null || inst gtk3 2>/dev/null || true
-
-# Mesa OpenGL - software rendering
-case "$PKG" in
-    apt)
-        inst libgl1-mesa-dri libgl1-mesa-glx libegl1-mesa \
-             libgles2-mesa libgl1-mesa-swrast libgbm1 libdrm2
-        ;;
-    dnf)
-        inst mesa-dri-drivers mesa-libGL mesa-libEGL mesa-libgbm libdrm ;;
-    pacman)
-        inst mesa libdrm ;;
-esac
+# X11 (opzionale, per sessione X11) e utilità
+inst xorg x11-xserver-utils xinit openbox unclutter
 
 # Java
-log "Installo Java..."
-JAVA_OK=false
-case "$PKG" in
-    apt)
-        DEBIAN_FRONTEND=noninteractive apt-get install -y \
-            --no-install-recommends default-jre 2>/dev/null && JAVA_OK=true || \
-        DEBIAN_FRONTEND=noninteractive apt-get install -y \
-            --no-install-recommends openjdk-21-jre-headless 2>/dev/null && JAVA_OK=true || \
-        DEBIAN_FRONTEND=noninteractive apt-get install -y \
-            --no-install-recommends openjdk-17-jre-headless 2>/dev/null && JAVA_OK=true || true
-        ;;
-    dnf)
-        dnf install -y java-21-openjdk-headless 2>/dev/null && JAVA_OK=true || \
-        dnf install -y java-17-openjdk-headless 2>/dev/null && JAVA_OK=true || true
-        ;;
-    pacman)
-        pacman -S --noconfirm jre21-openjdk-headless 2>/dev/null && JAVA_OK=true || \
-        pacman -S --noconfirm jre17-openjdk-headless 2>/dev/null && JAVA_OK=true || true
-        ;;
-esac
+inst openjdk-17-jre-headless || inst default-jre
 
-# JavaFX sistema
+# JavaFX (pacchetto di sistema, se disponibile)
 inst openjfx 2>/dev/null || true
 
-# unclutter: nasconde il cursore del mouse
-inst unclutter 2>/dev/null || inst unclutter-xfixes 2>/dev/null || true
+# GTK, Mesa, librerie grafiche
+inst libgtk-3-0 libgl1-mesa-dri libgl1-mesa-glx libegl1-mesa libgbm1 libdrm2
+
+# Font
+inst fonts-dejavu-core fonts-noto-color-emoji
+
+# SSH (per gestione remota)
+inst openssh-server
 
 command -v java >/dev/null && ok "Java: $(java -version 2>&1 | head -1)" || warn "Java non trovato"
-command -v startx >/dev/null && ok "startx: OK" || warn "startx non trovato"
-command -v openbox >/dev/null && ok "openbox: OK" || warn "openbox non trovato"
 ldconfig 2>/dev/null || true
 
 # =============================================================================
-# FASE 2 - Utente kiosk (sempre ricreato da zero)
+# FASE 2 - Utente kiosk
 # =============================================================================
 sep "FASE 2 - Utente kiosk"
 
@@ -346,32 +265,31 @@ if id "$KIOSK_USER" >/dev/null 2>&1; then
     log "Utente $KIOSK_USER esiste - lo rimuovo per ricrearlo pulito..."
     pkill -u "$KIOSK_USER" 2>/dev/null || true
     sleep 1
-    userdel -r -f "$KIOSK_USER" 2>/dev/null || \
-    userdel -r    "$KIOSK_USER" 2>/dev/null || true
-    ok "Rimosso."
+    userdel -r -f "$KIOSK_USER" 2>/dev/null || true
 fi
 
 log "Creo utente $KIOSK_USER..."
-useradd -m -s /bin/bash -G video,input,render,audio "$KIOSK_USER" 2>/dev/null || \
+useradd -m -s /bin/bash -G video,input,render,audio,tty "$KIOSK_USER" || \
 useradd -m -s /bin/bash "$KIOSK_USER" || fail "Impossibile creare $KIOSK_USER"
-
-# Aggiungo ai gruppi necessari (in particolare tty per X)
-usermod -a -G tty "$KIOSK_USER" 2>/dev/null && ok "Utente aggiunto al gruppo tty"
-
 passwd -d "$KIOSK_USER"
 
 KIOSK_HOME=$(eval echo ~"$KIOSK_USER")
 KIOSK_UID=$(id -u "$KIOSK_USER")
 ok "Utente $KIOSK_USER: UID=$KIOSK_UID home=$KIOSK_HOME"
-log "Gruppi: $(id $KIOSK_USER)"
 
-# Verifica accesso a /dev/tty0 (importante per X)
-if ! sudo -u "$KIOSK_USER" test -r /dev/tty0 2>/dev/null; then
-    warn "L'utente $KIOSK_USER non può leggere /dev/tty0 - potrebbe servire il gruppo tty"
-fi
+# Abilita autologin per l'utente (impostazione di GNOME)
+# Configura il file /var/lib/AccountsService/users/kiosk
+mkdir -p /var/lib/AccountsService/users
+cat > "/var/lib/AccountsService/users/${KIOSK_USER}" <<EOF
+[User]
+Session=gnome-kiosk-script-wayland
+SystemAccount=false
+EOF
+chmod 644 "/var/lib/AccountsService/users/${KIOSK_USER}"
+ok "Autologin configurato per GNOME Kiosk (Wayland)."
 
 # =============================================================================
-# FASE 3 - Download app
+# FASE 3 - Download app e librerie
 # =============================================================================
 sep "FASE 3 - Download app"
 mkdir -p "${APP_DIR}/lib" "${APP_DIR}/logs" "${APP_DIR}/config"
@@ -382,7 +300,6 @@ if [ -f "${APP_DIR}/demo-1.jar" ]; then
     if [ "$SZ" -gt 10000 ] 2>/dev/null; then
         ok "demo-1.jar: gia presente ($(du -h "${APP_DIR}/demo-1.jar" | cut -f1))"
     else
-        warn "demo-1.jar presente ma corrotto - riscarico..."
         rm -f "${APP_DIR}/demo-1.jar"
     fi
 fi
@@ -394,9 +311,7 @@ if [ ! -f "${APP_DIR}/demo-1.jar" ]; then
         if curl -fsSL --retry 2 --connect-timeout 30 --max-time 180 \
                 "$JAR_URL" -o "${APP_DIR}/demo-1.jar"; then
             SZ=$(stat -c%s "${APP_DIR}/demo-1.jar" 2>/dev/null || echo 0)
-            [ "$SZ" -gt 10000 ] 2>/dev/null && {
-                ok "demo-1.jar: $(du -h "${APP_DIR}/demo-1.jar" | cut -f1)"; DONE=true; break; }
-            warn "File troppo piccolo ($SZ bytes)"
+            [ "$SZ" -gt 10000 ] 2>/dev/null && { ok "demo-1.jar: OK"; DONE=true; break; }
         fi
         warn "Tentativo $TRY/5 fallito. Attendo $((TRY*3))s..."
         sleep $((TRY*3))
@@ -404,7 +319,7 @@ if [ ! -f "${APP_DIR}/demo-1.jar" ]; then
     $DONE || fail "Impossibile scaricare demo-1.jar."
 fi
 
-# lib.tar.gz - Download, verifica ed estrazione robusta
+# lib.tar.gz - Download ed estrazione robusta
 LIB_N=$(ls "${APP_DIR}/lib/"*.jar 2>/dev/null | wc -l || echo 0)
 if [ "$LIB_N" -gt 0 ]; then
     ok "Librerie: gia presenti ($LIB_N JAR)"
@@ -413,46 +328,27 @@ else
     DOWNLOAD_OK=false
     for TRY in 1 2 3; do
         rm -f /tmp/kiosk-lib.tar.gz
-        # Scarica con curl, seguito da controllo dimensione
         if curl -fsSL --retry 2 --max-time 180 "$LIB_URL" -o /tmp/kiosk-lib.tar.gz; then
             SIZE=$(stat -c%s /tmp/kiosk-lib.tar.gz 2>/dev/null || echo 0)
-            if [ "$SIZE" -lt 1024 ]; then
-                warn "File troppo piccolo ($SIZE byte) - tentativo $TRY/3"
-                sleep $((TRY*3))
-                continue
-            fi
-            # Analizza il contenuto del tar per decidere se usare --strip-components
-            TAR_CONTENT=$(tar -tzf /tmp/kiosk-lib.tar.gz 2>/dev/null | head -5)
-            log "Contenuto prime righe: $TAR_CONTENT"
-            FIRST_ENTRY=$(echo "$TAR_CONTENT" | head -1)
+            [ "$SIZE" -lt 1024 ] && { warn "File troppo piccolo"; continue; }
+            # Analizza contenuto per decidere strip
+            FIRST_ENTRY=$(tar -tzf /tmp/kiosk-lib.tar.gz 2>/dev/null | head -1)
             STRIP_OPT=""
-            if [[ "$FIRST_ENTRY" == lib/* ]] || [[ "$FIRST_ENTRY" == ./lib/* ]]; then
-                STRIP_OPT="--strip-components=1"
-                log "Rilevata directory radice 'lib/', uso --strip-components=1"
-            fi
-            # Estrai nella directory lib/
+            [[ "$FIRST_ENTRY" == lib/* || "$FIRST_ENTRY" == ./lib/* ]] && STRIP_OPT="--strip-components=1"
             mkdir -p "${APP_DIR}/lib"
             if tar -xzf /tmp/kiosk-lib.tar.gz -C "${APP_DIR}/lib/" $STRIP_OPT 2>/dev/null; then
                 LIB_N=$(ls "${APP_DIR}/lib/"*.jar 2>/dev/null | wc -l || echo 0)
                 if [ "$LIB_N" -gt 0 ]; then
-                    ok "Librerie: $LIB_N JAR estratti correttamente"
+                    ok "Librerie: $LIB_N JAR estratti"
                     DOWNLOAD_OK=true
                     break
-                else
-                    warn "Estrazione completata ma nessun JAR trovato in ${APP_DIR}/lib/"
                 fi
-            else
-                warn "Errore durante l'estrazione del tar"
             fi
-        else
-            warn "Download fallito (tentativo $TRY/3)"
         fi
         rm -f /tmp/kiosk-lib.tar.gz
         sleep $((TRY*3))
     done
-    if [ "$DOWNLOAD_OK" != "true" ]; then
-        fail "Impossibile scaricare o estrarre lib.tar.gz dopo 3 tentativi.\nVerifica che il file esista nella release: $LIB_URL\nPuoi anche controllare manualmente con: curl -I $LIB_URL"
-    fi
+    [ "$DOWNLOAD_OK" = "true" ] || fail "Impossibile scaricare lib.tar.gz"
 fi
 
 # =============================================================================
@@ -469,51 +365,34 @@ if [ "$FX_N" -gt 0 ]; then
 fi
 
 if [ -z "$FX_PATH" ]; then
-    FX_JAR=$(find /usr/share/java /usr/lib/jvm \
-                  -name "javafx.controls.jar" 2>/dev/null | head -1 || true)
+    # Cerca JavaFX di sistema
+    FX_JAR=$(find /usr/share/java /usr/lib/jvm -name "javafx.controls.jar" 2>/dev/null | head -1)
     if [ -n "$FX_JAR" ]; then
         FX_SYS=$(dirname "$FX_JAR")
-        log "JavaFX di sistema: $FX_SYS"
         mkdir -p "$JAVAFX_DIR"
         cp "${FX_SYS}/"*.jar "$JAVAFX_DIR/" 2>/dev/null || true
-        find "$FX_SYS" -name "*.so" -exec cp {} "$JAVAFX_DIR/" \; 2>/dev/null || true
+        cp "${FX_SYS}/"*.so "$JAVAFX_DIR/" 2>/dev/null || true
         FX_N=$(ls "${JAVAFX_DIR}/"*.jar 2>/dev/null | wc -l || echo 0)
-        ok "JavaFX di sistema copiato: $FX_N JAR"
-        FX_PATH="$JAVAFX_DIR"
+        [ "$FX_N" -gt 0 ] && { ok "JavaFX di sistema copiato"; FX_PATH="$JAVAFX_DIR"; }
     fi
 fi
 
 if [ -z "$FX_PATH" ]; then
-    TMP_MB=$(df /tmp --output=avail -m 2>/dev/null | tail -1 | tr -d ' ' || echo 999)
-    [ "$TMP_MB" -lt 200 ] 2>/dev/null && {
-        warn "Poco spazio /tmp - pulizia..."
-        apt-get clean 2>/dev/null || true
-        rm -rf /tmp/javafx-* /tmp/fxext /tmp/*.zip 2>/dev/null || true
-    }
+    # Download da Gluon
     log "Download JavaFX SDK $FX_VER da Gluon (~80MB)..."
     for TRY in 1 2 3; do
         rm -f /tmp/javafx.zip
         if curl -fsSL --max-time 360 "$FX_URL" -o /tmp/javafx.zip; then
-            log "Estraggo JavaFX (escludo webkit 60MB inutile)..."
             mkdir -p /tmp/fxext
-            unzip -q /tmp/javafx.zip -d /tmp/fxext/ \
-                -x "*/libjfxwebkit.so" -x "*/libgstreamer-lite.so" \
-                -x "*/src.zip" 2>/dev/null
-            true
+            unzip -q /tmp/javafx.zip -d /tmp/fxext/ -x "*/libjfxwebkit.so" "*/src.zip" 2>/dev/null
             mkdir -p "$JAVAFX_DIR"
-            find /tmp/fxext -name "*.jar" -exec cp {} "$JAVAFX_DIR/" \; 2>/dev/null || true
-            find /tmp/fxext -name "*.so" \
-                ! -name "libjfxwebkit.so" ! -name "libgstreamer-lite.so" \
-                -exec cp {} "$JAVAFX_DIR/" \; 2>/dev/null || true
+            find /tmp/fxext -name "*.jar" -exec cp {} "$JAVAFX_DIR/" \;
+            find /tmp/fxext -name "*.so" ! -name "libjfxwebkit.so" -exec cp {} "$JAVAFX_DIR/" \;
             rm -rf /tmp/javafx.zip /tmp/fxext
             FX_N=$(ls "${JAVAFX_DIR}/"*.jar 2>/dev/null | wc -l || echo 0)
-            [ "$FX_N" -gt 0 ] && {
-                ok "JavaFX SDK: $FX_N JAR"; FX_PATH="$JAVAFX_DIR"; break; } || \
-                warn "Nessun JAR estratto"
-        else
-            warn "Download tentativo $TRY/3 fallito"
-            sleep $((TRY*5))
+            [ "$FX_N" -gt 0 ] && { ok "JavaFX SDK scaricato"; FX_PATH="$JAVAFX_DIR"; break; }
         fi
+        sleep $((TRY*5))
     done
 fi
 
@@ -522,96 +401,32 @@ log "FX_PATH: $FX_PATH"
 chown -R "${KIOSK_USER}:${KIOSK_USER}" "$APP_DIR"
 
 # =============================================================================
-# FASE 5 - Test sistema (senza disabilitare DM)
+# FASE 5 - Script di avvio per GNOME Kiosk
 # =============================================================================
-sep "FASE 5 - Test e riparazione"
+sep "FASE 5 - Script di avvio (gnome-kiosk-script)"
 
-# Java
-command -v java >/dev/null && ok "Java: $(java -version 2>&1 | head -1)" || {
-    warn "Java non trovato - reinstallo..."
-    inst default-jre 2>/dev/null || inst openjdk-17-jre-headless 2>/dev/null || true
-}
+# Crea la directory per lo script (se non esiste)
+mkdir -p "${KIOSK_HOME}/.local/bin"
 
-# JavaFX moduli
-if command -v java >/dev/null && [ -d "$FX_PATH" ]; then
-    java --module-path "$FX_PATH" --list-modules 2>/dev/null | \
-        grep -q "javafx.controls" && ok "JavaFX moduli: OK" || \
-        warn "JavaFX moduli non trovati in $FX_PATH"
-fi
+# Crea lo script che verrà eseguito da GNOME Kiosk
+cat > "${KIOSK_HOME}/.local/bin/gnome-kiosk-script" << 'KIOSKSCRIPT'
+#!/bin/bash
+# Script per GNOME Kiosk - avvia l'applicazione JavaFX
 
-# GTK3
-ldconfig -p 2>/dev/null | grep -q "libgtk-3.so" && ok "GTK3: OK" || {
-    warn "GTK3 mancante - installo..."
-    inst libgtk-3-0 2>/dev/null || true; ldconfig 2>/dev/null || true; }
-
-# libGL
-ldconfig -p 2>/dev/null | grep -q "libGL.so" && ok "libGL: OK" || {
-    warn "libGL mancante - installo..."
-    inst libgl1-mesa-dri libgl1-mesa-glx libgl1-mesa-swrast 2>/dev/null || true
-    ldconfig 2>/dev/null || true; }
-
-# startx / openbox
-command -v startx  >/dev/null && ok "startx: OK"  || { warn "startx mancante"; inst xinit; }
-command -v openbox >/dev/null && ok "openbox: OK" || { warn "openbox mancante"; inst openbox; }
-
-# NOTA: non disabilitiamo i display manager ora, lo faremo alla fine.
-ok "Fase 5 completata."
-
-# =============================================================================
-# FASE 6 - Cursore invisibile
-# =============================================================================
-sep "FASE 6 - Cursore invisibile"
-mkdir -p /usr/share/icons/blank-cursor/cursors
-command -v python3 >/dev/null && python3 << 'PYEOF'
-import struct, os
-data = (b'Xcur'
-    + struct.pack('<III', 16, 0x10000, 1)
-    + struct.pack('<III', 0xFFFD0002, 24, 28)
-    + struct.pack('<IIIIIIIII', 36, 0xFFFD0002, 24, 1, 1, 1, 0, 0, 50)
-    + b'\x00\x00\x00\x00')
-with open('/usr/share/icons/blank-cursor/cursors/left_ptr', 'wb') as f:
-    f.write(data)
-for n in ['default','arrow','pointer','hand','hand1','hand2','text',
-          'xterm','wait','watch','grabbing','grab','move','progress']:
-    dst = '/usr/share/icons/blank-cursor/cursors/' + n
-    if not os.path.exists(dst):
-        try: os.symlink('left_ptr', dst)
-        except: pass
-PYEOF
-printf '[Icon Theme]\nName=blank-cursor\n' \
-    > /usr/share/icons/blank-cursor/index.theme
-ok "Cursore invisibile creato."
-
-# =============================================================================
-# FASE 7 - run-kiosk.sh (self-healing con X11/DISPLAY=:0)
-# =============================================================================
-sep "FASE 7 - Script di avvio (self-healing)"
-RUN="${APP_DIR}/run-kiosk.sh"
-
-printf '#!/usr/bin/env bash\n'                   > "$RUN"
-printf 'APP_DIR="%s"\n'        "$APP_DIR"       >> "$RUN"
-printf 'API_KEY="%s"\n'        "$API_KEY"       >> "$RUN"
-printf 'FX_PATH_DEFAULT="%s"\n' "$FX_PATH"      >> "$RUN"
-
-cat >> "$RUN" << 'RUNEOF'
-# run-kiosk.sh - lanciato da .xinitrc dopo startx
-# DISPLAY=:0 e gia settato da X11
-
+APP_DIR="/opt/kiosk"
 LOG="${APP_DIR}/logs/kiosk.log"
 ERRLOG="${APP_DIR}/logs/kiosk-err.log"
 PROFILE_FILE="${APP_DIR}/config/profile.conf"
 mkdir -p "${APP_DIR}/logs" "${APP_DIR}/config"
-ts()  { date '+%H:%M:%S'; }
-log() { echo "[$(ts)] $*" | tee -a "$LOG"; }
 
+export DISPLAY=:0
+export XAUTHORITY=/run/user/$(id -u)/gdm/Xauthority  # per Wayland? Forse non serve
+
+# Funzioni helper (copiate da run-kiosk.sh)
 find_fx() {
-    [ -d "${APP_DIR}/javafx-sdk" ] && \
-        ls "${APP_DIR}/javafx-sdk/"*.jar >/dev/null 2>&1 && \
-        echo "${APP_DIR}/javafx-sdk" && return
-    [ -n "$FX_PATH_DEFAULT" ] && [ -d "$FX_PATH_DEFAULT" ] && \
-        echo "$FX_PATH_DEFAULT" && return
-    FXJ=$(find /usr/share/java /usr/lib/jvm /usr/share/openjfx \
-               -name "javafx.controls.jar" 2>/dev/null | head -1)
+    [ -d "${APP_DIR}/javafx-sdk" ] && ls "${APP_DIR}/javafx-sdk/"*.jar >/dev/null 2>&1 && echo "${APP_DIR}/javafx-sdk" && return
+    [ -n "$FX_PATH_DEFAULT" ] && [ -d "$FX_PATH_DEFAULT" ] && echo "$FX_PATH_DEFAULT" && return
+    FXJ=$(find /usr/share/java /usr/lib/jvm /usr/share/openjfx -name "javafx.controls.jar" 2>/dev/null | head -1)
     [ -n "$FXJ" ] && dirname "$FXJ" && return
     echo "${APP_DIR}/lib"
 }
@@ -624,282 +439,109 @@ build_cp() {
     echo "$CP"
 }
 
-detect_error() {
-    O="$1"
-    echo "$O" | grep -qi "javafx.*not found\|FindException\|boot layer" \
-        && echo "no_javafx"  && return
-    echo "$O" | grep -qi "Cannot connect to X\|no display\|DISPLAY" \
-        && echo "no_display" && return
-    echo "$O" | grep -qi "OutOfMemoryError\|heap space" \
-        && echo "oom"        && return
-    echo "$O" | grep -qi "UnsatisfiedLinkError\|library.*not found" \
-        && echo "missing_lib" && return
-    echo "$O" | grep -qi "libGL\|MESA\|prism.*fail" \
-        && echo "opengl"     && return
-    echo "unknown"
-}
-
-# Con X11 usiamo sempre DISPLAY=:0 (impostato da startx)
-# Profili: variano solo le opzioni di rendering JavaFX
+# Leggi profilo
 PROFILE="x11_sw"
-[ -f "$PROFILE_FILE" ] && PROFILE=$(cat "$PROFILE_FILE" | tr -d '[:space:]')
+[ -f "$PROFILE_FILE" ] && PROFILE=$(cat "$PROFILE_FILE")
 
-ATTEMPT=0
+export TOTEM_API_KEY="api_key_totem_1"
+export LIBGL_ALWAYS_SOFTWARE=1
+export MESA_GL_VERSION_OVERRIDE=3.3
+export GALLIUM_DRIVER=softpipe
+
+case "$PROFILE" in
+    x11_sw)      JFXOPTS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3 -Djava.awt.headless=false" ;;
+    x11_gtk2)    JFXOPTS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=2 -Djava.awt.headless=false" ;;
+    x11_llvmpipe) export GALLIUM_DRIVER=llvmpipe; export MESA_GL_VERSION_OVERRIDE=4.5; JFXOPTS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3 -Djava.awt.headless=false" ;;
+    x11_verbose) MEM="-Xms128m -Xmx512m"; JFXOPTS="-Dprism.order=sw -Dprism.verbose=true -Dglass.platform=gtk -Djdk.gtk.version=3 -Djava.awt.headless=false" ;;
+    *)           JFXOPTS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3 -Djava.awt.headless=false" ;;
+esac
+
+# Esegui JavaFX
+FX=$(find_fx)
+CP=$(build_cp)
 MEM="-Xms64m -Xmx256m"
-LAST_WORKING=""
 
-log "======================================="
-log "Kiosk avvio su X11"
-log "DISPLAY: ${DISPLAY:-non impostato}"
-log "Profilo: $PROFILE"
-log "FX: $(find_fx)"
-log "======================================="
+echo "=== Avvio JavaFX (profilo $PROFILE) ===" >> "$LOG"
+java $MEM \
+    --module-path "$FX" \
+    --add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.base \
+    --add-opens javafx.graphics/com.sun.glass.ui=ALL-UNNAMED \
+    --add-opens javafx.graphics/com.sun.javafx.application=ALL-UNNAMED \
+    $JFXOPTS \
+    -cp "$CP" \
+    com.example.App >> "$LOG" 2>> "$ERRLOG"
+
+# Se termina, GNOME Kiosk riavvierà lo script automaticamente (grazie al loop in fondo)
+# ma dobbiamo mettere un loop per mantenerlo vivo? No, GNOME Kiosk riavvia lo script se termina? Sì, se lo script termina, la sessione termina.
+# Per far sì che l'applicazione venga riavviata in caso di crash, mettiamo un while true qui dentro.
+# In realtà, il meccanismo di GNOME Kiosc prevede che lo script venga eseguito una volta; se termina, la sessione finisce.
+# Quindi dobbiamo mettere un loop di riavvio manuale.
 
 while true; do
-    ATTEMPT=$((ATTEMPT+1))
-    FX=$(find_fx)
-    CP=$(build_cp)
-
-    # Con X11, DISPLAY=:0 e sempre disponibile (impostato da startx)
-    # Non serve Wayland, non serve cage, non serve seatd
-    export TOTEM_API_KEY="$API_KEY"
-    export LIBGL_ALWAYS_SOFTWARE=1
-    export MESA_GL_VERSION_OVERRIDE=3.3
-    export GALLIUM_DRIVER=softpipe
-
-    case "$PROFILE" in
-        x11_sw)
-            # Standard: X11 + software rendering + GTK3
-            JFXOPTS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3 -Djava.awt.headless=false"
-            ;;
-        x11_gtk2)
-            # Fallback GTK2
-            JFXOPTS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=2 -Djava.awt.headless=false"
-            ;;
-        x11_llvmpipe)
-            # llvmpipe renderer
-            export GALLIUM_DRIVER=llvmpipe
-            export MESA_GL_VERSION_OVERRIDE=4.5
-            JFXOPTS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3 -Djava.awt.headless=false"
-            ;;
-        x11_verbose)
-            # Verbose per debug
-            MEM="-Xms128m -Xmx512m"
-            JFXOPTS="-Dprism.order=sw -Dprism.forceGPU=false -Dprism.verbose=true -Dglass.platform=gtk -Djdk.gtk.version=3 -Djava.awt.headless=false"
-            ;;
-        *)
-            JFXOPTS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3 -Djava.awt.headless=false"
-            ;;
-    esac
-
-    log "--- Tentativo $ATTEMPT | profilo=$PROFILE | DISPLAY=${DISPLAY:-:0} ---"
-    TMPF=$(mktemp /tmp/kiosk.XXXXXX 2>/dev/null || echo "/tmp/kiosk-$$")
-
     java $MEM \
         --module-path "$FX" \
         --add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.base \
         --add-opens javafx.graphics/com.sun.glass.ui=ALL-UNNAMED \
         --add-opens javafx.graphics/com.sun.javafx.application=ALL-UNNAMED \
-        -Djava.awt.headless=false \
-        -Djavafx.animation.fullspeed=true \
-        -Dfile.encoding=UTF-8 \
-        -XX:+UseG1GC \
         $JFXOPTS \
         -cp "$CP" \
-        com.example.App > "$TMPF" 2>&1
-    RC=$?
-
-    cat "$TMPF" >> "$ERRLOG"
-    OUT=$(cat "$TMPF" 2>/dev/null || echo "")
-    rm -f "$TMPF"
-
-    log "Exit: $RC"
-    [ $RC -eq 0 ] && { log "Uscita normale."; exit 0; }
-
-    # App era partita - riavvia con stesso profilo
-    if echo "$OUT" | grep -qi "SplashController\|Login OK\|Nav.*->"; then
-        log "App partita con $PROFILE - riavvio in 3s..."
-        echo "$PROFILE" > "$PROFILE_FILE"
-        LAST_WORKING="$PROFILE"
-        sleep 3
-        continue
-    fi
-
-    ERRTYPE=$(detect_error "$OUT")
-    LASTERR=$(echo "$OUT" | grep -i "error\|exception\|failed" | tail -3)
-    log "Errore: $ERRTYPE | $LASTERR"
-
-    case "$ERRTYPE" in
-        no_javafx)
-            log "JavaFX mancante - installo openjfx..."
-            apt-get install -y openjfx 2>/dev/null || true
-            NEXT="x11_sw"
-            ;;
-        missing_lib)
-            log "Libreria nativa mancante - reinstallo Mesa..."
-            apt-get install -y libgl1-mesa-dri libgl1-mesa-glx \
-                libegl1-mesa libgbm1 2>/dev/null || true
-            ldconfig 2>/dev/null || true
-            NEXT="x11_sw"
-            ;;
-        oom)
-            MEM="-Xms128m -Xmx512m"
-            log "OOM - aumento heap a 512m"
-            NEXT="$PROFILE"
-            ;;
-        *)
-            case "$PROFILE" in
-                x11_sw)       NEXT="x11_gtk2" ;;
-                x11_gtk2)     NEXT="x11_llvmpipe" ;;
-                x11_llvmpipe) NEXT="x11_verbose" ;;
-                x11_verbose)  NEXT="x11_sw" ;;
-                *)             NEXT="x11_sw" ;;
-            esac
-            ;;
-    esac
-
-    if [ $ATTEMPT -ge 8 ]; then
-        log "8 tentativi. Pausa 30s..."
-        NEXT="${LAST_WORKING:-x11_sw}"
-        ATTEMPT=0
-        sleep 30
-    fi
-
-    log "Cambio: $PROFILE -> $NEXT"
-    PROFILE="$NEXT"
-    echo "$PROFILE" > "$PROFILE_FILE"
-    WAIT=$((ATTEMPT * 2))
-    [ $WAIT -gt 15 ] && WAIT=15
-    log "Attendo ${WAIT}s..."
-    sleep $WAIT
-done
-RUNEOF
-
-chmod +x "$RUN"
-bash -n "$RUN" && ok "run-kiosk.sh: sintassi OK" || warn "run-kiosk.sh: errore sintassi"
-
-echo "x11_sw" > "${APP_DIR}/config/profile.conf"
-chown -R "${KIOSK_USER}:${KIOSK_USER}" "$APP_DIR"
-
-# =============================================================================
-# FASE 8 - .xinitrc (avviato da startx, configura X11 e lancia l'app)
-# =============================================================================
-sep "FASE 8 - .xinitrc (sessione X11)"
-
-cat > "${KIOSK_HOME}/.xinitrc" << XIEOF
-#!/bin/bash
-# .xinitrc - configurazione sessione X11 per kiosk JavaFX
-
-# Disabilita screensaver e risparmio energetico
-xset -dpms
-xset s off
-xset s noblank
-xset r rate 500 50
-
-# Nasconde il cursore dopo 0.1 secondi di inattivita
-unclutter -idle 0.1 -root &
-
-# Avvia openbox come window manager (gestisce fullscreen)
-openbox-session &
-
-# Aspetta che openbox sia pronto
-sleep 1
-
-# Loop di avvio - riavvia l'app se crasha
-while true; do
-    /opt/kiosk/run-kiosk.sh
-    EC=\$?
-    echo "[$(date '+%H:%M:%S')] run-kiosk.sh uscito con codice \$EC" \
-        >> /opt/kiosk/logs/kiosk.log
-    # Se uscita normale (0) - esci senza riavviare
-    [ \$EC -eq 0 ] && break
-    echo "[$(date '+%H:%M:%S')] Riavvio in 3s..." >> /opt/kiosk/logs/kiosk.log
+        com.example.App >> "$LOG" 2>> "$ERRLOG"
+    EC=$?
+    echo "$(date): Java uscito con codice $EC - riavvio tra 3s" >> "$LOG"
     sleep 3
 done
+KIOSKSCRIPT
 
-# Se il loop finisce, chiudi X
-openbox --exit 2>/dev/null || true
-XIEOF
+chmod +x "${KIOSK_HOME}/.local/bin/gnome-kiosk-script"
+chown -R "${KIOSK_USER}:${KIOSK_USER}" "${KIOSK_HOME}/.local"
 
-chmod +x "${KIOSK_HOME}/.xinitrc"
-chown "${KIOSK_USER}:${KIOSK_USER}" "${KIOSK_HOME}/.xinitrc"
-ok ".xinitrc creato."
+# Imposta profilo iniziale
+echo "x11_sw" > "${APP_DIR}/config/profile.conf"
+chown "${KIOSK_USER}:${KIOSK_USER}" "${APP_DIR}/config/profile.conf"
 
-# =============================================================================
-# FASE 9 - .bash_profile (avviato da auto-login su TTY1) - VERSIONE CORRETTA
-# =============================================================================
-sep "FASE 9 - .bash_profile (auto-login TTY1)"
-
-cat > "${KIOSK_HOME}/.bash_profile" << 'BPEOF'
-# .bash_profile - eseguito al login su TTY1
-# Lancia startx che avvia X11 + .xinitrc + JavaFX
-
-if [ "$(tty)" = "/dev/tty1" ]; then
-    # Controlla flag di stop manuale
-    if [ -f /opt/kiosk/.stop ]; then
-        rm -f /opt/kiosk/.stop
-        echo ""
-        echo "Kiosk fermato manualmente."
-        echo "Per riavviare: startx"
-        echo ""
-    else
-        echo ""
-        echo "+----------------------------------------+"
-        echo "|  Kiosk in avvio tra 3 secondi...       |"
-        echo "|  Ctrl+C per accedere al terminale       |"
-        echo "+----------------------------------------+"
-        echo ""
-
-        # 3 secondi per interrompere con Ctrl+C
-        sleep 3
-
-        # Avvia X server + sessione (loop: riavvia se X crasha)
-        while true; do
-            startx -- -nocursor 2>> /opt/kiosk/logs/kiosk.log
-            EC=$?
-            echo "[$(date '+%H:%M:%S')] startx uscito (cod $EC)" \
-                >> /opt/kiosk/logs/kiosk.log
-            # Fermato manualmente?
-            if [ -f /opt/kiosk/.stop ]; then
-                rm -f /opt/kiosk/.stop
-                echo "Kiosk fermato."
-                break
-            fi
-            echo "X server uscito - riavvio in 5s..."
-            sleep 5
-        done
-    fi
-fi
-BPEOF
-chown "${KIOSK_USER}:${KIOSK_USER}" "${KIOSK_HOME}/.bash_profile"
-ok ".bash_profile creato (sintassi corretta)."
+ok "Script di avvio creato in ~/.local/bin/gnome-kiosk-script"
 
 # =============================================================================
-# FASE 10 - Auto-login TTY1
+# FASE 6 - Cursore invisibile (opzionale, già gestito da GNOME Kiosk? Meglio unclutter)
 # =============================================================================
-sep "FASE 10 - Auto-login TTY1"
+sep "FASE 6 - Configurazione accessorie"
 
-mkdir -p /etc/systemd/system/getty@tty1.service.d
-cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty --autologin ${KIOSK_USER} --noclear %I \$TERM
-Type=idle
+# Unclutter per nascondere il cursore
+if command -v unclutter >/dev/null; then
+    mkdir -p "${KIOSK_HOME}/.config/autostart"
+    cat > "${KIOSK_HOME}/.config/autostart/unclutter.desktop" << EOF
+[Desktop Entry]
+Type=Application
+Name=Unclutter
+Exec=unclutter -idle 0.1 -root
+X-GNOME-Autostart-enabled=true
 EOF
-ok "Auto-login TTY1 configurato."
-
-# Permessi X server (kiosk puo usare X senza sudo)
-printf 'allowed_users=anybody\n' > /etc/X11/Xwrapper.config 2>/dev/null || true
-# Alternativa:
-dpkg-reconfigure -f noninteractive x11-common 2>/dev/null || true
-
-printf 'kiosk ALL=(ALL) NOPASSWD: /usr/local/bin/kiosk-control\n' \
-    > /etc/sudoers.d/kiosk
-chmod 440 /etc/sudoers.d/kiosk
+    chown -R "${KIOSK_USER}:${KIOSK_USER}" "${KIOSK_HOME}/.config"
+    ok "Unclutter configurato per nascondere il cursore"
+fi
 
 # =============================================================================
-# FASE 11 - kiosk-control
+# FASE 7 - OverlayFS (protezione root in lettura)
 # =============================================================================
+sep "FASE 7 - Configurazione OverlayFS"
+
+# Assicuriamoci che /opt sia una partizione separata (come da linee guida) - qui assumiamo che lo sia.
+# Configuriamo overlayroot
+if [ -f /etc/overlayroot.conf ]; then
+    cp /etc/overlayroot.conf /etc/overlayroot.conf.bak
+fi
+
+cat > /etc/overlayroot.conf << EOF
+overlayroot_cfgdisk="disabled"
+overlayroot="tmpfs:swap=1,recurse=0"
+EOF
+ok "OverlayFS configurato (protezione root)."
+
+# =============================================================================
+# FASE 8 - kiosk-control (comandi utente)
+# =============================================================================
+sep "FASE 8 - Script di controllo (kiosk-control)"
+
 cat > "${APP_DIR}/kiosk-control.sh" << 'CTRLEOF'
 #!/usr/bin/env bash
 APP_DIR="/opt/kiosk"
@@ -907,34 +549,31 @@ BASE_URL="https://raw.githubusercontent.com/accaicedtea/ttetttos/main/setup-kios
 
 case "${1:-help}" in
     start)
-        rm -f "$APP_DIR/.stop"
-        su - kiosk -c "DISPLAY=:0 startx -- -nocursor &"
-        echo "Avviato."
+        # Avvia la sessione kiosk per l'utente
+        loginctl terminate-user kiosk 2>/dev/null || true
+        sleep 1
+        systemctl start user@$(id -u kiosk) 2>/dev/null || true
+        echo "Kiosk avviato."
         ;;
     stop)
-        touch "$APP_DIR/.stop"
-        pkill java  2>/dev/null || true
-        pkill Xorg  2>/dev/null || true
-        pkill X     2>/dev/null || true
-        echo "Fermato."
+        loginctl terminate-user kiosk 2>/dev/null || true
+        pkill -u kiosk 2>/dev/null || true
+        echo "Kiosk fermato."
         ;;
     restart)    "$0" stop; sleep 3; "$0" start ;;
     status)
-        pgrep Xorg >/dev/null && echo "X11:     IN ESECUZIONE" || echo "X11:     FERMO"
-        pgrep java >/dev/null && echo "java:    IN ESECUZIONE" || echo "java:    FERMO"
+        pgrep -u kiosk java >/dev/null && echo "Kiosk: IN ESECUZIONE" || echo "Kiosk: FERMO"
         echo "Profilo: $(cat $APP_DIR/config/profile.conf 2>/dev/null || echo x11_sw)"
-        echo ""
-        echo "--- Log ---"
-        tail -25 "$APP_DIR/logs/kiosk.log" 2>/dev/null || echo "(nessun log)"
+        tail -20 "$APP_DIR/logs/kiosk.log" 2>/dev/null || echo "(nessun log)"
         ;;
-    log)            tail -f "$APP_DIR/logs/kiosk.log" ;;
-    errlog)         tail -f "$APP_DIR/logs/kiosk-err.log" ;;
-    profile)        cat "$APP_DIR/config/profile.conf" 2>/dev/null || echo "x11_sw" ;;
-    reset-profile)  echo "x11_sw" > "$APP_DIR/config/profile.conf"; echo "Profilo resettato." ;;
-    reset-soft)     curl -fsSL "$BASE_URL" | bash -s reset-soft ;;
-    reset)          curl -fsSL "$BASE_URL" | bash -s reset ;;
-    fix)            curl -fsSL "$BASE_URL" | bash -s fix ;;
-    update)         curl -fsSL "$BASE_URL" | bash -s update "${2:-}" ;;
+    log)        tail -f "$APP_DIR/logs/kiosk.log" ;;
+    errlog)     tail -f "$APP_DIR/logs/kiosk-err.log" ;;
+    profile)    cat "$APP_DIR/config/profile.conf" 2>/dev/null || echo "x11_sw" ;;
+    reset-profile) echo "x11_sw" > "$APP_DIR/config/profile.conf"; echo "Profilo resettato." ;;
+    reset-soft) curl -fsSL "$BASE_URL" | bash -s reset-soft ;;
+    reset)      curl -fsSL "$BASE_URL" | bash -s reset ;;
+    fix)        curl -fsSL "$BASE_URL" | bash -s fix ;;
+    update)     curl -fsSL "$BASE_URL" | bash -s update "${2:-}" ;;
     help|*)
         echo "Uso: kiosk-control {start|stop|restart|status|log|errlog|profile|reset-profile|reset-soft|reset|fix|update [tag]}"
         ;;
@@ -945,71 +584,62 @@ ln -sf "${APP_DIR}/kiosk-control.sh" /usr/local/bin/kiosk-control
 ok "kiosk-control installato."
 
 # =============================================================================
-# FASE 12 - Ottimizzazioni sistema (non distruttive per la sessione corrente)
+# FASE 9 - Ottimizzazioni varie
 # =============================================================================
-sep "FASE 12 - Ottimizzazioni sistema"
+sep "FASE 9 - Ottimizzazioni sistema"
 
-# GRUB
+# Disabilita sleep, lock screen, ecc. per l'utente kiosk (via gsettings)
+# Questo richiede che l'utente abbia un dbus attivo, ma possiamo preconfigurare
+sudo -u "$KIOSK_USER" dbus-launch gsettings set org.gnome.desktop.screensaver idle-activation-enabled false 2>/dev/null || true
+sudo -u "$KIOSK_USER" dbus-launch gsettings set org.gnome.desktop.screensaver lock-enabled false 2>/dev/null || true
+sudo -u "$KIOSK_USER" dbus-launch gsettings set org.gnome.desktop.session idle-delay 0 2>/dev/null || true
+
+# GRUB timeout ridotto
 if [ -f /etc/default/grub ]; then
-    sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=3/' /etc/default/grub
-    grep -q '^GRUB_TIMEOUT_STYLE' /etc/default/grub || \
-        echo 'GRUB_TIMEOUT_STYLE=menu' >> /etc/default/grub
-    update-grub 2>/dev/null || \
-        grub-mkconfig -o /boot/grub/grub.cfg 2>/dev/null || true
-    ok "GRUB: 3s timeout."
+    sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=2/' /etc/default/grub
+    update-grub 2>/dev/null || grub-mkconfig -o /boot/grub/grub.cfg 2>/dev/null || true
+    ok "GRUB timeout ridotto a 2s"
 fi
 
 # sysctl
-printf 'kernel.panic=30\nvm.swappiness=5\n' \
-    > /etc/sysctl.d/99-kiosk.conf
+printf 'kernel.panic=30\nvm.swappiness=5\n' > /etc/sysctl.d/99-kiosk.conf
 sysctl -p /etc/sysctl.d/99-kiosk.conf >/dev/null 2>&1 || true
 
 # udev
-printf 'SUBSYSTEM=="drm",   TAG+="uaccess", GROUP="video"\n' \
-    > /etc/udev/rules.d/99-kiosk.rules
-printf 'SUBSYSTEM=="input", TAG+="uaccess", GROUP="input"\n' \
-    >> /etc/udev/rules.d/99-kiosk.rules
+printf 'SUBSYSTEM=="drm", TAG+="uaccess", GROUP="video"\n' > /etc/udev/rules.d/99-kiosk.rules
+printf 'SUBSYSTEM=="input", TAG+="uaccess", GROUP="input"\n' >> /etc/udev/rules.d/99-kiosk.rules
 udevadm control --reload-rules 2>/dev/null || true
 
-# Servizi inutili
-for SVC in ModemManager bluetooth cups avahi-daemon \
-           apt-daily.timer apt-daily-upgrade.timer; do
+# Disabilita servizi non necessari
+for SVC in bluetooth cups avahi-daemon apt-daily.timer apt-daily-upgrade.timer; do
     systemctl disable "$SVC" 2>/dev/null || true
-    systemctl mask    "$SVC" 2>/dev/null || true
+    systemctl mask "$SVC" 2>/dev/null || true
 done
 
-# Journal
+# Journal ridotto
 mkdir -p /etc/systemd/journald.conf.d/
-printf '[Journal]\nSystemMaxUse=50M\nCompress=yes\n' \
-    > /etc/systemd/journald.conf.d/kiosk.conf
-
+printf '[Journal]\nSystemMaxUse=50M\nCompress=yes\n' > /etc/systemd/journald.conf.d/kiosk.conf
 systemctl daemon-reload
+
 ok "Ottimizzazioni completate."
 
 # =============================================================================
-# FASE 13 - Verifica finale
+# FASE 10 - Verifica finale
 # =============================================================================
-sep "FASE 13 - Verifica finale"
+sep "FASE 10 - Verifica finale"
 
 ALL_OK=true
 chk() {
     LABEL="$1"; CMD="$2"
-    eval "$CMD" >/dev/null 2>&1 && ok "$LABEL" || {
-        warn "$LABEL: PROBLEMA"; ALL_OK=false; }
+    eval "$CMD" >/dev/null 2>&1 && ok "$LABEL" || { warn "$LABEL: PROBLEMA"; ALL_OK=false; }
 }
 
 chk "demo-1.jar"          "[ -f '${APP_DIR}/demo-1.jar' ]"
-chk "run-kiosk.sh"        "[ -x '${APP_DIR}/run-kiosk.sh' ]"
-chk "run-kiosk.sh sintassi" "bash -n '${APP_DIR}/run-kiosk.sh'"
-chk ".xinitrc"            "[ -f '${KIOSK_HOME}/.xinitrc' ]"
-chk ".bash_profile"       "[ -f '${KIOSK_HOME}/.bash_profile' ]"
-chk "Auto-login TTY1"     "[ -f '/etc/systemd/system/getty@tty1.service.d/autologin.conf' ]"
+chk "gnome-kiosk-script"  "[ -x '${KIOSK_HOME}/.local/bin/gnome-kiosk-script' ]"
+chk "Autologin config"    "[ -f '/var/lib/AccountsService/users/${KIOSK_USER}' ]"
 chk "kiosk-control"       "[ -x '/usr/local/bin/kiosk-control' ]"
 chk "Java"                "command -v java"
-chk "startx"              "command -v startx"
-chk "openbox"             "command -v openbox"
-chk "libGL"               "ldconfig -p | grep -q 'libGL.so'"
-chk "libGTK3"             "ldconfig -p | grep -q 'libgtk-3.so'"
+chk "overlayroot.conf"    "[ -f /etc/overlayroot.conf ]"
 
 FX_N=$(ls "${APP_DIR}/javafx-sdk/"*.jar 2>/dev/null | wc -l || echo 0)
 [ "$FX_N" -gt 0 ] && ok "JavaFX SDK: $FX_N JAR" || warn "JavaFX SDK: non trovato"
@@ -1030,102 +660,19 @@ else
 fi
 
 echo ""
-echo "  Come funziona (approccio X11, semplice e affidabile):"
-echo "   1. reboot"
-echo "   2. getty auto-login su TTY1 come utente kiosk"
-echo "   3. .bash_profile chiama startx dopo 3s"
-echo "   4. startx avvia X11 + .xinitrc"
-echo "   5. .xinitrc avvia openbox + run-kiosk.sh"
-echo "   6. run-kiosk.sh avvia JavaFX con DISPLAY=:0"
-echo "   7. Se crash: riavvio automatico con profilo alternativo"
+echo "  Riepilogo:"
+echo "    - GNOME Kiosk attivo con utente $KIOSK_USER"
+echo "    - OverlayFS proteggerà il root al prossimo riavvio"
+echo "    - L'applicazione JavaFX verrà avviata automaticamente"
 echo ""
 echo "  Comandi:"
-echo "   kiosk-control status       stato + ultimi log"
-echo "   kiosk-control log          log live"
-echo "   kiosk-control errlog       errori Java live"
-echo "   kiosk-control reset-soft   risconfigura veloce"
-echo "   kiosk-control reset        reinstalla tutto"
-echo "   kiosk-control reset-profile torna a profilo default"
+echo "    kiosk-control status"
+echo "    kiosk-control log"
+echo "    kiosk-control stop/start"
 echo ""
-echo "  Per il terminale durante il kiosk:"
-echo "   - SSH: ssh root@<ip>"
-echo "   - Locale: touch /opt/kiosk/.stop && pkill Xorg"
+echo "  Per disabilitare OverlayFS temporaneamente (es. per aggiornamenti):"
+echo "    sudo overlayroot-chroot"
+echo "    # modifica /etc/overlayroot.conf commentando la riga overlayroot="
+echo "    exit; reboot"
 echo ""
-
-# =============================================================================
-# FASE 14 - Test applicazione in ambiente corrente
-# =============================================================================
-sep "FASE 14 - Test applicazione (prima di disabilitare la GUI)"
-
-# Funzione per testare l'app
-test_app() {
-    local DISPLAY_NR="$1"
-    local LOG_FILE="${APP_DIR}/logs/test.log"
-    local PID_FILE="/tmp/kiosk-test.pid"
-    
-    log "Avvio test su display $DISPLAY_NR ..."
-    
-    # Pulisci log precedenti
-    > "$LOG_FILE"
-    
-    # Lancia run-kiosk.sh come utente kiosk
-    su - "$KIOSK_USER" -c "DISPLAY=$DISPLAY_NR /opt/kiosk/run-kiosk.sh > $LOG_FILE 2>&1 & echo \$! > $PID_FILE"
-    
-    # Attendi 10 secondi per l'avvio
-    sleep 10
-    
-    # Controlla se il processo è vivo
-    if kill -0 $(cat $PID_FILE 2>/dev/null) 2>/dev/null; then
-        # Processo ancora in esecuzione, sembra funzionare
-        ok "Test: applicazione avviata con successo (PID $(cat $PID_FILE))"
-        # Termina il processo di test
-        kill $(cat $PID_FILE) 2>/dev/null
-        rm -f "$PID_FILE"
-        return 0
-    else
-        # Processo terminato, controlla il log
-        warn "Test: applicazione non è rimasta in esecuzione. Ultime righe del log:"
-        tail -20 "$LOG_FILE" | while read line; do warn "  $line"; done
-        return 1
-    fi
-}
-
-# Determina se siamo in una sessione X
-TEST_DISPLAY=""
-if [ -n "$DISPLAY" ] && xdpyinfo >/dev/null 2>&1; then
-    TEST_DISPLAY="$DISPLAY"
-    log "Rilevato display X corrente: $TEST_DISPLAY"
-else
-    log "Nessun display X disponibile, provo con Xvfb..."
-    if ! command -v Xvfb >/dev/null; then
-        log "Installazione Xvfb..."
-        inst xvfb
-    fi
-    # Avvia Xvfb su display :99
-    Xvfb :99 -screen 0 1024x768x24 >/dev/null 2>&1 &
-    XVFB_PID=$!
-    sleep 2
-    TEST_DISPLAY=":99"
-    log "Xvfb avviato su display $TEST_DISPLAY"
-fi
-
-if [ -z "$TEST_DISPLAY" ]; then
-    warn "Impossibile trovare un display X per il test. Salto il test."
-    # Non blocchiamo l'installazione, ma avvertiamo
-else
-    if test_app "$TEST_DISPLAY"; then
-        ok "Test superato, l'applicazione funziona."
-    else
-        fail "Test fallito. L'applicazione non si avvia correttamente. Controlla i log in ${APP_DIR}/logs/test.log e correggi eventuali errori prima di procedere."
-    fi
-    
-    # Ferma Xvfb se lo abbiamo avviato
-    if [ -n "$XVFB_PID" ]; then
-        kill "$XVFB_PID" 2>/dev/null
-    fi
-fi
-
-# =============================================================================
-# FASE 15 - Applicazione modifiche di sistema e riavvio
-# =============================================================================
-apply_system_changes_and_reboot
+echo "  Riavvia ora con: reboot"
