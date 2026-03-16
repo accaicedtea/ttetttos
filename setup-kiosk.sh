@@ -377,14 +377,13 @@ step "Script di lancio"
 cat > "${APP_DIR}/run-kiosk.sh" << 'LAUNCHER_EOF'
 #!/usr/bin/env bash
 # ===============================================================================
-#  run-kiosk.sh  Launcher auto-healing JavaFX
+#  run-kiosk.sh  Auto-healing launcher for JavaFX Kiosk
 #
-#  Logica:
-#    1. Legge il profilo di avvio salvato (config/profile.conf)
-#    2. Prova ad avviare JavaFX con quel profilo
-#    3. Se fallisce, analizza l'errore e sceglie il profilo successivo
-#    4. Dopo 3 fallimenti dello stesso tipo, passa alla strategia successiva
-#    5. Salva il profilo che ha funzionato per i prossimi avvii
+#  On each start:
+#    1. Reads saved profile from config/profile.conf
+#    2. Tries to launch JavaFX with that profile
+#    3. On failure: detects error type and switches to next profile
+#    4. Saves the working profile for next boot
 # ===============================================================================
 
 APP_DIR="/opt/kiosk"
@@ -392,319 +391,261 @@ LOG="${APP_DIR}/logs/kiosk.log"
 ERR="${APP_DIR}/logs/kiosk-err.log"
 PROFILE_FILE="${APP_DIR}/config/profile.conf"
 FAIL_LOG="${APP_DIR}/logs/failures.log"
-MAX_FAILS=3
 
 mkdir -p "${APP_DIR}/logs" "${APP_DIR}/config"
 
 log()  { echo "[$(date '+%H:%M:%S')] $*" | tee -a "${LOG}"; }
 fail() { echo "[$(date '+%H:%M:%S')] FAIL: $*" | tee -a "${FAIL_LOG}"; }
 
-# -- Determina module path ------------------------------------------------------
+# -- Find JavaFX module path ---------------------------------------------------
 find_fx_path() {
-    if [[ -d "${APP_DIR}/javafx-sdk" ]] && \
-       ls "${APP_DIR}/javafx-sdk/"*.jar &>/dev/null 2>&1; then
+    if [ -d "${APP_DIR}/javafx-sdk" ] && \
+       ls "${APP_DIR}/javafx-sdk/"*.jar >/dev/null 2>&1; then
         echo "${APP_DIR}/javafx-sdk"
-    elif FX_SYS=$(find /usr/share/java /usr/lib/jvm \
-                       -name "javafx.controls.jar" 2>/dev/null | \
-                  head -1 | xargs dirname 2>/dev/null); \
-         [[ -n "${FX_SYS}" ]]; then
-        echo "${FX_SYS}"
-    else
-        echo "${APP_DIR}/lib"
+        return
     fi
+    FX_SYS=$(find /usr/share/java /usr/lib/jvm \
+                  -name "javafx.controls.jar" 2>/dev/null | \
+             head -1 | xargs -r dirname 2>/dev/null || echo "")
+    if [ -n "${FX_SYS}" ]; then
+        echo "${FX_SYS}"
+        return
+    fi
+    echo "${APP_DIR}/lib"
 }
 
-# -- Classpath completo ---------------------------------------------------------
+# -- Build classpath -----------------------------------------------------------
 build_cp() {
-    local cp="${APP_DIR}/demo-1.jar"
+    CP="${APP_DIR}/demo-1.jar"
     for jar in "${APP_DIR}/lib/"*.jar; do
-        cp="${cp}:${jar}"
+        [ -f "$jar" ] && CP="${CP}:${jar}"
     done
-    echo "${cp}"
+    echo "${CP}"
 }
 
-# -- Carica/salva profilo -------------------------------------------------------
+# -- Load / save profile -------------------------------------------------------
 load_profile() {
-    [[ -f "${PROFILE_FILE}" ]] && source "${PROFILE_FILE}" || true
-    PROFILE="${PROFILE:-default}"
+    PROFILE="default"
+    [ -f "${PROFILE_FILE}" ] && . "${PROFILE_FILE}" || true
 }
 
 save_profile() {
     echo "PROFILE=${1}" > "${PROFILE_FILE}"
-    log "Profilo salvato: ${1}"
+    log "Profile saved: ${1}"
 }
 
-# -- Conta fallimenti recenti ---------------------------------------------------
-count_recent_fails() {
-    local pattern="${1}"
-    local minutes="${2:-10}"
-    local cutoff
-    cutoff=$(date -d "${minutes} minutes ago" '+%H:%M:%S' 2>/dev/null || \
-             date -v-"${minutes}"M '+%H:%M:%S' 2>/dev/null || echo "00:00:00")
-    grep -c "${pattern}" "${FAIL_LOG}" 2>/dev/null | tr -d '[:space:]' || echo 0
-}
-
-# -- Analizza errore dall'output ------------------------------------------------
+# -- Detect error type from output --------------------------------------------
 detect_error() {
-    local output="${1}"
-    if echo "${output}" | grep -qi "Module javafx.*not found\|boot layer"; then
+    OUTPUT="${1}"
+    if   echo "${OUTPUT}" | grep -qi "Module javafx.*not found\|boot layer"; then
         echo "missing_javafx"
-    elif echo "${output}" | grep -qi "Unable to open DISPLAY\|no display"; then
+    elif echo "${OUTPUT}" | grep -qi "Unable to open DISPLAY\|no display"; then
         echo "no_display"
-    elif echo "${output}" | grep -qi "UnsupportedOperationException.*DISPLAY\|GtkApplication"; then
+    elif echo "${OUTPUT}" | grep -qi "GtkApplication\|UnsupportedOperation.*DISPLAY"; then
         echo "gtk_display"
-    elif echo "${output}" | grep -qi "connection to the bus\|dbus"; then
+    elif echo "${OUTPUT}" | grep -qi "connection to the bus\|dbus"; then
         echo "no_dbus"
-    elif echo "${output}" | grep -qi "libGL\|MESA\|OpenGL\|prism\|es2pipe\|Fallback\|failed to create"; then
+    elif echo "${OUTPUT}" | grep -qi "libGL\|MESA\|OpenGL\|prism\|es2pipe\|failed to create"; then
         echo "opengl"
-    elif echo "${output}" | grep -qi "OutOfMemoryError\|heap space\|GC overhead"; then
+    elif echo "${OUTPUT}" | grep -qi "OutOfMemoryError\|heap space\|GC overhead"; then
         echo "oom"
-    elif echo "${output}" | grep -qi "Could not find or load main class\|ClassNotFoundException"; then
+    elif echo "${OUTPUT}" | grep -qi "Could not find or load main class\|ClassNotFoundException"; then
         echo "class_not_found"
-    elif echo "${output}" | grep -qi "cage.*exit\|compositor\|wayland"; then
+    elif echo "${OUTPUT}" | grep -qi "cage.*exit\|compositor\|wayland"; then
         echo "cage_failed"
     else
         echo "unknown"
     fi
 }
 
-# -- Profili di avvio (dal piu compatibile al piu ottimizzato) ------------------
-#
-#  default    -> software rendering, GTK3, tutte le opzioni sicure
-#  sw_pixman  -> renderer pixman esplicito (VM senza virgl)
-#  sw_mesa    -> softpipe Mesa (VM con driver virtio)
-#  gtk2       -> fallback GTK2 per sistemi vecchi
-#  xwayland   -> usa DISPLAY X11 invece di Wayland
-#  headless   -> test senza display (diagnostica)
-#
-apply_profile() {
-    local profile="${1}"
+# -- Build java command for a given profile -----------------------------------
+# Uses a plain string instead of arrays for maximum shell compatibility
+build_java_cmd() {
+    PROFILE="${1}"
     FX_PATH=$(find_fx_path)
     CP=$(build_cp)
 
-    # Reset variabili comuni
-    export TOTEM_API_KEY="${TOTEM_API_KEY:-api_key_totem_1}"
-    export LIBGL_ALWAYS_SOFTWARE=1
-    export WLR_NO_HARDWARE_CURSORS=1
-    export PRISM_VERBOSE=true
+    # Common flags
+    BASE_FLAGS="-Xms64m -Xmx256m"
+    BASE_FLAGS="${BASE_FLAGS} --module-path ${FX_PATH}"
+    BASE_FLAGS="${BASE_FLAGS} --add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.base"
+    BASE_FLAGS="${BASE_FLAGS} --add-opens javafx.graphics/com.sun.glass.ui=ALL-UNNAMED"
+    BASE_FLAGS="${BASE_FLAGS} --add-opens javafx.graphics/com.sun.javafx.application=ALL-UNNAMED"
+    BASE_FLAGS="${BASE_FLAGS} -Djava.awt.headless=false"
+    BASE_FLAGS="${BASE_FLAGS} -Djavafx.animation.fullspeed=true"
+    BASE_FLAGS="${BASE_FLAGS} -Dfile.encoding=UTF-8"
+    BASE_FLAGS="${BASE_FLAGS} -XX:+UseG1GC -XX:MaxGCPauseMillis=50"
+    BASE_FLAGS="${BASE_FLAGS} -cp ${CP}"
 
-    case "${profile}" in
-
+    case "${PROFILE}" in
         default)
+            export LIBGL_ALWAYS_SOFTWARE=1
             export WLR_RENDERER=pixman
             export WLR_RENDERER_ALLOW_SOFTWARE=1
+            export WLR_NO_HARDWARE_CURSORS=1
             export MESA_GL_VERSION_OVERRIDE=3.3
             export GALLIUM_DRIVER=softpipe
-            JAVA_ARGS=(
-                -Dprism.order=sw
-                -Dglass.platform=gtk
-                -Djdk.gtk.version=3
-            ) ;;
-
+            PROFILE_FLAGS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3"
+            ;;
         sw_pixman)
+            export LIBGL_ALWAYS_SOFTWARE=1
             export WLR_RENDERER=pixman
             export WLR_RENDERER_ALLOW_SOFTWARE=1
+            export WLR_NO_HARDWARE_CURSORS=1
             export MESA_GL_VERSION_OVERRIDE=4.5
             export GALLIUM_DRIVER=softpipe
-            export LIBGL_DRIVERS_PATH=/usr/lib/x86_64-linux-gnu/dri
-            JAVA_ARGS=(
-                -Dprism.order=sw
-                -Dprism.forceGPU=false
-                -Dglass.platform=gtk
-                -Djdk.gtk.version=3
-                -Djavafx.platform=gtk
-            ) ;;
-
+            PROFILE_FLAGS="-Dprism.order=sw -Dprism.forceGPU=false -Dglass.platform=gtk -Djdk.gtk.version=3"
+            ;;
         sw_mesa)
+            export LIBGL_ALWAYS_SOFTWARE=1
             export WLR_RENDERER=pixman
+            export WLR_NO_HARDWARE_CURSORS=1
             export MESA_GL_VERSION_OVERRIDE=3.3
             export GALLIUM_DRIVER=llvmpipe
-            export LIBGL_ALWAYS_SOFTWARE=1
-            JAVA_ARGS=(
-                -Dprism.order=sw
-                -Dglass.platform=gtk
-                -Djdk.gtk.version=3
-            ) ;;
-
+            PROFILE_FLAGS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3"
+            ;;
         gtk2)
-            export WLR_RENDERER=pixman
-            export WLR_RENDERER_ALLOW_SOFTWARE=1
-            JAVA_ARGS=(
-                -Dprism.order=sw
-                -Dglass.platform=gtk
-                -Djdk.gtk.version=2
-            ) ;;
-
-        xwayland)
-            # Usa DISPLAY X11 direttamente invece di Wayland
-            export DISPLAY="${DISPLAY:-:0}"
-            unset WAYLAND_DISPLAY 2>/dev/null || true
             export LIBGL_ALWAYS_SOFTWARE=1
-            JAVA_ARGS=(
-                -Dprism.order=sw
-                -Dglass.platform=gtk
-                -Djdk.gtk.version=3
-                -Djava.awt.headless=false
-            ) ;;
-
+            export WLR_RENDERER=pixman
+            export WLR_NO_HARDWARE_CURSORS=1
+            PROFILE_FLAGS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=2"
+            ;;
+        xwayland)
+            export DISPLAY="${DISPLAY:-:0}"
+            export LIBGL_ALWAYS_SOFTWARE=1
+            unset WAYLAND_DISPLAY 2>/dev/null || true
+            PROFILE_FLAGS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3"
+            ;;
         es2_hw)
-            # Tenta OpenGL hardware (solo su macchine fisiche con GPU)
             unset LIBGL_ALWAYS_SOFTWARE 2>/dev/null || true
             export WLR_RENDERER=gles2
-            JAVA_ARGS=(
-                -Dprism.order=es2,sw
-                -Dglass.platform=gtk
-                -Djdk.gtk.version=3
-            ) ;;
-
+            PROFILE_FLAGS="-Dprism.order=es2,sw -Dglass.platform=gtk -Djdk.gtk.version=3"
+            ;;
         *)
-            # Fallback estremo: tutti i flag di compatibilita
+            export LIBGL_ALWAYS_SOFTWARE=1
             export WLR_RENDERER=pixman
             export WLR_RENDERER_ALLOW_SOFTWARE=1
-            export MESA_GL_VERSION_OVERRIDE=3.3
+            export WLR_NO_HARDWARE_CURSORS=1
             export GALLIUM_DRIVER=softpipe
-            export LIBGL_ALWAYS_SOFTWARE=1
-            JAVA_ARGS=(
-                -Dprism.order=sw
-                -Dprism.forceGPU=false
-                -Dglass.platform=gtk
-                -Djdk.gtk.version=3
-                -Djavafx.platform=gtk
-                -Dsun.java2d.opengl=false
-            ) ;;
+            PROFILE_FLAGS="-Dprism.order=sw -Dprism.forceGPU=false -Dglass.platform=gtk -Djdk.gtk.version=3"
+            ;;
     esac
+
+    echo "java ${BASE_FLAGS} ${PROFILE_FLAGS} com.example.App"
 }
 
-# -- Strategia di riparazione automatica ---------------------------------------
-#  Data la tipologia di errore, suggerisce il profilo successivo da provare.
+# -- Next profile after failure -----------------------------------------------
 next_profile() {
-    local current="${1}" error="${2}"
-    case "${error}" in
+    CURRENT="${1}"
+    ERROR="${2}"
+
+    case "${ERROR}" in
         missing_javafx)
-            # Scarica JavaFX SDK se mancante
-            log "Tentativo download JavaFX SDK..."
+            log "Attempting JavaFX SDK download..."
             curl -fsSL \
                 "https://download2.gluonhq.com/openjfx/21.0.2/openjfx-21.0.2_linux-x64_bin-sdk.zip" \
                 -o /tmp/javafx.zip 2>/dev/null && {
-                    unzip -q /tmp/javafx.zip \
-                        "javafx-sdk-21.0.2/lib/*.jar" \
-                        -d /tmp/fxext/ 2>/dev/null || \
-                    unzip -q /tmp/javafx.zip \
-                        -d /tmp/fxext/ \
-                        -x "*/libjfxwebkit.so" 2>/dev/null || true
-                    mkdir -p "${APP_DIR}/javafx-sdk"
-                    cp /tmp/fxext/javafx-sdk-21.0.2/lib/*.jar \
-                       "${APP_DIR}/javafx-sdk/" 2>/dev/null || true
-                    rm -rf /tmp/javafx.zip /tmp/fxext/
-                    log "JavaFX SDK scaricato."
-                } || log "Download JavaFX fallito."
-            # Prova anche openjfx di sistema
-            apt-get install -y openjfx 2>/dev/null || true
-            echo "default" ;;
+                mkdir -p /tmp/fxext/
+                unzip -q /tmp/javafx.zip -d /tmp/fxext/ \
+                    -x "*/libjfxwebkit.so" 2>/dev/null || true
+                mkdir -p "${APP_DIR}/javafx-sdk"
+                cp /tmp/fxext/javafx-sdk-21.0.2/lib/*.jar \
+                   "${APP_DIR}/javafx-sdk/" 2>/dev/null || true
+                rm -rf /tmp/javafx.zip /tmp/fxext/
+                log "JavaFX SDK downloaded."
+            } || {
+                apt-get install -y openjfx 2>/dev/null || true
+                log "Tried apt install openjfx."
+            }
+            echo "default"
+            ;;
         opengl)
-            case "${current}" in
-                default)   echo "sw_pixman" ;;
-                sw_pixman) echo "sw_mesa"   ;;
-                sw_mesa)   echo "gtk2"      ;;
-                *)         echo "fallback"  ;;
-            esac ;;
+            case "${CURRENT}" in
+                default)    echo "sw_pixman" ;;
+                sw_pixman)  echo "sw_mesa"   ;;
+                sw_mesa)    echo "gtk2"      ;;
+                *)          echo "fallback"  ;;
+            esac
+            ;;
         no_display|gtk_display)
-            case "${current}" in
-                default)   echo "xwayland"  ;;
-                xwayland)  echo "sw_pixman" ;;
-                *)         echo "fallback"  ;;
-            esac ;;
+            case "${CURRENT}" in
+                default)    echo "xwayland"  ;;
+                xwayland)   echo "sw_pixman" ;;
+                *)          echo "fallback"  ;;
+            esac
+            ;;
         cage_failed)
-            case "${current}" in
-                default)   echo "sw_pixman" ;;
-                sw_pixman) echo "xwayland"  ;;
-                *)         echo "fallback"  ;;
-            esac ;;
+            case "${CURRENT}" in
+                default)    echo "sw_pixman" ;;
+                sw_pixman)  echo "xwayland"  ;;
+                *)          echo "fallback"  ;;
+            esac
+            ;;
         oom)
-            # Aumenta heap e riprova lo stesso profilo
-            export JAVA_OPTS="-Xms128m -Xmx512m"
-            echo "${current}" ;;
+            log "OOM: increasing heap to 512m"
+            sed -i 's/-Xmx256m/-Xmx512m/g' "${APP_DIR}/run-kiosk.sh" 2>/dev/null || true
+            echo "${CURRENT}"
+            ;;
         class_not_found)
-            log "JAR corrotto? Tentativo redownload..."
+            log "JAR missing? Re-downloading..."
             curl -fsSL \
                 "https://github.com/accaicedtea/ttetttos/releases/download/v1.0.0/demo-1.jar" \
                 -o "${APP_DIR}/demo-1.jar" 2>/dev/null && \
-                log "JAR ricaricato." || log "Redownload fallito."
-            echo "default" ;;
+                log "JAR re-downloaded." || log "Re-download failed."
+            echo "default"
+            ;;
         *)
-            case "${current}" in
-                default)   echo "sw_pixman" ;;
-                sw_pixman) echo "sw_mesa"   ;;
-                sw_mesa)   echo "gtk2"      ;;
-                gtk2)      echo "xwayland"  ;;
-                xwayland)  echo "es2_hw"    ;;
-                *)         echo "fallback"  ;;
-            esac ;;
+            case "${CURRENT}" in
+                default)    echo "sw_pixman" ;;
+                sw_pixman)  echo "sw_mesa"   ;;
+                sw_mesa)    echo "gtk2"      ;;
+                gtk2)       echo "xwayland"  ;;
+                xwayland)   echo "es2_hw"    ;;
+                *)          echo "fallback"  ;;
+            esac
+            ;;
     esac
 }
 
-# -- Loop principale ------------------------------------------------------------
+# -- Main loop ----------------------------------------------------------------
 load_profile
-FX_PATH=$(find_fx_path)
-CP=$(build_cp)
-
-log "======================================="
-log "Avvio kiosk  profilo: ${PROFILE}"
-log "FX_PATH: ${FX_PATH}"
-log "======================================="
-
-ATTEMPT=0
 CURRENT_PROFILE="${PROFILE}"
+ATTEMPT=0
+
+log "==============================="
+log "Kiosk start  profile=${CURRENT_PROFILE}"
+log "FX path: $(find_fx_path)"
+log "==============================="
 
 while true; do
-    ATTEMPT=$((ATTEMPT + 1))
-    apply_profile "${CURRENT_PROFILE}"
+    ATTEMPT=$(( ATTEMPT + 1 ))
+    export TOTEM_API_KEY="${TOTEM_API_KEY:-api_key_totem_1}"
 
-    log "Tentativo ${ATTEMPT} con profilo '${CURRENT_PROFILE}'"
+    JAVA_CMD=$(build_java_cmd "${CURRENT_PROFILE}")
+    log "Attempt ${ATTEMPT}  profile=${CURRENT_PROFILE}"
 
-    # Aggiorna FX_PATH e CP dopo apply_profile
-    FX_PATH=$(find_fx_path)
-    CP=$(build_cp)
-
-    # Avvia Java e cattura l'output
     TMPOUT=$(mktemp /tmp/kiosk-out.XXXXXX)
+
     set +e
-    java \
-        -Xms64m -Xmx256m \
-        --module-path "${FX_PATH}" \
-        --add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.base \
-        --add-opens javafx.graphics/com.sun.glass.ui=ALL-UNNAMED \
-        --add-opens javafx.graphics/com.sun.javafx.application=ALL-UNNAMED \
-        -Djava.awt.headless=false \
-        "${JAVA_ARGS[@]}" \
-        -Djavafx.animation.fullspeed=true \
-        -Dfile.encoding=UTF-8 \
-        -XX:+UseG1GC \
-        -XX:MaxGCPauseMillis=50 \
-        -cp "${CP}" \
-        com.example.App \
-        2>&1 | tee -a "${ERR}" "${TMPOUT}"
-    EXIT_CODE=${PIPESTATUS[0]}
+    eval "${JAVA_CMD}" 2>&1 | tee -a "${ERR}" > "${TMPOUT}"
+    EXIT_CODE=$?
     set -e
 
     OUTPUT=$(cat "${TMPOUT}" 2>/dev/null || echo "")
     rm -f "${TMPOUT}"
 
-    # Uscita normale (es. Ctrl+Alt+H)
-    if [[ ${EXIT_CODE} -eq 0 ]]; then
-        log "Uscita normale (exit 0)."
+    # Clean exit (Ctrl+Alt+H pressed)
+    if [ "${EXIT_CODE}" -eq 0 ]; then
+        log "Clean exit."
         exit 0
     fi
 
-    # Analisi errore
     ERROR_TYPE=$(detect_error "${OUTPUT}")
-    fail "Exit=${EXIT_CODE} Tipo=${ERROR_TYPE} Profilo=${CURRENT_PROFILE} Tentativo=${ATTEMPT}"
+    fail "exit=${EXIT_CODE} type=${ERROR_TYPE} profile=${CURRENT_PROFILE} attempt=${ATTEMPT}"
+    log "Error: ${ERROR_TYPE}"
 
-    log "Errore rilevato: ${ERROR_TYPE}"
-
-    # Se ha funzionato in precedenza e ora fallisce, resetta al profilo salvato
-    if [[ ${ATTEMPT} -gt 6 ]]; then
-        log "Troppi fallimenti (${ATTEMPT}). Attendo 30s prima di ricominciare..."
+    if [ "${ATTEMPT}" -gt 6 ]; then
+        log "Too many failures. Waiting 30s then resetting to default..."
         sleep 30
         ATTEMPT=0
         CURRENT_PROFILE="default"
@@ -712,20 +653,17 @@ while true; do
         continue
     fi
 
-    # Calcola prossimo profilo
-    NEXT_PROFILE=$(next_profile "${CURRENT_PROFILE}" "${ERROR_TYPE}")
-    log "Prossimo profilo: ${NEXT_PROFILE}"
+    NEXT=$(next_profile "${CURRENT_PROFILE}" "${ERROR_TYPE}")
+    log "Next profile: ${NEXT}"
 
-    # Salva il nuovo profilo se diverso
-    if [[ "${NEXT_PROFILE}" != "${CURRENT_PROFILE}" ]]; then
-        save_profile "${NEXT_PROFILE}"
-        CURRENT_PROFILE="${NEXT_PROFILE}"
+    if [ "${NEXT}" != "${CURRENT_PROFILE}" ]; then
+        save_profile "${NEXT}"
+        CURRENT_PROFILE="${NEXT}"
     fi
 
-    # Breve pausa prima del retry
-    WAIT=$((ATTEMPT * 3))
-    [[ ${WAIT} -gt 15 ]] && WAIT=15
-    log "Attendo ${WAIT}s prima del prossimo tentativo..."
+    WAIT=$(( ATTEMPT * 3 ))
+    [ "${WAIT}" -gt 15 ] && WAIT=15
+    log "Waiting ${WAIT}s..."
     sleep "${WAIT}"
 done
 LAUNCHER_EOF
