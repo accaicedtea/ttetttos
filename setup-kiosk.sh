@@ -406,7 +406,7 @@ find_fx_path() {
         echo "${APP_DIR}/javafx-sdk"
     elif FX_SYS=$(find /usr/share/java /usr/lib/jvm \
                        -name "javafx.controls.jar" 2>/dev/null | \
-                  head -1 | xargs dirname 2>/dev/null 2>&1); \
+                  head -1 | xargs dirname 2>/dev/null); \
          [[ -n "${FX_SYS}" ]]; then
         echo "${FX_SYS}"
     else
