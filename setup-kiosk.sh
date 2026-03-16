@@ -1352,4 +1352,683 @@ echo "|                                                      |"
 echo "|  Profilo attuale:  kiosk-control profile             |"
 echo "|  Reset profilo:    kiosk-control reset-profile       |"
 echo "+------------------------------------------------------+"
+echo ""# =============================================================================
+# FASE 6 - Creazione run-kiosk.sh (self-healing aggressivo)
+# =============================================================================
+sep "FASE 6 - Script di avvio self-healing"
+
+RUN_SCRIPT="${APP_DIR}/run-kiosk.sh"
+log "Creo $RUN_SCRIPT..."
+
+# Scrivi variabili di configurazione
+printf '#!/usr/bin/env bash\n'                          > "$RUN_SCRIPT"
+printf '# run-kiosk.sh - auto-generato dal setup\n'   >> "$RUN_SCRIPT"
+printf 'APP_DIR="%s"\n'      "$APP_DIR"                >> "$RUN_SCRIPT"
+printf 'API_KEY="%s"\n'      "$API_KEY"                >> "$RUN_SCRIPT"
+printf 'KIOSK_UID="%s"\n'    "$KIOSK_UID"              >> "$RUN_SCRIPT"
+printf 'FX_PATH_SETUP="%s"\n' "$FX_PATH"              >> "$RUN_SCRIPT"
+
+# Scrivi il corpo dello script
+cat >> "$RUN_SCRIPT" << 'RUNEOF'
+
+LOG="${APP_DIR}/logs/kiosk.log"
+ERRLOG="${APP_DIR}/logs/kiosk-err.log"
+PROFILE_FILE="${APP_DIR}/config/profile.conf"
+
+mkdir -p "${APP_DIR}/logs" "${APP_DIR}/config"
+ts() { date '+%H:%M:%S'; }
+log() { echo "[$(ts)] $*" | tee -a "$LOG"; }
+
+# ------ Trova FX_PATH ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+find_fx() {
+    if [ -d "${APP_DIR}/javafx-sdk" ]; then
+        N=$(ls "${APP_DIR}/javafx-sdk/"*.jar 2>/dev/null | wc -l)
+        [ "$N" -gt 0 ] && echo "${APP_DIR}/javafx-sdk" && return
+    fi
+    if [ -n "$FX_PATH_SETUP" ] && [ -d "$FX_PATH_SETUP" ]; then
+        echo "$FX_PATH_SETUP" && return
+    fi
+    FX_JAR=$(find /usr/share/java /usr/lib/jvm -name "javafx.controls.jar" 2>/dev/null | head -1)
+    if [ -n "$FX_JAR" ]; then
+        dirname "$FX_JAR" && return
+    fi
+    echo "${APP_DIR}/lib"
+}
+
+# ------ Classpath ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+build_cp() {
+    CP="${APP_DIR}/demo-1.jar"
+    for J in "${APP_DIR}/lib/"*.jar; do
+        [ -f "$J" ] && CP="${CP}:${J}"
+    done
+    echo "$CP"
+}
+
+# ------ Rileva errore ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+detect_error() {
+    O="$1"
+    echo "$O" | grep -qi "Module javafx.*not found\|FindException\|boot layer" && echo "no_javafx" && return
+    echo "$O" | grep -qi "Unable to open DISPLAY\|no display\|GtkApplication" && echo "no_display" && return
+    echo "$O" | grep -qi "connection to the bus\|dbus" && echo "no_dbus"    && return
+    echo "$O" | grep -qi "black\|blank\|prism.*fail\|es2pipe\|libGL\|MESA"  && echo "black_screen" && return
+    echo "$O" | grep -qi "OutOfMemoryError\|heap space"                      && echo "oom"          && return
+    echo "$O" | grep -qi "cage\|DRM session\|seat\|libseat\|wlroots"        && echo "cage"         && return
+    echo "$O" | grep -qi "Exception\|Error" && echo "generic_error" && return
+    echo "unknown"
+}
+
+# ------ Lista profili da provare in ordine ------------------------------------------------------------------------------------------------------------------------
+# Ogni profilo e una lista di variabili ambiente + opzioni Java
+# Il piu affidabile per Cage/Wayland: forzare DISPLAY=:0 (Xwayland)
+PROFILES="xwayland_sw xwayland_gtk2 wayland_pixman wayland_llvmpipe wayland_gtk2 fallback_all"
+
+# Carica profilo salvato (mettilo per primo)
+SAVED_PROFILE=""
+if [ -f "$PROFILE_FILE" ]; then
+    SAVED_PROFILE=$(cat "$PROFILE_FILE" 2>/dev/null | tr -d '[:space:]')
+fi
+if [ -n "$SAVED_PROFILE" ]; then
+    # Metti il profilo salvato in cima, rimuovendolo dalla lista
+    PROFILES="$SAVED_PROFILE $(echo $PROFILES | sed s/$SAVED_PROFILE//g)"
+fi
+
+# ------ Setup profilo ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+setup_profile() {
+    P="$1"
+    MEM="${JAVA_MEM:--Xms64m -Xmx256m}"
+
+    # Reset comune
+    export LIBGL_ALWAYS_SOFTWARE=1
+    export WLR_NO_HARDWARE_CURSORS=1
+    export WLR_RENDERER_ALLOW_SOFTWARE=1
+    export TOTEM_API_KEY="$API_KEY"
+    unset DISPLAY        2>/dev/null || true
+    unset WAYLAND_DISPLAY 2>/dev/null || true
+
+    case "$P" in
+
+        xwayland_sw)
+            # MIGLIORE PER VM/CAGE: usa Xwayland, software rendering
+            # Cage con -d avvia Xwayland su :1, usiamo quello
+            export DISPLAY=":1"
+            export LIBGL_ALWAYS_SOFTWARE=1
+            export MESA_GL_VERSION_OVERRIDE=3.3
+            export GALLIUM_DRIVER=softpipe
+            JFXOPTS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3 -Djava.awt.headless=false"
+            ;;
+
+        xwayland_gtk2)
+            export DISPLAY=":1"
+            export LIBGL_ALWAYS_SOFTWARE=1
+            export GALLIUM_DRIVER=softpipe
+            JFXOPTS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=2 -Djava.awt.headless=false"
+            ;;
+
+        wayland_pixman)
+            # Wayland nativo tramite GTK Wayland backend
+            unset DISPLAY 2>/dev/null || true
+            export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"
+            export WLR_RENDERER=pixman
+            export MESA_GL_VERSION_OVERRIDE=4.5
+            export GALLIUM_DRIVER=softpipe
+            export GDK_BACKEND=wayland
+            JFXOPTS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3 -Djava.awt.headless=false"
+            ;;
+
+        wayland_llvmpipe)
+            unset DISPLAY 2>/dev/null || true
+            export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"
+            export WLR_RENDERER=pixman
+            export GALLIUM_DRIVER=llvmpipe
+            export GDK_BACKEND=wayland
+            JFXOPTS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3 -Djava.awt.headless=false"
+            ;;
+
+        wayland_gtk2)
+            unset DISPLAY 2>/dev/null || true
+            export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"
+            export WLR_RENDERER=pixman
+            export GALLIUM_DRIVER=softpipe
+            JFXOPTS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=2 -Djava.awt.headless=false"
+            ;;
+
+        fallback_all)
+            # Prova tutto insieme - massima compatibilita
+            export DISPLAY=":1"
+            export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"
+            export WLR_RENDERER=pixman
+            export MESA_GL_VERSION_OVERRIDE=3.3
+            export GALLIUM_DRIVER=softpipe
+            export GDK_BACKEND="x11"
+            MEM="-Xms128m -Xmx512m"
+            JFXOPTS="-Dprism.order=sw -Dprism.forceGPU=false -Dglass.platform=gtk -Djdk.gtk.version=3 -Djava.awt.headless=false -Dprism.verbose=true"
+            ;;
+
+        *)
+            # Default safe
+            export DISPLAY=":1"
+            export LIBGL_ALWAYS_SOFTWARE=1
+            export MESA_GL_VERSION_OVERRIDE=3.3
+            export GALLIUM_DRIVER=softpipe
+            JFXOPTS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3 -Djava.awt.headless=false"
+            ;;
+    esac
+
+    JAVA_MEM_CURRENT="$MEM"
+}
+
+# ------ Avvia Java e controlla se funziona ------------------------------------------------------------------------------------------------------------------------
+run_java() {
+    FX=$(find_fx)
+    CP=$(build_cp)
+
+    log "  FX_PATH: $FX"
+    log "  DISPLAY: ${DISPLAY:-<unset>} | WAYLAND: ${WAYLAND_DISPLAY:-<unset>}"
+    log "  JFXOPTS: $JFXOPTS"
+
+    TMPOUT=$(mktemp /tmp/kiosk.XXXXXX 2>/dev/null || echo "/tmp/kiosk-$$")
+
+    java \
+        $JAVA_MEM_CURRENT \
+        --module-path "$FX" \
+        --add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.base \
+        --add-opens javafx.graphics/com.sun.glass.ui=ALL-UNNAMED \
+        --add-opens javafx.graphics/com.sun.javafx.application=ALL-UNNAMED \
+        -Djava.awt.headless=false \
+        -Djavafx.animation.fullspeed=true \
+        -Dfile.encoding=UTF-8 \
+        -XX:+UseG1GC \
+        $JFXOPTS \
+        -cp "$CP" \
+        com.example.App > "$TMPOUT" 2>&1
+    RC=$?
+
+    cat "$TMPOUT" >> "$ERRLOG"
+    OUT=$(cat "$TMPOUT" 2>/dev/null || echo "")
+    rm -f "$TMPOUT"
+    echo "$OUT"
+    return $RC
+}
+
+# ------ Loop principale ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ATTEMPT=0
+JAVA_MEM="-Xms64m -Xmx256m"
+JAVA_MEM_CURRENT="$JAVA_MEM"
+
+log "======================================="
+log "Kiosk avviato"
+log "Profili da provare: $PROFILES"
+FX=$(find_fx)
+log "FX_PATH: $FX"
+CP_N=$(build_cp | tr ':' '\n' | wc -l)
+log "Classpath: $CP_N elementi"
+log "======================================="
+
+# Converti lista profili in array
+set -- $PROFILES
+PROFILE_LIST="$@"
+PROFILE_INDEX=0
+
+CURRENT_PROFILE=$(echo $PROFILE_LIST | cut -d' ' -f1)
+
+while true; do
+    ATTEMPT=$((ATTEMPT + 1))
+    setup_profile "$CURRENT_PROFILE"
+
+    log "--- Tentativo $ATTEMPT | Profilo: $CURRENT_PROFILE ---"
+
+    # Avvia Java
+    OUT=$(run_java)
+    RC=$?
+
+    log "Exit code: $RC"
+
+    # Uscita pulita (es. Ctrl+Alt+H)
+    if [ $RC -eq 0 ]; then
+        log "Uscita normale."
+        exit 0
+    fi
+
+    # L'app era partita? (cerca output di navigazione)
+    if echo "$OUT" | grep -qi "Nav.*->|SplashController|App.*start|Login"; then
+        log "L'app era partita correttamente con profilo '$CURRENT_PROFILE'."
+        log "Exit code $RC - probabilmente crash dell'app, non del renderer."
+        echo "$CURRENT_PROFILE" > "$PROFILE_FILE"
+        # Riavvia con lo stesso profilo
+        WAIT=3
+        log "Riavvio in ${WAIT}s con lo stesso profilo..."
+        sleep $WAIT
+        continue
+    fi
+
+    # Analisi errore
+    ERRTYPE=$(detect_error "$OUT")
+    log "Tipo errore: $ERRTYPE"
+
+    # Log ultime righe errore per debug
+    LAST_ERR=$(echo "$OUT" | grep -i "error\|exception\|failed\|denied\|not found" | tail -3)
+    if [ -n "$LAST_ERR" ]; then
+        log "Ultimo errore: $LAST_ERR"
+    fi
+
+    # Azioni speciali per certi errori
+    case "$ERRTYPE" in
+        no_javafx)
+            log "JavaFX non trovato - tentativo installazione openjfx..."
+            apt-get install -y openjfx 2>/dev/null || true
+            # Non cambiare profilo, riprova
+            WAIT=5
+            ;;
+        oom)
+            log "OutOfMemory - aumento heap..."
+            JAVA_MEM="-Xms128m -Xmx512m"
+            WAIT=2
+            ;;
+        cage)
+            log "Errore Cage/seat - riavvio seatd..."
+            systemctl restart seatd 2>/dev/null || true
+            sleep 2
+            # Prova profilo Xwayland
+            CURRENT_PROFILE="xwayland_sw"
+            WAIT=3
+            ;;
+        *)
+            WAIT=$((ATTEMPT * 2))
+            [ $WAIT -gt 10 ] && WAIT=10
+            ;;
+    esac
+
+    # Dopo 3 tentativi con lo stesso profilo, passa al successivo
+    if [ $((ATTEMPT % 3)) -eq 0 ]; then
+        # Avanza al prossimo profilo
+        PROFILE_INDEX=$((PROFILE_INDEX + 1))
+        NEXT=$(echo $PROFILE_LIST | cut -d' ' -f$((PROFILE_INDEX + 1)))
+        if [ -z "$NEXT" ]; then
+            # Fine lista: ricomincia da capo con reset
+            log "=== Tutti i profili provati. Reset e riavvio da capo in 30s... ==="
+            PROFILE_INDEX=0
+            NEXT=$(echo $PROFILE_LIST | cut -d' ' -f1)
+            ATTEMPT=0
+            WAIT=30
+        fi
+        if [ "$NEXT" != "$CURRENT_PROFILE" ]; then
+            log "Cambio profilo: $CURRENT_PROFILE -> $NEXT"
+            CURRENT_PROFILE="$NEXT"
+            echo "$CURRENT_PROFILE" > "$PROFILE_FILE"
+        fi
+    fi
+
+    log "Attendo ${WAIT}s..."
+    sleep $WAIT
+done
+RUNEOF
+
+chmod +x "$RUN_SCRIPT"
+
+# Verifica sintassi
+if bash -n "$RUN_SCRIPT"; then
+    ok "run-kiosk.sh: sintassi OK"
+else
+    warn "ERRORE sintassi in run-kiosk.sh:"
+    bash -n "$RUN_SCRIPT" 2>&1
+fi
+
+# Salva il profilo rilevato dai test precedenti
+if [ -n "${WORKING_PROFILE:-}" ]; then
+    # Mappa il profilo interno nel nuovo schema
+    case "${WORKING_PROFILE}" in
+        default|pixman) INIT_PROFILE="xwayland_sw" ;;
+        llvmpipe)       INIT_PROFILE="xwayland_sw" ;;
+        gtk2)           INIT_PROFILE="xwayland_gtk2" ;;
+        *)              INIT_PROFILE="xwayland_sw" ;;
+    esac
+    mkdir -p "${APP_DIR}/config"
+    echo "$INIT_PROFILE" > "${APP_DIR}/config/profile.conf"
+    chown -R "${KIOSK_USER}:${KIOSK_USER}" "${APP_DIR}/config"
+    ok "Profilo iniziale impostato a: $INIT_PROFILE (xwayland, massima compatibilita)"
+else
+    mkdir -p "${APP_DIR}/config"
+    echo "xwayland_sw" > "${APP_DIR}/config/profile.conf"
+    chown -R "${KIOSK_USER}:${KIOSK_USER}" "${APP_DIR}/config"
+    ok "Profilo iniziale: xwayland_sw (default sicuro per VM)"
+fi
+
+
+# =============================================================================
+# FASE 7 - kiosk-control
+# =============================================================================
+sep "FASE 7 - Script kiosk-control"
+
+cat > "${APP_DIR}/kiosk-control.sh" << 'CTRLEOF'
+#!/usr/bin/env bash
+case "${1:-help}" in
+    start)          systemctl start kiosk.service ;;
+    stop)           touch /opt/kiosk/.stop; systemctl stop kiosk.service ;;
+    restart)        rm -f /opt/kiosk/.stop; systemctl restart kiosk.service ;;
+    status)         systemctl status kiosk.service; echo ""; tail -30 /opt/kiosk/logs/kiosk.log ;;
+    log)            journalctl -u kiosk.service -f ;;
+    errlog)         tail -f /opt/kiosk/logs/kiosk-err.log ;;
+    profile)        cat /opt/kiosk/config/profile.conf 2>/dev/null || echo "default" ;;
+    reset-profile)  rm -f /opt/kiosk/config/profile.conf; echo "Profilo resettato a default." ;;
+    update)
+        VER="${2:-v1.0.0}"
+        URL="https://github.com/accaicedtea/ttetttos/releases/download/${VER}/demo-1.jar"
+        echo "Download $URL..."
+        if curl -fsSL "$URL" -o /tmp/kiosk-update.jar; then
+            systemctl stop kiosk.service 2>/dev/null || true
+            cp /tmp/kiosk-update.jar /opt/kiosk/demo-1.jar
+            chown kiosk:kiosk /opt/kiosk/demo-1.jar
+            rm -f /opt/kiosk/.stop /tmp/kiosk-update.jar
+            systemctl start kiosk.service
+            echo "Aggiornato a $VER."
+        else
+            echo "Download fallito."
+        fi
+        ;;
+    help|*)
+        echo "Uso: kiosk-control {start|stop|restart|status|log|errlog|profile|reset-profile|update [tag]}"
+        ;;
+esac
+CTRLEOF
+
+chmod +x "${APP_DIR}/kiosk-control.sh"
+ln -sf "${APP_DIR}/kiosk-control.sh" /usr/local/bin/kiosk-control
+ok "kiosk-control installato in /usr/local/bin/kiosk-control"
+
+# =============================================================================
+# FASE 8 - Cursore trasparente
+# =============================================================================
+sep "FASE 8 - Cursore trasparente"
+
+mkdir -p /usr/share/icons/blank-cursor/cursors
+
+python3 << 'PYEOF'
+import struct, os, sys
+data = (b'Xcur'
+    + struct.pack('<III', 16, 0x10000, 1)
+    + struct.pack('<III', 0xFFFD0002, 24, 28)
+    + struct.pack('<IIIIIIIII', 36, 0xFFFD0002, 24, 1, 1, 1, 0, 0, 50)
+    + b'\x00\x00\x00\x00')
+base = '/usr/share/icons/blank-cursor/cursors/left_ptr'
+with open(base, 'wb') as f:
+    f.write(data)
+names = ['default','arrow','pointer','hand','hand1','hand2',
+         'text','xterm','wait','watch','grabbing','grab',
+         'move','progress','not-allowed']
+for n in names:
+    dst = '/usr/share/icons/blank-cursor/cursors/' + n
+    if not os.path.exists(dst):
+        os.symlink('left_ptr', dst)
+print('Cursore trasparente: OK')
+PYEOF
+
+printf '[Icon Theme]\nName=blank-cursor\n' \
+    > /usr/share/icons/blank-cursor/index.theme
+
+ok "Cursore trasparente creato."
+
+# =============================================================================
+# FASE 9 - Servizio systemd
+# =============================================================================
+sep "FASE 9 - Servizio systemd kiosk"
+
+# Prepara XDG runtime dir
+mkdir -p "/run/user/${KIOSK_UID}"
+chmod 700 "/run/user/${KIOSK_UID}"
+chown "${KIOSK_USER}:${KIOSK_USER}" "/run/user/${KIOSK_UID}"
+loginctl enable-linger "$KIOSK_USER" 2>/dev/null || true
+log "XDG_RUNTIME_DIR: /run/user/${KIOSK_UID}"
+
+# Scrivi il service file
+log "Creo /etc/systemd/system/kiosk.service..."
+printf '[Unit]\n' > /etc/systemd/system/kiosk.service
+printf 'Description=Kiosk JavaFX 24/7\n' >> /etc/systemd/system/kiosk.service
+printf 'After=network-online.target systemd-user-sessions.service local-fs.target\n' >> /etc/systemd/system/kiosk.service
+printf 'Wants=network-online.target\n' >> /etc/systemd/system/kiosk.service
+printf 'StartLimitIntervalSec=120\n' >> /etc/systemd/system/kiosk.service
+printf 'StartLimitBurst=5\n' >> /etc/systemd/system/kiosk.service
+printf '\n[Service]\n' >> /etc/systemd/system/kiosk.service
+printf 'Type=simple\n' >> /etc/systemd/system/kiosk.service
+printf 'User=%s\n' "$KIOSK_USER" >> /etc/systemd/system/kiosk.service
+printf 'Group=%s\n' "$KIOSK_USER" >> /etc/systemd/system/kiosk.service
+printf 'WorkingDirectory=%s\n' "$APP_DIR" >> /etc/systemd/system/kiosk.service
+printf 'Environment="HOME=%s"\n' "$KIOSK_HOME" >> /etc/systemd/system/kiosk.service
+printf 'Environment="XDG_RUNTIME_DIR=/run/user/%s"\n' "$KIOSK_UID" >> /etc/systemd/system/kiosk.service
+printf 'Environment="XCURSOR_THEME=blank-cursor"\n' >> /etc/systemd/system/kiosk.service
+printf 'Environment="XCURSOR_SIZE=24"\n' >> /etc/systemd/system/kiosk.service
+printf 'Environment="TOTEM_API_KEY=%s"\n' "$API_KEY" >> /etc/systemd/system/kiosk.service
+printf 'Environment="LIBGL_ALWAYS_SOFTWARE=1"\n' >> /etc/systemd/system/kiosk.service
+printf 'Environment="WLR_RENDERER=pixman"\n' >> /etc/systemd/system/kiosk.service
+printf 'Environment="WLR_RENDERER_ALLOW_SOFTWARE=1"\n' >> /etc/systemd/system/kiosk.service
+printf 'Environment="WLR_NO_HARDWARE_CURSORS=1"\n' >> /etc/systemd/system/kiosk.service
+printf 'ExecStartPre=/bin/bash -c "test ! -f %s/.stop || { rm -f %s/.stop; exit 1; }"\n' \
+    "$APP_DIR" "$APP_DIR" >> /etc/systemd/system/kiosk.service
+printf 'ExecStartPre=/bin/bash -c "mkdir -p /run/user/%s && chmod 700 /run/user/%s && chown %s:%s /run/user/%s"\n' \
+    "$KIOSK_UID" "$KIOSK_UID" "$KIOSK_USER" "$KIOSK_USER" "$KIOSK_UID" \
+    >> /etc/systemd/system/kiosk.service
+printf 'ExecStart=/usr/bin/dbus-run-session /usr/bin/cage -d -- %s/run-kiosk.sh\n' \
+    "$APP_DIR" >> /etc/systemd/system/kiosk.service
+printf 'Restart=always\n' >> /etc/systemd/system/kiosk.service
+printf 'RestartSec=5s\n' >> /etc/systemd/system/kiosk.service
+printf 'MemoryMax=600M\n' >> /etc/systemd/system/kiosk.service
+printf 'OOMScoreAdjust=200\n' >> /etc/systemd/system/kiosk.service
+printf 'StandardOutput=append:%s/logs/kiosk.log\n' "$APP_DIR" >> /etc/systemd/system/kiosk.service
+printf 'StandardError=append:%s/logs/kiosk-err.log\n' "$APP_DIR" >> /etc/systemd/system/kiosk.service
+printf 'ProtectSystem=strict\n' >> /etc/systemd/system/kiosk.service
+printf 'ReadWritePaths=%s /tmp /run/user\n' "$APP_DIR" >> /etc/systemd/system/kiosk.service
+printf 'PrivateTmp=true\n' >> /etc/systemd/system/kiosk.service
+printf 'NoNewPrivileges=true\n' >> /etc/systemd/system/kiosk.service
+printf '\n[Install]\n' >> /etc/systemd/system/kiosk.service
+printf 'WantedBy=multi-user.target\n' >> /etc/systemd/system/kiosk.service
+
+ok "kiosk.service creato."
+
+# Timer pulizia log
+printf '[Unit]\nDescription=Pulizia log kiosk\n[Service]\nType=oneshot\n' \
+    > /etc/systemd/system/kiosk-logclean.service
+printf 'ExecStart=/bin/bash -c "f=%s/logs/kiosk.log; [ -f $f ] && [ $(wc -c < $f) -gt 5242880 ] && tail -500 $f > $f.tmp && mv $f.tmp $f; journalctl --vacuum-size=50M 2>/dev/null||true"\n' \
+    "$APP_DIR" >> /etc/systemd/system/kiosk-logclean.service
+printf '[Unit]\nDescription=Pulizia log giornaliera\n[Timer]\nOnCalendar=daily\nPersistent=true\n[Install]\nWantedBy=timers.target\n' \
+    > /etc/systemd/system/kiosk-logclean.timer
+
+# Riavvio notturno
+printf '[Unit]\nDescription=Riavvio notturno kiosk\n[Service]\nType=oneshot\n' \
+    > /etc/systemd/system/kiosk-nightly-restart.service
+printf 'ExecStart=/bin/bash -c "rm -f %s/.stop; systemctl restart kiosk.service"\n' \
+    "$APP_DIR" >> /etc/systemd/system/kiosk-nightly-restart.service
+printf '[Unit]\nDescription=Riavvio kiosk 04:00\n[Timer]\nOnCalendar=04:00\nRandomizedDelaySec=300\n[Install]\nWantedBy=timers.target\n' \
+    > /etc/systemd/system/kiosk-nightly-restart.timer
+
+ok "Tutti i servizi systemd creati."
+
+# =============================================================================
+# FASE 10 - Auto-login TTY1
+# =============================================================================
+sep "FASE 10 - Auto-login TTY1"
+
+mkdir -p /etc/systemd/system/getty@tty1.service.d
+printf '[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin %s --noclear %%I $TERM\nType=idle\n' \
+    "$KIOSK_USER" > /etc/systemd/system/getty@tty1.service.d/autologin.conf
+ok "Auto-login TTY1 configurato."
+
+cat > "${KIOSK_HOME}/.bash_profile" << 'BPEOF'
+if [ "$(tty)" = "/dev/tty1" ]; then
+    if systemctl is-active --quiet kiosk.service 2>/dev/null; then
+        echo "Kiosk attivo. Premi Invio per il terminale."
+        read _
+    else
+        export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+        mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
+        export LIBGL_ALWAYS_SOFTWARE=1
+        export WLR_RENDERER=pixman
+        export WLR_NO_HARDWARE_CURSORS=1
+        sudo systemctl restart kiosk.service 2>/dev/null || \
+            dbus-run-session cage -d -- /opt/kiosk/run-kiosk.sh
+    fi
+fi
+BPEOF
+chown "${KIOSK_USER}:${KIOSK_USER}" "${KIOSK_HOME}/.bash_profile"
+
+printf 'kiosk ALL=(ALL) NOPASSWD: /bin/systemctl restart kiosk.service\n' \
+    > /etc/sudoers.d/kiosk
+printf 'kiosk ALL=(ALL) NOPASSWD: /bin/systemctl start kiosk.service\n' \
+    >> /etc/sudoers.d/kiosk
+printf 'kiosk ALL=(ALL) NOPASSWD: /bin/systemctl stop kiosk.service\n' \
+    >> /etc/sudoers.d/kiosk
+chmod 440 /etc/sudoers.d/kiosk
+ok "sudoers configurato."
+
+# =============================================================================
+# FASE 11 - Ottimizzazioni
+# =============================================================================
+sep "FASE 11 - Ottimizzazioni sistema"
+
+# sysctl
+printf 'kernel.panic = 30\nvm.swappiness = 5\nnet.ipv4.tcp_tw_reuse = 1\n' \
+    > /etc/sysctl.d/99-kiosk.conf
+sysctl -p /etc/sysctl.d/99-kiosk.conf > /dev/null 2>&1 || true
+ok "sysctl configurato."
+
+# Disabilita servizi inutili
+for SVC in ModemManager bluetooth cups avahi-daemon apt-daily.timer apt-daily-upgrade.timer; do
+    systemctl disable "$SVC" 2>/dev/null || true
+    systemctl mask    "$SVC" 2>/dev/null || true
+done
+ok "Servizi inutili disabilitati."
+
+# TTY extra
+for i in 2 3 4 5 6; do
+    systemctl mask "getty@tty${i}.service" 2>/dev/null || true
+done
+
+# Default target
+systemctl set-default multi-user.target
+
+# GRUB
+if [ -f /etc/default/grub ]; then
+    sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=2/' /etc/default/grub
+    grep -q '^GRUB_TIMEOUT_STYLE' /etc/default/grub || \
+        printf 'GRUB_TIMEOUT_STYLE=menu\n' >> /etc/default/grub
+    update-grub 2>/dev/null || grub-mkconfig -o /boot/grub/grub.cfg 2>/dev/null || true
+    ok "GRUB: timeout 2s."
+fi
+
+# udev
+printf 'SUBSYSTEM=="drm",   TAG+="uaccess", GROUP="video"\n' \
+    > /etc/udev/rules.d/99-kiosk.rules
+printf 'SUBSYSTEM=="input", TAG+="uaccess", GROUP="input"\n' \
+    >> /etc/udev/rules.d/99-kiosk.rules
+udevadm control --reload-rules 2>/dev/null || true
+
+# Journal
+mkdir -p /etc/systemd/journald.conf.d/
+printf '[Journal]\nSystemMaxUse=50M\nCompress=yes\nForwardToSyslog=no\n' \
+    > /etc/systemd/journald.conf.d/kiosk.conf
+
+ok "Ottimizzazioni completate."
+
+# =============================================================================
+# FASE 12 - Abilitazione servizi e permessi finali
+# =============================================================================
+sep "FASE 12 - Abilitazione servizi"
+
+chown -R "${KIOSK_USER}:${KIOSK_USER}" "$APP_DIR"
+chmod -R u+rw "$APP_DIR"
+
+systemctl daemon-reload
+systemctl enable kiosk.service        && ok "kiosk.service abilitato."
+systemctl enable kiosk-logclean.timer && ok "kiosk-logclean.timer abilitato."
+systemctl enable kiosk-nightly-restart.timer && ok "kiosk-nightly-restart.timer abilitato."
+
+# =============================================================================
+# RIEPILOGO FINALE
+# =============================================================================
+sep "RIEPILOGO"
+
+echo ""
+log "=== STATO FINALE ==="
+
+# JAR
+if [ -f "${APP_DIR}/demo-1.jar" ]; then
+    SZ=$(du -h "${APP_DIR}/demo-1.jar" | cut -f1)
+    ok "demo-1.jar: presente ($SZ)"
+else
+    warn "demo-1.jar: MANCANTE"
+fi
+
+# Lib
+LIB_N=$(ls "${APP_DIR}/lib/"*.jar 2>/dev/null | wc -l || echo 0)
+ok "Librerie: $LIB_N JAR in ${APP_DIR}/lib/"
+
+# JavaFX
+FX_N=$(ls "${JAVAFX_DIR}/"*.jar 2>/dev/null | wc -l || echo 0)
+if [ "$FX_N" -gt 0 ]; then
+    ok "JavaFX SDK: $FX_N JAR in $JAVAFX_DIR"
+else
+    warn "JavaFX SDK: non presente. L'app potrebbe non avviarsi."
+    warn "Soluzione: apt install openjfx"
+fi
+
+# run-kiosk.sh
+if [ -x "${APP_DIR}/run-kiosk.sh" ]; then
+    ok "run-kiosk.sh: eseguibile"
+else
+    warn "run-kiosk.sh: problemi di permessi"
+    chmod +x "${APP_DIR}/run-kiosk.sh"
+fi
+
+# Java
+if command -v java >/dev/null 2>&1; then
+    ok "Java: $(java -version 2>&1 | head -1)"
+else
+    warn "Java: non trovato nel PATH"
+fi
+
+# cage
+if command -v cage >/dev/null 2>&1; then
+    ok "cage: $(cage --version 2>/dev/null || echo 'trovato')"
+else
+    warn "cage: non trovato - avvio non funzionera"
+    warn "Installa con: apt install cage"
+fi
+
+# seatd
+if systemctl is-active seatd >/dev/null 2>&1; then
+    ok "seatd: attivo (gestione seat OK)"
+elif command -v seatd >/dev/null 2>&1; then
+    warn "seatd installato ma non attivo - avvio..."
+    systemctl start seatd 2>/dev/null || true
+else
+    warn "seatd non installato - cage potrebbe non avviarsi"
+    warn "Installa con: apt install seatd"
+fi
+
+# Verifica gruppo seat
+if id "$KIOSK_USER" 2>/dev/null | grep -q "seat"; then
+    ok "Utente $KIOSK_USER nel gruppo seat: OK"
+else
+    warn "Utente $KIOSK_USER NON nel gruppo seat"
+    warn "Fix: usermod -aG seat $KIOSK_USER && reboot"
+fi
+
+# servizio
+systemctl is-enabled kiosk.service >/dev/null 2>&1     && ok "kiosk.service: abilitato"     || warn "kiosk.service: non abilitato"
+
+echo ""
+echo "+------------------------------------------------------+"
+echo "|  SETUP COMPLETATO                                    |"
+echo "+------------------------------------------------------+"
+echo "|                                                      |"
+echo "|  Avvia ora:  systemctl start kiosk.service           |"
+echo "|  Oppure:     reboot                                  |"
+echo "|                                                      |"
+echo "|  Diagnostica:                                        |"
+echo "|    kiosk-control status                              |"
+echo "|    kiosk-control log                                 |"
+echo "|    kiosk-control errlog                              |"
+echo "|    journalctl -u kiosk -f                            |"
+echo "|                                                      |"
+echo "|  Profilo attuale:  kiosk-control profile             |"
+echo "|  Reset profilo:    kiosk-control reset-profile       |"
+echo "+------------------------------------------------------+"
 echo ""
