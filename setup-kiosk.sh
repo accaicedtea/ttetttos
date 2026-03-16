@@ -1053,6 +1053,79 @@ echo "   - Locale: touch /opt/kiosk/.stop && pkill Xorg"
 echo ""
 
 # =============================================================================
-# FASE 14 - Applicazione modifiche di sistema e riavvio
+# FASE 14 - Test applicazione in ambiente corrente
+# =============================================================================
+sep "FASE 14 - Test applicazione (prima di disabilitare la GUI)"
+
+# Funzione per testare l'app
+test_app() {
+    local DISPLAY_NR="$1"
+    local LOG_FILE="${APP_DIR}/logs/test.log"
+    local PID_FILE="/tmp/kiosk-test.pid"
+    
+    log "Avvio test su display $DISPLAY_NR ..."
+    
+    # Pulisci log precedenti
+    > "$LOG_FILE"
+    
+    # Lancia run-kiosk.sh come utente kiosk
+    su - "$KIOSK_USER" -c "DISPLAY=$DISPLAY_NR /opt/kiosk/run-kiosk.sh > $LOG_FILE 2>&1 & echo \$! > $PID_FILE"
+    
+    # Attendi 10 secondi per l'avvio
+    sleep 10
+    
+    # Controlla se il processo è vivo
+    if kill -0 $(cat $PID_FILE 2>/dev/null) 2>/dev/null; then
+        # Processo ancora in esecuzione, sembra funzionare
+        ok "Test: applicazione avviata con successo (PID $(cat $PID_FILE))"
+        # Termina il processo di test
+        kill $(cat $PID_FILE) 2>/dev/null
+        rm -f "$PID_FILE"
+        return 0
+    else
+        # Processo terminato, controlla il log
+        warn "Test: applicazione non è rimasta in esecuzione. Ultime righe del log:"
+        tail -20 "$LOG_FILE" | while read line; do warn "  $line"; done
+        return 1
+    fi
+}
+
+# Determina se siamo in una sessione X
+TEST_DISPLAY=""
+if [ -n "$DISPLAY" ] && xdpyinfo >/dev/null 2>&1; then
+    TEST_DISPLAY="$DISPLAY"
+    log "Rilevato display X corrente: $TEST_DISPLAY"
+else
+    log "Nessun display X disponibile, provo con Xvfb..."
+    if ! command -v Xvfb >/dev/null; then
+        log "Installazione Xvfb..."
+        inst xvfb
+    fi
+    # Avvia Xvfb su display :99
+    Xvfb :99 -screen 0 1024x768x24 >/dev/null 2>&1 &
+    XVFB_PID=$!
+    sleep 2
+    TEST_DISPLAY=":99"
+    log "Xvfb avviato su display $TEST_DISPLAY"
+fi
+
+if [ -z "$TEST_DISPLAY" ]; then
+    warn "Impossibile trovare un display X per il test. Salto il test."
+    # Non blocchiamo l'installazione, ma avvertiamo
+else
+    if test_app "$TEST_DISPLAY"; then
+        ok "Test superato, l'applicazione funziona."
+    else
+        fail "Test fallito. L'applicazione non si avvia correttamente. Controlla i log in ${APP_DIR}/logs/test.log e correggi eventuali errori prima di procedere."
+    fi
+    
+    # Ferma Xvfb se lo abbiamo avviato
+    if [ -n "$XVFB_PID" ]; then
+        kill "$XVFB_PID" 2>/dev/null
+    fi
+fi
+
+# =============================================================================
+# FASE 15 - Applicazione modifiche di sistema e riavvio
 # =============================================================================
 apply_system_changes_and_reboot
