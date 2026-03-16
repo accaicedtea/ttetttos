@@ -275,8 +275,8 @@ public class NetworkWatchdog {
      * Legge la temperatura CPU in gradi Celsius.
      *
      * Strategia (in ordine di priorit?):
-     *   1. /sys/class/thermal/thermal_zone temp  - Linux standard (Raspberry Pi, SBC, laptop)
-     *   2. /sys/class/hwmon/hwmon emp*_input     - hwmon (Intel, AMD desktop)
+     *   1. /sys/class/thermal/thermal_zonetemp  - Linux standard (Raspberry Pi, SBC, laptop)
+     *   2. /sys/class/hwmon/hwmon temp*_input     - hwmon (Intel, AMD desktop)
      *   3. Comando sensors command (lm-sensors) - fallback universale
      *   4. 0.0 se nulla funziona
      */

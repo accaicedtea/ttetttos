@@ -1,0 +1,366 @@
+{
+  "cached_at": "2026-03-16T03:21:23.935682578",
+  "version": "",
+  "menu": {
+    "ok": true,
+    "messaggio": "OK",
+    "data": {
+      "categorie": [
+        {
+          "nome": "Kumpir",
+          "prodotti": [
+            {
+              "nome": "Kumpir Mare",
+              "prezzo": "7.50",
+              "descrizione": "Kumpir Mare auto-generato",
+              "allergeni": [],
+              "ingredienti": [
+                {
+                  "nome": "Tonno",
+                  "allergeni": [
+                    "Arachidi"
+                  ]
+                },
+                {
+                  "nome": "Olive",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Patata",
+                  "allergeni": []
+                }
+              ]
+            },
+            {
+              "nome": "Kumpir Vegetariano",
+              "prezzo": "6.50",
+              "descrizione": "Kumpir Vegetariano auto-generato",
+              "allergeni": [],
+              "ingredienti": [
+                {
+                  "nome": "Olive",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Patata",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Formaggio",
+                  "allergeni": [
+                    "Latte e derivati"
+                  ]
+                },
+                {
+                  "nome": "Pesto",
+                  "allergeni": [
+                    "Frutta a guscio"
+                  ]
+                }
+              ]
+            },
+            {
+              "nome": "Kumpir Piccante",
+              "prezzo": "7.00",
+              "descrizione": "Kumpir Piccante auto-generato",
+              "allergeni": [],
+              "ingredienti": [
+                {
+                  "nome": "Peperoni",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Patata",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Salsiccia",
+                  "allergeni": []
+                }
+              ]
+            },
+            {
+              "nome": "Kumpir Classico",
+              "prezzo": "6.00",
+              "descrizione": "Kumpir Classico auto-generato",
+              "allergeni": [],
+              "ingredienti": [
+                {
+                  "nome": "Mais",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Patata",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Formaggio",
+                  "allergeni": [
+                    "Latte e derivati"
+                  ]
+                }
+              ]
+            },
+            {
+              "nome": "Kumpir Small",
+              "prezzo": "7.50",
+              "descrizione": "Patata piccola al forno, farcita a tua scelta",
+              "allergeni": [],
+              "ingredienti": [
+                {
+                  "nome": "Patata piccola",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Mais",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Pomodoro",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Maionese",
+                  "allergeni": [
+                    "Uova"
+                  ]
+                }
+              ]
+            },
+            {
+              "nome": "Kumpir Medium",
+              "prezzo": "9.50",
+              "descrizione": "Patata media al forno, farcita a tua scelta",
+              "allergeni": [],
+              "ingredienti": [
+                {
+                  "nome": "Patata media",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Mais",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Pomodoro",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Maionese",
+                  "allergeni": [
+                    "Uova"
+                  ]
+                }
+              ]
+            },
+            {
+              "nome": "Kumpir Large",
+              "prezzo": "11.90",
+              "descrizione": "Patata grande al forno, farcita a tua scelta",
+              "allergeni": [],
+              "ingredienti": [
+                {
+                  "nome": "Patata grande",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Mais",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Pomodoro",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Maionese",
+                  "allergeni": [
+                    "Uova"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "nome": "Panini",
+          "prodotti": [
+            {
+              "nome": "Panino Classico",
+              "prezzo": "6.50",
+              "descrizione": "Pane classico con ingredienti a scelta",
+              "allergeni": [
+                "Glutine"
+              ],
+              "ingredienti": [
+                {
+                  "nome": "Pane classico",
+                  "allergeni": [
+                    "Glutine"
+                  ]
+                },
+                {
+                  "nome": "Pollo grigliato",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Pomodoro",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Maionese",
+                  "allergeni": [
+                    "Uova"
+                  ]
+                }
+              ]
+            },
+            {
+              "nome": "Panino Integrale",
+              "prezzo": "7.00",
+              "descrizione": "Pane integrale con ingredienti a scelta",
+              "allergeni": [
+                "Glutine"
+              ],
+              "ingredienti": [
+                {
+                  "nome": "Pane integrale",
+                  "allergeni": [
+                    "Glutine"
+                  ]
+                },
+                {
+                  "nome": "Falafel",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Pomodoro",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Hummus",
+                  "allergeni": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "nome": "Patatine \u0026 Contorni",
+          "prodotti": [
+            {
+              "nome": "Patatine Piccole",
+              "prezzo": "2.50",
+              "descrizione": "Patatine fritte croccanti",
+              "allergeni": [],
+              "ingredienti": []
+            },
+            {
+              "nome": "Patatine Grandi",
+              "prezzo": "3.50",
+              "descrizione": "Porzione abbondante di patatine fritte",
+              "allergeni": [],
+              "ingredienti": []
+            },
+            {
+              "nome": "Insalata Mista",
+              "prezzo": "2.90",
+              "descrizione": "Verdure fresche di stagione;ita",
+              "allergeni": [],
+              "ingredienti": [
+                {
+                  "nome": "Olive",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Pomodoro",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Peperoni",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Spinaci",
+                  "allergeni": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "nome": "Bibite",
+          "prodotti": [
+            {
+              "nome": "Acqua 500ml",
+              "prezzo": "1.00",
+              "descrizione": "Naturale o frizzante",
+              "allergeni": [],
+              "ingredienti": []
+            },
+            {
+              "nome": "Coca Cola 330ml",
+              "prezzo": "2.00",
+              "descrizione": "In lattina",
+              "allergeni": [],
+              "ingredienti": []
+            },
+            {
+              "nome": "Succo di Frutta",
+              "prezzo": "2.00",
+              "descrizione": "Vari gusti",
+              "allergeni": [],
+              "ingredienti": []
+            },
+            {
+              "nome": "Tè Freddo",
+              "prezzo": "1.80",
+              "descrizione": "Limone o pesca",
+              "allergeni": [],
+              "ingredienti": []
+            }
+          ]
+        },
+        {
+          "nome": "Dolci",
+          "prodotti": [
+            {
+              "nome": "Cheesecake",
+              "prezzo": "3.50",
+              "descrizione": "Fatta in casa",
+              "allergeni": [
+                "Uova",
+                "Latte e derivati"
+              ],
+              "ingredienti": [
+                {
+                  "nome": "Patata grande",
+                  "allergeni": []
+                },
+                {
+                  "nome": "Mozzarella",
+                  "allergeni": [
+                    "Latte e derivati"
+                  ]
+                }
+              ]
+            },
+            {
+              "nome": "Brownie",
+              "prezzo": "2.50",
+              "descrizione": "Al cioccolato fondente",
+              "allergeni": [
+                "Glutine",
+                "Uova",
+                "Latte e derivati"
+              ],
+              "ingredienti": []
+            }
+          ]
+        }
+      ],
+      "versione": "475d3383c66d1e335cca15777b957dd1",
+      "generato_at": "2026-03-16 03:21:23",
+      "generated_by": "MenuController_v2"
+    }
+  }
+}

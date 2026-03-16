@@ -2,16 +2,25 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                              http://maven.apache.org/maven-v4_0_0.xsd">
+
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.example</groupId>
   <artifactId>totem</artifactId>
-  <version>1</version>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+
+  <name>Totem Kiosk</name>
+  <description>Sistema di ordinazione digitale JavaFX per totem touch screen</description>
+  <url>https://github.com/accaicedtea/ttetttos</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
+    <javafx.version>21</javafx.version>
     <ikonli.version>12.3.1</ikonli.version>
+    <!-- Classifer automatico per il sistema corrente -->
+    <javafx.platform>${os.name}-${os.arch}</javafx.platform>
   </properties>
 
   <dependencies>
@@ -20,35 +29,38 @@
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-controls</artifactId>
-      <version>21</version>
+      <version>${javafx.version}</version>
     </dependency>
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-fxml</artifactId>
-      <version>21</version>
+      <version>${javafx.version}</version>
+    </dependency>
+    <!-- javafx-graphics con nativi Linux per Cage/Wayland -->
+    <dependency>
+      <groupId>org.openjfx</groupId>
+      <artifactId>javafx-graphics</artifactId>
+      <version>${javafx.version}</version>
     </dependency>
 
-    <!-- ── JSON ──────────────────────────────────────────────────── -->
+    <!-- ── Gson (JSON) ───────────────────────────────────────────── -->
     <dependency>
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
       <version>2.11.0</version>
     </dependency>
 
-    <!-- ── Ikonli: framework icone per JavaFX ────────────────────── -->
-    <!-- Core Ikonli -->
+    <!-- ── Ikonli (icone MDI2 vettoriali) ────────────────────────── -->
     <dependency>
       <groupId>org.kordamp.ikonli</groupId>
       <artifactId>ikonli-core</artifactId>
       <version>${ikonli.version}</version>
     </dependency>
-    <!-- Ikonli JavaFX integration -->
     <dependency>
       <groupId>org.kordamp.ikonli</groupId>
       <artifactId>ikonli-javafx</artifactId>
       <version>${ikonli.version}</version>
     </dependency>
-    <!-- Material Design Icons 2 (MDI2) — 7000+ icone vettoriali -->
     <dependency>
       <groupId>org.kordamp.ikonli</groupId>
       <artifactId>ikonli-materialdesign2-pack</artifactId>
@@ -59,66 +71,145 @@
 
   <build>
     <plugins>
-    <plugin>
-    <groupId>org.apache.maven.plugins</groupId>
-    <artifactId>maven-compiler-plugin</artifactId>
-    <version>3.8.0</version>
-    <configuration><release>17</release></configuration>
-    </plugin>
 
-    <plugin>
-    <groupId>org.openjfx</groupId>
-    <artifactId>javafx-maven-plugin</artifactId>
-    <version>0.0.8</version>
-    <executions>
-      <execution>
-      <id>default-cli</id>
-      <configuration>
-        <mainClass>com.example.App</mainClass>
-      </configuration>
-      </execution>
-    </executions>
-    </plugin>
+      <!-- Compilatore Java 17 -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <release>17</release>
+          <encoding>UTF-8</encoding>
+        </configuration>
+      </plugin>
 
-  </plugins>
+      <!-- Runner JavaFX (sviluppo locale) -->
+      <plugin>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-maven-plugin</artifactId>
+        <version>0.0.8</version>
+        <executions>
+          <execution>
+            <id>default-cli</id>
+            <configuration>
+              <mainClass>com.example.App</mainClass>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--
+        Fat JAR con tutte le dipendenze incluse (per distribuzione).
+        Uso: mvn package -Pfat
+        Output: target/totem-fat.jar
+        Deployment: java -jar totem-fat.jar
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.5.2</version>
+        <executions>
+          <execution>
+            <id>fat-jar</id>
+            <phase>package</phase>
+            <goals><goal>shade</goal></goals>
+            <configuration>
+              <finalName>totem-fat</finalName>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>com.example.App</mainClass>
+                </transformer>
+                <!-- Unisce i file ServiceLoader (Ikonli li usa) -->
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--
+        Assembly: produce demo-1.jar + lib/ separati (per setup-kiosk.sh).
+        Uso: mvn package
+        Output:
+          target/demo-1.jar          (app senza dipendenze)
+          target/lib/*.jar           (tutte le dipendenze)
+          target/lib.tar.gz          (archivio lib/ per setup-kiosk.sh)
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.6.1</version>
+        <executions>
+          <execution>
+            <id>copy-deps</id>
+            <phase>package</phase>
+            <goals><goal>copy-dependencies</goal></goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/lib</outputDirectory>
+              <includeScope>runtime</includeScope>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Crea lib.tar.gz dopo il package (per il deploy via setup-kiosk.sh) -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>create-lib-archive</id>
+            <phase>package</phase>
+            <goals><goal>run</goal></goals>
+            <configuration>
+              <target>
+                <tar destfile="${project.build.directory}/lib.tar.gz"
+                     basedir="${project.build.directory}/lib"
+                     compression="gzip" longfile="gnu" />
+                                <echo message="=== Deploy artifacts ===" />
+                <echo message="JAR:     target/demo-1.jar" />
+                <echo message="Libs:    target/lib.tar.gz" />
+                <echo message="Fat JAR: target/totem-fat.jar" />
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Jar manifest -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.3.0</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>com.example.App</mainClass>
+              <addClasspath>true</addClasspath>
+              <classpathPrefix>lib/</classpathPrefix>
+            </manifest>
+            <manifestEntries>
+              <Built-By>Totem Kiosk Build</Built-By>
+              <App-Version>${project.version}</App-Version>
+            </manifestEntries>
+          </archive>
+          <finalName>demo-1</finalName>
+        </configuration>
+      </plugin>
+
+    </plugins>
   </build>
-
-  <!-- Distribuzione su repository remoto (es. Maven Central, GitHub Packages, Nexus, Artifactory) -->
-  <distributionManagement>
-    <repository>
-      <id>github</id>
-      <url>https://maven.pkg.github.com/USERNAME/REPO</url>
-    </repository>
-    <snapshotRepository>
-      <id>github</id>
-      <url>https://maven.pkg.github.com/USERNAME/REPO</url>
-    </snapshotRepository>
-  </distributionManagement>
-
-  <licenses>
-    <license>
-      <name>MIT License</name>
-      <url>https://opensource.org/licenses/MIT</url>
-      <distribution>repo</distribution>
-    </license>
-  </licenses>
-
-  <scm>
-    <url>https://github.com/USERNAME/REPO</url>
-    <connection>scm:git:git://github.com/USERNAME/REPO.git</connection>
-    <developerConnection>scm:git:ssh://github.com/USERNAME/REPO.git</developerConnection>
-    <tag>HEAD</tag>
-  </scm>
-
-  <developers>
-    <developer>
-      <id>yourid</id>
-      <name>Your Name</name>
-      <email>your@email.com</email>
-    </developer>
-  </developers>
-
-  <description>Totem JavaFX kiosk app</description>
-  <url>https://github.com/USERNAME/REPO</url>
 
 </project>
