@@ -5,7 +5,6 @@
 #   sudo bash setup-kiosk.sh reset
 #   sudo bash setup-kiosk.sh update
 
-set -euo pipefail
 
 GITHUB_USER="accaicedtea"
 GITHUB_REPO="ttetttos"
@@ -304,8 +303,11 @@ else
 fi
 
 info "Scarico librerie..."
-if curl -fsSL --retry 3 "${LIB_URL}" | tar -xz -C "${APP_DIR}/lib/"; then
-    LIB_COUNT=$(ls "${APP_DIR}/lib/"*.jar 2>/dev/null | wc -l)
+curl -fsSL --retry 3 "${LIB_URL}" -o /tmp/kiosk-lib.tar.gz 2>/dev/null || true
+if [[ -f /tmp/kiosk-lib.tar.gz ]]; then
+    tar -xz -C "${APP_DIR}/lib/" -f /tmp/kiosk-lib.tar.gz 2>/dev/null || true
+    rm -f /tmp/kiosk-lib.tar.gz
+    LIB_COUNT=$(ls "${APP_DIR}/lib/"*.jar 2>/dev/null | wc -l || echo 0)
     ok "Librerie scaricate: ${LIB_COUNT} JAR in ${APP_DIR}/lib/"
 else
     warn "Download lib.tar.gz fallito - l'app potrebbe non avviarsi"
@@ -324,9 +326,10 @@ if [[ -d "${JAVAFX_DIR}" ]] && ls "${JAVAFX_DIR}/"*.jar &>/dev/null 2>&1; then
 else
     # Prova prima openjfx di sistema
     FX_SYSTEM=""
-    FX_SYSTEM=$(find /usr/share/java /usr/lib/jvm \
-                     -name "javafx.controls.jar" 2>/dev/null | head -1 \
-                | xargs -I{} dirname {} 2>/dev/null || echo "")
+    FX_JAR=$(find /usr/share/java /usr/lib/jvm                   -name "javafx.controls.jar" 2>/dev/null | head -1 || echo "")
+    if [[ -n "${FX_JAR}" ]]; then
+        FX_SYSTEM=$(dirname "${FX_JAR}" 2>/dev/null || echo "")
+    fi
 
     if [[ -n "${FX_SYSTEM}" ]]; then
         info "Uso JavaFX di sistema: ${FX_SYSTEM}"
@@ -354,13 +357,8 @@ else
             mkdir -p /tmp/fxext
 
             # Estrai escludendo webkit (~60MB inutile) e media
-            unzip -q /tmp/javafx.zip \
-                -d /tmp/fxext/ \
-                -x "*/libjfxwebkit.so" \
-                -x "*/libgstreamer-lite.so" \
-                -x "*/src.zip" 2>/dev/null || \
-            unzip -q /tmp/javafx.zip \
-                -d /tmp/fxext/ 2>/dev/null || true
+            unzip -q /tmp/javafx.zip                 -d /tmp/fxext/                 -x "*/libjfxwebkit.so"                 -x "*/libgstreamer-lite.so"                 -x "*/src.zip" 2>/dev/null
+            true  # ignora exit code unzip (ritorna 1 su warning)
 
             mkdir -p "${JAVAFX_DIR}"
 
@@ -406,10 +404,10 @@ step "Verifica Java e JavaFX"
 if [[ -d "${JAVAFX_DIR}" ]] && ls "${JAVAFX_DIR}/"*.jar &>/dev/null 2>&1; then
     FX_PATH="${JAVAFX_DIR}"
 else
-    FX_SYSTEM=$(find /usr/share/java /usr/lib/jvm \
-                     -name "javafx.controls.jar" 2>/dev/null | head -1 \
-                | xargs -I{} dirname {} 2>/dev/null || echo "")
-    FX_PATH="${FX_SYSTEM:-${APP_DIR}/lib}"
+    FX_JAR2=$(find /usr/share/java /usr/lib/jvm                    -name "javafx.controls.jar" 2>/dev/null | head -1 || echo "")
+    FX_SYSTEM2=""
+    [[ -n "${FX_JAR2}" ]] && FX_SYSTEM2=$(dirname "${FX_JAR2}" 2>/dev/null || echo "")
+    FX_PATH="${FX_SYSTEM2:-${APP_DIR}/lib}"
 fi
 info "FX_PATH: ${FX_PATH}"
 
@@ -439,11 +437,11 @@ fi
 
 # Test 3: JAR principale leggibile
 if command -v java &>/dev/null && [[ -f "${APP_DIR}/demo-1.jar" ]]; then
-    if java -cp "${APP_DIR}/demo-1.jar" --list-modules 2>/dev/null 1>/dev/null \
-       || jar tf "${APP_DIR}/demo-1.jar" 2>/dev/null | grep -q "com/example/App"; then
+    JAR_CHECK=$(jar tf "${APP_DIR}/demo-1.jar" 2>/dev/null | grep -c "com/example/App" || echo 0)
+    if [[ "${JAR_CHECK}" -gt 0 ]]; then
         ok "demo-1.jar valido"
     else
-        warn "demo-1.jar: impossibile verificare il contenuto"
+        warn "demo-1.jar: impossibile verificare (normale senza javafx nel path)"
     fi
 fi
 
