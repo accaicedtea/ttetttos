@@ -192,6 +192,12 @@ install_pkg curl wget unzip ca-certificates
 log "Installo Cage (compositor Wayland minimale)..."
 install_pkg cage
 
+log "Installo seatd (gestore seat - necessario per cage)..."
+install_pkg seatd
+# Abilita e avvia seatd subito
+systemctl enable seatd 2>/dev/null || true
+systemctl start  seatd 2>/dev/null || true
+
 log "Installo Xwayland..."
 install_pkg xwayland
 
@@ -1019,12 +1025,30 @@ if command -v cage >/dev/null 2>&1; then
     ok "cage: $(cage --version 2>/dev/null || echo 'trovato')"
 else
     warn "cage: non trovato - avvio non funzionera"
+    warn "Installa con: apt install cage"
+fi
+
+# seatd
+if systemctl is-active seatd >/dev/null 2>&1; then
+    ok "seatd: attivo (gestione seat OK)"
+elif command -v seatd >/dev/null 2>&1; then
+    warn "seatd installato ma non attivo - avvio..."
+    systemctl start seatd 2>/dev/null || true
+else
+    warn "seatd non installato - cage potrebbe non avviarsi"
+    warn "Installa con: apt install seatd"
+fi
+
+# Verifica gruppo seat
+if id "$KIOSK_USER" 2>/dev/null | grep -q "seat"; then
+    ok "Utente $KIOSK_USER nel gruppo seat: OK"
+else
+    warn "Utente $KIOSK_USER NON nel gruppo seat"
+    warn "Fix: usermod -aG seat $KIOSK_USER && reboot"
 fi
 
 # servizio
-systemctl is-enabled kiosk.service >/dev/null 2>&1 \
-    && ok "kiosk.service: abilitato" \
-    || warn "kiosk.service: non abilitato"
+systemctl is-enabled kiosk.service >/dev/null 2>&1     && ok "kiosk.service: abilitato"     || warn "kiosk.service: non abilitato"
 
 echo ""
 echo "+------------------------------------------------------+"
