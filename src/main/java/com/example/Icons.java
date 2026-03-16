@@ -45,7 +45,7 @@ public class Icons {
 
     // Connettività
     public static final String WIFI         = "mdi2w-wifi";
-    public static final String WIFI_OFF     = "mdi2w-wifi-off";
+    public static final String WIFI_OFF     = "mdi2w-wifi";
     public static final String SIGNAL       = "mdi2s-signal";
 
     // Sistema
