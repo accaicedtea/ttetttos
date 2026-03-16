@@ -419,6 +419,29 @@ chown -R "${KIOSK_USER}:${KIOSK_USER}" "${APP_DIR}"
 chmod 755 "${APP_DIR}"
 ok "App installata in ${APP_DIR}."
 
+# ─── Download JavaFX SDK (nativi Linux inclusi) ───────────────────────────────
+# Non servono moduli separati — JavaFX SDK contiene tutto inclusi i .so nativi
+JAVAFX_VERSION="21.0.2"
+JAVAFX_URL="https://download2.gluonhq.com/openjfx/${JAVAFX_VERSION}/openjfx-${JAVAFX_VERSION}_linux-x64_bin-sdk.zip"
+JAVAFX_ZIP="/tmp/javafx-sdk.zip"
+JAVAFX_DIR="${APP_DIR}/javafx-sdk"
+
+if [[ ! -d "${JAVAFX_DIR}" ]]; then
+    info "Download JavaFX SDK ${JAVAFX_VERSION} (nativi Linux inclusi)..."
+    if curl -fsSL "${JAVAFX_URL}" -o "${JAVAFX_ZIP}"; then
+        pkg_install unzip 2>/dev/null || true
+        unzip -q "${JAVAFX_ZIP}" -d "/tmp/javafx-extract/"
+        mv /tmp/javafx-extract/javafx-sdk-${JAVAFX_VERSION}/lib "${JAVAFX_DIR}"
+        rm -rf "${JAVAFX_ZIP}" /tmp/javafx-extract/
+        chown -R "${KIOSK_USER}:${KIOSK_USER}" "${JAVAFX_DIR}"
+        ok "JavaFX SDK installato in ${JAVAFX_DIR}."
+    else
+        warn "Download JavaFX SDK fallito — verifica la connessione."
+    fi
+else
+    info "JavaFX SDK gia presente: ${JAVAFX_DIR}"
+fi
+
 # ─── Script di lancio ─────────────────────────────────────────────────────────
 cat > "${APP_DIR}/run-kiosk.sh" << LAUNCHER
 #!/usr/bin/env bash
