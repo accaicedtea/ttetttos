@@ -472,8 +472,293 @@ fi
 chown -R "${KIOSK_USER}:${KIOSK_USER}" "$APP_DIR"
 
 # =============================================================================
-# FASE 6 - Creazione run-kiosk.sh
+# FASE 5b - Test rendering JavaFX (trova il profilo che funziona)
 # =============================================================================
+sep "FASE 5b - Test rendering JavaFX"
+
+log "Cerco il profilo di rendering che funziona su questo sistema..."
+log "Questo evita lo schermo nero al primo avvio."
+
+WORKING_PROFILE="default"
+JAVA_BIN=$(command -v java 2>/dev/null || echo "")
+
+if [ -z "$JAVA_BIN" ]; then
+    warn "Java non trovato - salto il test rendering."
+else
+    # Crea un mini programma di test JavaFX
+    TEST_DIR=$(mktemp -d /tmp/fx-test.XXXXXX)
+    mkdir -p "${TEST_DIR}"
+
+    # Determina FX_PATH per il test
+    if [ -d "${JAVAFX_DIR}" ] && ls "${JAVAFX_DIR}/"*.jar >/dev/null 2>&1; then
+        TEST_FX="${JAVAFX_DIR}"
+    else
+        FX_JAR=$(find /usr/share/java /usr/lib/jvm -name "javafx.controls.jar" 2>/dev/null | head -1 || echo "")
+        if [ -n "$FX_JAR" ]; then
+            TEST_FX=$(dirname "$FX_JAR")
+        else
+            TEST_FX="${APP_DIR}/lib"
+        fi
+    fi
+
+    # Classpath test: includi tutte le lib
+    TEST_CP="${APP_DIR}/demo-1.jar"
+    for J in "${APP_DIR}/lib/"*.jar; do
+        [ -f "$J" ] && TEST_CP="${TEST_CP}:${J}"
+    done
+
+    log "FX_PATH per test: $TEST_FX"
+    log "Test rendering in corso..."
+
+    # Funzione che testa un profilo e ritorna 0 se JavaFX parte
+    test_profile() {
+        PNAME="$1"
+        log "  -> Provo profilo: $PNAME"
+
+        # Setup environment per questo profilo
+        export LIBGL_ALWAYS_SOFTWARE=1
+        export WLR_NO_HARDWARE_CURSORS=1
+        export WLR_RENDERER_ALLOW_SOFTWARE=1
+
+        case "$PNAME" in
+            default)
+                export WLR_RENDERER=pixman
+                export MESA_GL_VERSION_OVERRIDE=3.3
+                export GALLIUM_DRIVER=softpipe
+                JFXTEST="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3"
+                ;;
+            pixman)
+                export WLR_RENDERER=pixman
+                export MESA_GL_VERSION_OVERRIDE=4.5
+                export GALLIUM_DRIVER=softpipe
+                JFXTEST="-Dprism.order=sw -Dprism.forceGPU=false -Dglass.platform=gtk -Djdk.gtk.version=3"
+                ;;
+            llvmpipe)
+                export WLR_RENDERER=pixman
+                export GALLIUM_DRIVER=llvmpipe
+                JFXTEST="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3"
+                ;;
+            gtk2)
+                export WLR_RENDERER=pixman
+                JFXTEST="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=2"
+                ;;
+        esac
+
+        # Test: avvia Java con JavaFX per 3 secondi e controlla se parte
+        # Usa timeout per non bloccarsi
+        TESTOUT=$(timeout 8 java             -Xms32m -Xmx128m             --module-path "$TEST_FX"             --add-modules javafx.graphics,javafx.controls             $JFXTEST             -Djavafx.headless=false             -Djava.awt.headless=false             -Dfile.encoding=UTF-8             -cp "$TEST_CP"             com.example.App 2>&1 || true)
+
+        # Controlla se JavaFX si e avviato (cerca segnali positivi nei log)
+        if echo "$TESTOUT" | grep -qi "Nav.*->|SplashController|Login|avvio|started|toolkit|stage"; then
+            log "  -> Profilo $PNAME: FUNZIONA (JavaFX si e avviato)"
+            echo "$TESTOUT" | head -5 >> "$LOG"
+            return 0
+        fi
+
+        # Controlla se almeno JavaFX si e inizializzato senza errori critici
+        if echo "$TESTOUT" | grep -qi "prism\|quantum\|glass" &&            ! echo "$TESTOUT" | grep -qi "Exception\|Error\|failed\|not found"; then
+            log "  -> Profilo $PNAME: PARZIALMENTE OK (JavaFX avviato ma uscito subito)"
+            return 0
+        fi
+
+        # Errori critici = profilo non funziona
+        ERR_LINE=$(echo "$TESTOUT" | grep -i "Exception\|Error\|not found\|failed" | head -2)
+        log "  -> Profilo $PNAME: FALLITO - $ERR_LINE"
+        return 1
+    }
+
+    # Prova i profili in ordine
+    for P in default pixman llvmpipe gtk2; do
+        if test_profile "$P"; then
+            WORKING_PROFILE="$P"
+            ok "Profilo funzionante trovato: $WORKING_PROFILE"
+            break
+        fi
+        sleep 1
+    done
+
+    rm -rf "${TEST_DIR}" 2>/dev/null || true
+
+    if [ "$WORKING_PROFILE" = "default" ]; then
+        warn "Nessun profilo testato con successo - uso 'default' come base."
+        warn "Lo script di avvio provera automaticamente tutti i profili."
+    fi
+fi
+
+# Salva il profilo trovato
+mkdir -p "${APP_DIR}/config"
+echo "$WORKING_PROFILE" > "${APP_DIR}/config/profile.conf"
+chown -R "${KIOSK_USER}:${KIOSK_USER}" "${APP_DIR}/config"
+ok "Profilo salvato: $WORKING_PROFILE"
+
+# =============================================================================
+# FASE 5c - Test Cage + seatd
+# =============================================================================
+sep "FASE 5c - Test Cage e seatd"
+
+# Verifica seatd attivo
+if systemctl is-active seatd >/dev/null 2>&1; then
+    ok "seatd: attivo"
+else
+    warn "seatd non attivo - avvio..."
+    systemctl start seatd 2>/dev/null || true
+    sleep 2
+    if systemctl is-active seatd >/dev/null 2>&1; then
+        ok "seatd: avviato con successo"
+    else
+        warn "seatd non parte - installo libseat..."
+        install_pkg libseat-dev 2>/dev/null || install_pkg libseat1 2>/dev/null || true
+        systemctl start seatd 2>/dev/null || true
+    fi
+fi
+
+# Verifica gruppo seat
+if id "$KIOSK_USER" 2>/dev/null | grep -q "seat"; then
+    ok "Utente $KIOSK_USER nel gruppo seat: OK"
+else
+    warn "Aggiungo $KIOSK_USER al gruppo seat..."
+    groupadd seat 2>/dev/null || true
+    usermod -aG seat "$KIOSK_USER"
+    ok "Aggiunto al gruppo seat."
+fi
+
+# Verifica cage funziona
+if command -v cage >/dev/null 2>&1; then
+    ok "cage trovato: $(cage --version 2>/dev/null || echo 'ok')"
+
+    # Test cage con un comando dummy (ls) per vedere se parte
+    log "Test cage con comando dummy..."
+    CAGE_TEST=$(timeout 5 su - "$KIOSK_USER" -c "
+        export XDG_RUNTIME_DIR=/run/user/$(id -u $KIOSK_USER)
+        export LIBGL_ALWAYS_SOFTWARE=1
+        export WLR_RENDERER=pixman
+        export WLR_NO_HARDWARE_CURSORS=1
+        dbus-run-session cage -- /bin/true 2>&1
+    " 2>&1 || true)
+
+    if echo "$CAGE_TEST" | grep -qi "DRM\|seat\|permission\|tty"; then
+        warn "Cage ha problemi di permessi TTY/DRM:"
+        echo "$CAGE_TEST" | head -3
+        warn "Assicurati che il sistema non abbia un display manager attivo."
+        # Ferma display manager se presente
+        for DM in gdm3 gdm lightdm sddm xdm; do
+            if systemctl is-active "$DM" >/dev/null 2>&1; then
+                warn "Display manager attivo: $DM - fermo..."
+                systemctl stop    "$DM" 2>/dev/null || true
+                systemctl disable "$DM" 2>/dev/null || true
+                ok "$DM fermato."
+            fi
+        done
+    else
+        ok "Cage test: OK"
+    fi
+else
+    warn "cage non trovato - tentativo installazione..."
+    install_pkg cage
+fi
+
+# Controlla se c'e un display manager che occupa il TTY
+for DM in gdm3 gdm lightdm sddm xdm; do
+    if systemctl is-active "$DM" >/dev/null 2>&1; then
+        warn "Display manager '$DM' attivo - lo fermo (occupa il TTY)..."
+        systemctl stop    "$DM" 2>/dev/null || true
+        systemctl disable "$DM" 2>/dev/null || true
+        ok "$DM disabilitato."
+    fi
+done
+
+# =============================================================================
+# FASE 5d - Verifica librerie native JavaFX
+# =============================================================================
+sep "FASE 5d - Verifica librerie native"
+
+log "Controllo librerie native JavaFX..."
+
+# Controlla libGL
+if ldconfig -p 2>/dev/null | grep -q "libGL.so"; then
+    ok "libGL.so: trovata"
+else
+    warn "libGL.so non trovata - installo Mesa..."
+    install_pkg libgl1-mesa-dri libgl1-mesa-glx 2>/dev/null ||     install_pkg mesa-libGL 2>/dev/null || true
+fi
+
+# Controlla libEGL
+if ldconfig -p 2>/dev/null | grep -q "libEGL.so"; then
+    ok "libEGL.so: trovata"
+else
+    warn "libEGL.so non trovata - installo..."
+    install_pkg libegl1-mesa 2>/dev/null || install_pkg mesa-libEGL 2>/dev/null || true
+fi
+
+# Controlla libgbm (necessario per Wayland/DRM)
+if ldconfig -p 2>/dev/null | grep -q "libgbm.so"; then
+    ok "libgbm.so: trovata"
+else
+    warn "libgbm.so non trovata - installo..."
+    install_pkg libgbm1 2>/dev/null || install_pkg mesa-libgbm 2>/dev/null || true
+fi
+
+# Controlla libdrm
+if ldconfig -p 2>/dev/null | grep -q "libdrm.so"; then
+    ok "libdrm.so: trovata"
+else
+    warn "libdrm.so non trovata - installo..."
+    install_pkg libdrm2 2>/dev/null || install_pkg libdrm 2>/dev/null || true
+fi
+
+# Controlla GTK3
+if ldconfig -p 2>/dev/null | grep -q "libgtk-3.so"; then
+    ok "libgtk-3.so (GTK3): trovata"
+else
+    warn "GTK3 non trovato - installo..."
+    install_pkg libgtk-3-0 2>/dev/null || install_pkg gtk3 2>/dev/null || true
+fi
+
+# Aggiorna cache librerie
+log "Aggiorno cache librerie (ldconfig)..."
+ldconfig 2>/dev/null || true
+ok "Cache librerie aggiornata."
+
+# =============================================================================
+# FASE 5e - Imposta variabili ambiente nel servizio in base al test
+# =============================================================================
+sep "FASE 5e - Configurazione ambiente basata sui test"
+
+log "Profilo di rendering selezionato: $WORKING_PROFILE"
+
+# Imposta JFXOPTS in base al profilo trovato
+case "$WORKING_PROFILE" in
+    pixman)
+        FINAL_JFXOPTS="-Dprism.order=sw -Dprism.forceGPU=false -Dglass.platform=gtk -Djdk.gtk.version=3"
+        FINAL_GALLIUM="softpipe"
+        FINAL_MESA="4.5"
+        ;;
+    llvmpipe)
+        FINAL_JFXOPTS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3"
+        FINAL_GALLIUM="llvmpipe"
+        FINAL_MESA="3.3"
+        ;;
+    gtk2)
+        FINAL_JFXOPTS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=2"
+        FINAL_GALLIUM="softpipe"
+        FINAL_MESA="3.3"
+        ;;
+    *)
+        FINAL_JFXOPTS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3"
+        FINAL_GALLIUM="softpipe"
+        FINAL_MESA="3.3"
+        ;;
+esac
+
+log "JFXOPTS: $FINAL_JFXOPTS"
+log "GALLIUM: $FINAL_GALLIUM"
+log "MESA:    $FINAL_MESA"
+
+# Aggiorna variabili ambiente nel service file (verra scritto nella FASE 9)
+# Salva per uso successivo
+SAVED_JFXOPTS="$FINAL_JFXOPTS"
+SAVED_GALLIUM="$FINAL_GALLIUM"
+SAVED_MESA="$FINAL_MESA"
 sep "FASE 6 - Script di avvio (self-healing)"
 
 RUN_SCRIPT="${APP_DIR}/run-kiosk.sh"
@@ -688,7 +973,7 @@ while true; do
     log "Tipo errore: $ERRTYPE"
 
     # Salva il profilo funzionante se era partito bene
-    if echo "$OUT" | grep -q "Nav\] ->"; then
+    if echo "$OUT" | grep -q "Nav.*->"; then
         log "L'app era partita (navigazione rilevata). Profilo '$CURRENT' funziona."
         echo "$CURRENT" > "$PROFILE_FILE"
     fi
