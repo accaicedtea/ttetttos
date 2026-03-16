@@ -5,6 +5,16 @@
 # Funziona su: Debian 11/12, Ubuntu 20.04/22.04/24.04, qualsiasi distro con X11
 # Approccio: TTY1 auto-login -> .bash_profile -> startx -> .xinitrc -> JavaFX
 #
+# MODIFICHE:
+#   - Le operazioni che possono disturbare la sessione GUI (disabilitazione
+#     display manager, mascheramento TTY, cambio runlevel) vengono eseguite
+#     solo al termine dell'installazione, subito prima del riavvio.
+#   - In questo modo lo script può essere lanciato da una finestra di terminale
+#     all'interno di un ambiente grafico senza interrompere prematuramente
+#     l'esecuzione.
+#   - Dopo la configurazione, il sistema viene riavviato automaticamente
+#     (countdown di 10 secondi) per avviare la modalità kiosk.
+#
 # Uso:
 #   curl -fsSL https://raw.githubusercontent.com/accaicedtea/ttetttos/main/setup-kiosk.sh | bash
 #   bash setup-kiosk.sh              # installazione
@@ -66,12 +76,12 @@ inst() {
 }
 
 # =============================================================================
-# Funzione pulizia sistema completa
+# Funzione pulizia sistema completa (solo per reset/reset-soft)
 # =============================================================================
 clean_system() {
     sep "Pulizia sistema"
 
-    # Ferma display manager e server X
+    # Ferma display manager e server X (necessario per reset)
     log "Fermo display manager e X server..."
     for DM in gdm3 gdm lightdm sddm xdm; do
         systemctl stop    "$DM" 2>/dev/null || true
@@ -117,12 +127,50 @@ clean_system() {
     rm -f /usr/local/bin/kiosk-control
     rm -rf /usr/share/icons/blank-cursor
 
-    # Riabilita TTY
+    # Riabilita TTY (non necessario ora, ma per pulizia)
     for i in 2 3 4 5 6; do
         systemctl unmask "getty@tty${i}.service" 2>/dev/null || true
     done
     systemctl daemon-reload 2>/dev/null || true
     ok "Pulizia completata."
+}
+
+# =============================================================================
+# Funzione per applicare le modifiche di sistema che richiedono il riavvio
+# (disabilita DM, maschera TTY, imposta target) e riavvia
+# =============================================================================
+apply_system_changes_and_reboot() {
+    sep "APPLICAZIONE MODIFICHE DI SISTEMA E RIAVVIO"
+
+    log "Disabilito display manager (gdm, lightdm, sddm, xdm)..."
+    for DM in gdm3 gdm lightdm sddm xdm; do
+        if systemctl is-active "$DM" >/dev/null 2>&1 || systemctl is-enabled "$DM" >/dev/null 2>&1; then
+            systemctl stop "$DM" 2>/dev/null || true
+            systemctl disable "$DM" 2>/dev/null || true
+            systemctl mask "$DM" 2>/dev/null || true
+            log "  $DM disabilitato e mascherato."
+        fi
+    done
+
+    log "Maschero getty sulle TTY 2-6..."
+    for i in 2 3 4 5 6; do
+        systemctl mask "getty@tty${i}.service" 2>/dev/null || true
+    done
+
+    log "Imposto default target a multi-user (senza DM)..."
+    systemctl set-default multi-user.target 2>/dev/null || true
+
+    log "Tutte le modifiche sono state applicate."
+
+    echo ""
+    echo "===================================================="
+    echo "  SETUP COMPLETATO - RIAVVIO IN 10 SECONDI"
+    echo "  Premi Ctrl+C per annullare il riavvio e fermarti"
+    echo "  (poi potrai riavviare manualmente con 'reboot')"
+    echo "===================================================="
+    sleep 10
+    log "Riavvio in corso..."
+    reboot
 }
 
 # =============================================================================
@@ -205,14 +253,14 @@ curl -sf --max-time 10 https://github.com -o /dev/null && ok "Internet: OK" || {
 
 command -v curl >/dev/null && ok "curl: OK" || { warn "curl mancante"; ERRORS=$((ERRORS+1)); }
 
-# Avviso importante: display manager attivi
+# Avviso importante: display manager attivi (ma non li fermiamo ora)
 DM_ACTIVE=""
 for DM in gdm3 gdm lightdm sddm xdm; do
     systemctl is-active "$DM" >/dev/null 2>&1 && DM_ACTIVE="$DM_ACTIVE $DM"
 done
 if [ -n "$DM_ACTIVE" ]; then
     warn "Display manager attivi:$DM_ACTIVE"
-    warn "VERRANNO DISABILITATI - il sistema passera a X11 via TTY1"
+    warn "Verranno disabilitati SOLO DOPO il completamento dell'installazione."
 fi
 
 [ "$ERRORS" -gt 0 ] && {
@@ -235,12 +283,7 @@ esac
 inst curl wget ca-certificates unzip python3
 
 # X11 - APPROCCIO SEMPLICE CHE FUNZIONA OVUNQUE
-# xorg: server X11
-# openbox: window manager minimale (gestisce la finestra fullscreen)
-# xinit: startx command
-log "Installo X11 + openbox (approccio semplice, funziona con/senza GUI esistente)..."
 inst xorg openbox xinit x11-xserver-utils
-# x11-xserver-utils fornisce xset, xrandr, ecc.
 
 # Font
 inst fonts-dejavu-core 2>/dev/null || true
@@ -446,7 +489,7 @@ log "FX_PATH: $FX_PATH"
 chown -R "${KIOSK_USER}:${KIOSK_USER}" "$APP_DIR"
 
 # =============================================================================
-# FASE 5 - Test sistema
+# FASE 5 - Test sistema (senza disabilitare DM)
 # =============================================================================
 sep "FASE 5 - Test e riparazione"
 
@@ -478,19 +521,7 @@ ldconfig -p 2>/dev/null | grep -q "libGL.so" && ok "libGL: OK" || {
 command -v startx  >/dev/null && ok "startx: OK"  || { warn "startx mancante"; inst xinit; }
 command -v openbox >/dev/null && ok "openbox: OK" || { warn "openbox mancante"; inst openbox; }
 
-# Disabilita TUTTI i display manager (interferiscono con TTY1)
-log "Disabilito display manager esistenti..."
-for DM in gdm3 gdm lightdm sddm xdm; do
-    if systemctl is-active "$DM" >/dev/null 2>&1 || \
-       systemctl is-enabled "$DM" >/dev/null 2>&1; then
-        log "  Disabilito: $DM"
-        systemctl stop    "$DM" 2>/dev/null || true
-        systemctl disable "$DM" 2>/dev/null || true
-        systemctl mask    "$DM" 2>/dev/null || true
-        ok "  $DM disabilitato e mascherato."
-    fi
-done
-
+# NOTA: non disabilitiamo i display manager ora, lo faremo alla fine.
 ok "Fase 5 completata."
 
 # =============================================================================
@@ -722,8 +753,6 @@ chown -R "${KIOSK_USER}:${KIOSK_USER}" "$APP_DIR"
 # =============================================================================
 sep "FASE 8 - .xinitrc (sessione X11)"
 
-# Il .xinitrc viene eseguito da startx come utente kiosk
-# Configura X11 e lancia openbox + l'app JavaFX
 cat > "${KIOSK_HOME}/.xinitrc" << XIEOF
 #!/bin/bash
 # .xinitrc - configurazione sessione X11 per kiosk JavaFX
@@ -883,17 +912,15 @@ ln -sf "${APP_DIR}/kiosk-control.sh" /usr/local/bin/kiosk-control
 ok "kiosk-control installato."
 
 # =============================================================================
-# FASE 12 - Ottimizzazioni
+# FASE 12 - Ottimizzazioni sistema (non distruttive per la sessione corrente)
 # =============================================================================
 sep "FASE 12 - Ottimizzazioni sistema"
 
-# TTY extra
-for i in 2 3 4 5 6; do
-    systemctl mask "getty@tty${i}.service" 2>/dev/null || true
-done
+# TTY extra: non mascheriamo ora, lo faremo in fase finale
+# per i in 2 3 4 5 6; do systemctl mask ... ; done  <-- SPOSTATO
 
-# Default target: multi-user (no display manager automatico)
-systemctl set-default multi-user.target 2>/dev/null || true
+# Default target: impostiamo dopo
+# systemctl set-default multi-user.target  <-- SPOSTATO
 
 # GRUB
 if [ -f /etc/default/grub ]; then
@@ -997,5 +1024,8 @@ echo "  Per il terminale durante il kiosk:"
 echo "   - SSH: ssh root@<ip>"
 echo "   - Locale: touch /opt/kiosk/.stop && pkill Xorg"
 echo ""
-echo "  Riavvia con: reboot"
-echo ""
+
+# =============================================================================
+# FASE 14 - Applicazione modifiche di sistema e riavvio
+# =============================================================================
+apply_system_changes_and_reboot
