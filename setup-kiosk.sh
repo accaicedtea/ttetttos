@@ -478,7 +478,7 @@ build_java_cmd() {
     BASE_FLAGS="${BASE_FLAGS} -cp ${CP}"
 
     case "${PROFILE}" in
-        (default)
+        default)
             export LIBGL_ALWAYS_SOFTWARE=1
             export WLR_RENDERER=pixman
             export WLR_RENDERER_ALLOW_SOFTWARE=1
@@ -487,7 +487,7 @@ build_java_cmd() {
             export GALLIUM_DRIVER=softpipe
             PROFILE_FLAGS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3"
             ;;
-        (sw_pixman)
+        sw_pixman)
             export LIBGL_ALWAYS_SOFTWARE=1
             export WLR_RENDERER=pixman
             export WLR_RENDERER_ALLOW_SOFTWARE=1
@@ -496,7 +496,7 @@ build_java_cmd() {
             export GALLIUM_DRIVER=softpipe
             PROFILE_FLAGS="-Dprism.order=sw -Dprism.forceGPU=false -Dglass.platform=gtk -Djdk.gtk.version=3"
             ;;
-        (sw_mesa)
+        sw_mesa)
             export LIBGL_ALWAYS_SOFTWARE=1
             export WLR_RENDERER=pixman
             export WLR_NO_HARDWARE_CURSORS=1
@@ -504,24 +504,24 @@ build_java_cmd() {
             export GALLIUM_DRIVER=llvmpipe
             PROFILE_FLAGS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3"
             ;;
-        (gtk2)
+        gtk2)
             export LIBGL_ALWAYS_SOFTWARE=1
             export WLR_RENDERER=pixman
             export WLR_NO_HARDWARE_CURSORS=1
             PROFILE_FLAGS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=2"
             ;;
-        (xwayland)
+        xwayland)
             export DISPLAY="${DISPLAY:-:0}"
             export LIBGL_ALWAYS_SOFTWARE=1
             unset WAYLAND_DISPLAY 2>/dev/null || true
             PROFILE_FLAGS="-Dprism.order=sw -Dglass.platform=gtk -Djdk.gtk.version=3"
             ;;
-        (es2_hw)
+        es2_hw)
             unset LIBGL_ALWAYS_SOFTWARE 2>/dev/null || true
             export WLR_RENDERER=gles2
             PROFILE_FLAGS="-Dprism.order=es2,sw -Dglass.platform=gtk -Djdk.gtk.version=3"
             ;;
-        (*)
+        *)
             export LIBGL_ALWAYS_SOFTWARE=1
             export WLR_RENDERER=pixman
             export WLR_RENDERER_ALLOW_SOFTWARE=1
