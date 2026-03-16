@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<StackPane xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.example.SplashController"
+           styleClass="splash-root">
+
+    <StackPane fx:id="splashCircle1" styleClass="splash-circle-1" />
+    <StackPane fx:id="splashCircle2" styleClass="splash-circle-2" />
+
+    <VBox alignment="CENTER" spacing="0" styleClass="splash-container">
+
+        <!-- Logo icona -->
+        <FontIcon fx:id="logoLabel"
+                  iconLiteral="mdi2f-food-fork-drink"
+                  iconSize="100"
+                  styleClass="splash-logo-icon" />
+
+        <Label text="Totem Ordini"              styleClass="splash-app-name" />
+        <Label text="Sistema di ordinazione digitale" styleClass="splash-app-sub" />
+
+        <Region prefHeight="60" />
+
+        <!-- Step corrente -->
+        <FontIcon fx:id="stepIconNode" iconLiteral="mdi2c-cog"
+                  iconSize="36" styleClass="splash-step-icon-node" />
+        <Label fx:id="stepLabel" text="Avvio in corso..."
+               styleClass="splash-step-label" />
+
+        <Region prefHeight="24" />
+
+        <ProgressBar fx:id="progressBar" progress="0"
+                     styleClass="splash-progress"
+                     maxWidth="500" prefHeight="10" />
+
+        <Region prefHeight="16" />
+
+        <Label fx:id="detailLabel" text="" styleClass="splash-detail" />
+
+        <Region prefHeight="60" />
+
+        <Label text="v1.0" styleClass="splash-version" />
+
+    </VBox>
+</StackPane>

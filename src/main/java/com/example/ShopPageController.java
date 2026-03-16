@@ -1,430 +1,470 @@
 package com.example;
 
-import com.util.Animations;
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
+import javafx.animation.*;
 import javafx.application.Platform;
-import javafx.concurrent.ScheduledService;
-import javafx.concurrent.Task;
 import javafx.fxml.FXML;
-import javafx.geometry.Pos;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.TilePane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.util.Duration;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.LocalDateTime;
+import com.api.services.ViewsService;
+import com.example.NetworkWatchdog;
+import org.kordamp.ikonli.javafx.FontIcon;
+import com.example.RemoteLogger;
+import com.example.model.MenuCache;
+import com.example.components.ProductCard;
+import com.example.model.CartManager;
+import com.example.model.I18n;
+import com.google.gson.*;
+import com.util.Animations;
+
+import java.time.*;
 import java.time.format.DateTimeFormatter;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-public class ShopPageController {
+public class ShopPageController implements Navigator.DataReceiver, Navigator.ScreenReturnable {
 
+    // ── Status ────────────────────────────────────────────────────────
+    @FXML private Label    dateLabel, clockLabel, internetLabel;
+    @FXML private FontIcon internetIcon;
+    @FXML private FontIcon themeIcon;
+
+    // ── Header ────────────────────────────────────────────────────────
+    @FXML private Label  categoryTitleLabel;
+    @FXML private Button themeBtn, cartBtn, addToCartBtn;
+    @FXML private Label  cartBadge;
+    @FXML private StackPane rootStack;
+
+    // ── Prodotti ──────────────────────────────────────────────────────
     @FXML private ScrollPane productsScroll;
+    @FXML private FlowPane   productsPane;
+
+    // ── Categorie ─────────────────────────────────────────────────────
     @FXML private ScrollPane categoriesScroll;
-    @FXML private TilePane   productsPane;
     @FXML private VBox       categoriesPane;
-    @FXML private Label      categoryTitleLabel;
 
-    // ── Status bar ───────────────────────────────────────────────
-    @FXML private Label clockLabel;
-    @FXML private Label dateLabel;
-    @FXML private Label internetDot;
-    @FXML private Label internetLabel;
-    @FXML private Label batteryIcon;
-    @FXML private Label batteryLabel;
+    // ── Modal ─────────────────────────────────────────────────────────
+    @FXML private StackPane modalOverlay;
+    @FXML private VBox      modalCard;
+    @FXML private Label     modalTitle, modalPrice, modalDesc;
+    @FXML private VBox      modalAllergenSection, modalIngredientSection;
+    @FXML private FlowPane  modalAllergenChips, modalIngredients;
+    @FXML private Button    modalClose;
+    @FXML private javafx.scene.layout.HBox toastBox;
+    @FXML private Label     toastLabel;
 
-    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm:ss");
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("EEEE d MMMM",
-            java.util.Locale.ITALIAN);
+    // Prodotto attualmente aperto nel modal
+    private String       currentModalName;
+    private String       currentModalPrice;
+    private double       currentModalPriceVal;
+    private int          currentModalProductId;
+    private int          currentModalIva;
+    private String       currentModalSku;
+    private java.util.List<String> currentModalAllergens;
 
-    // ── Data model ───────────────────────────────────────────────
-    record Product(String emoji, String name, String description, String price) {}
+    private final DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private final DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm:ss");
+    private Label   activeCategory = null;
+    private boolean syncStarted     = false; // evita sync multipli
 
-    private final Map<String, List<Product>> catalog = new LinkedHashMap<>();
-    private String selectedCategory = null;
+    // Cache menu ricevuto da WelcomeController
+    private JsonObject cachedMenu = null;
 
+    // ─────────────────────────────────────────────────────────────────
     @FXML
-    public void initialize() {
-        buildCatalog();
-        buildCategoryButtons();
-        selectCategory(catalog.keySet().iterator().next());
-        Animations.inertiaScroll(productsScroll);
-        Animations.inertiaScroll(categoriesScroll);
-        startClock();
-        startInternetCheck();
-        startBatteryCheck();
+    private void initialize() {
+        refreshThemeButton();
+        if (internetLabel != null) internetLabel.setText("Offline");
+        if (internetIcon  != null) internetIcon.getStyleClass().add("status-icon-offline");
 
-        // Calcola dimensioni tile in base al viewport (larghezza e altezza)
-        productsScroll.viewportBoundsProperty().addListener((obs, old, bounds) -> {
-            double w      = bounds.getWidth();
-            double h      = bounds.getHeight();
-            double hgap   = 20, vgap = 20, pad = 24 * 2;
-            double tileW  = (w - pad - hgap * 3) / 4.0;
-            double tileH  = (h - pad - vgap) / 2.5;
-            if (tileW > 80)  productsPane.setPrefTileWidth(tileW);
-            if (tileH > 80)  productsPane.setPrefTileHeight(tileH);
-        });
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    //  STATUS BAR
-    // ─────────────────────────────────────────────────────────────
-
-    private void startClock() {
-        Timeline clock = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
-            LocalDateTime now = LocalDateTime.now();
-            clockLabel.setText(now.format(TIME_FMT));
-            dateLabel.setText(now.format(DATE_FMT));
-        }));
+        // Orologio
+        Timeline clock = new Timeline(
+            new KeyFrame(Duration.ZERO, e -> updateDateTime()),
+            new KeyFrame(Duration.seconds(1)));
         clock.setCycleCount(Timeline.INDEFINITE);
         clock.play();
-        // Aggiorna subito senza aspettare 1 secondo
-        LocalDateTime now = LocalDateTime.now();
-        clockLabel.setText(now.format(TIME_FMT));
-        dateLabel.setText(now.format(DATE_FMT));
+
+        if (productsScroll   != null) Animations.inertiaScroll(productsScroll);
+        if (categoriesScroll != null) Animations.inertiaScroll(categoriesScroll);
+
+        if (productsScroll != null && productsPane != null) {
+            productsScroll.viewportBoundsProperty()
+                .addListener((obs, o, n) -> resizeCards(n.getWidth()));
+        }
+
+        if (cartBtn != null) Animations.touchFeedback(cartBtn);
+        updateCartBadge();
+        showInfo("Caricamento menu...");
+
+        // Ascolta i cambi di stato rete dal watchdog
+        NetworkWatchdog.setListener(this::setOnline);
     }
 
-    private void startInternetCheck() {
-        ScheduledService<Boolean> svc = new ScheduledService<>() {
-            @Override protected Task<Boolean> createTask() {
-                return new Task<>() {
-                    @Override protected Boolean call() {
-                        try (Socket s = new Socket()) {
-                            s.connect(new InetSocketAddress("8.8.8.8", 53), 1500);
-                            return true;
-                        } catch (IOException e) {
-                            return false;
+    /** Riceve il menu precaricato da WelcomeController via Navigator. */
+    @Override
+    public void receiveData(Object data) {
+        if (data instanceof JsonObject menu) {
+            cachedMenu = menu;
+            // runLater garantisce che il nodo sia già nel grafo della scena
+            Platform.runLater(() -> {
+                JsonArray cats = extractCategories(menu);
+                if (cats != null && !cats.isEmpty()) buildUI(cats);
+                else loadMenu(); // fallback: ricarica
+
+                // Avvia sync in background (una sola volta)
+                if (!syncStarted) {
+                    syncStarted = true;
+                    MenuCache.startBackgroundSync(freshMenu -> {
+                        JsonArray freshCats = extractCategories(freshMenu);
+                        if (freshCats != null && !freshCats.isEmpty()) {
+                            System.out.println("[Shop] Menu aggiornato da background sync.");
+                            Platform.runLater(() -> buildUI(freshCats));
                         }
-                    }
-                };
-            }
-        };
-        svc.setPeriod(Duration.seconds(10));
-        svc.setOnSucceeded(e -> {
-            boolean online = (Boolean) svc.getValue();
-            internetDot.getStyleClass().setAll(online ? "status-dot-online" : "status-dot-offline");
-            internetLabel.setText(online ? "Online" : "Offline");
-        });
-        svc.start();
-    }
-
-    private void startBatteryCheck() {
-        Timeline bat = new Timeline(new KeyFrame(Duration.seconds(30), e -> updateBattery()));
-        bat.setCycleCount(Timeline.INDEFINITE);
-        bat.play();
-        updateBattery();
-    }
-
-    private void updateBattery() {
-        // Cerca la prima batteria disponibile in /sys/class/power_supply/
-        try {
-            Path base = Path.of("/sys/class/power_supply");
-            if (!Files.exists(base)) { setBatteryNoHardware(); return; }
-            var batDir = Files.list(base)
-                .filter(p -> p.getFileName().toString().startsWith("BAT"))
-                .findFirst();
-            if (batDir.isEmpty()) { setBatteryNoHardware(); return; }
-
-            Path capacityFile = batDir.get().resolve("capacity");
-            Path statusFile   = batDir.get().resolve("status");
-            int  pct    = Integer.parseInt(Files.readString(capacityFile).trim());
-            String stat = Files.readString(statusFile).trim(); // Charging / Discharging / Full
-
-            String icon;
-            if (stat.equalsIgnoreCase("Charging"))    icon = "⚡";
-            else if (pct >= 80)                        icon = "🔋";
-            else if (pct >= 40)                        icon = "🔋";
-            else if (pct >= 15)                        icon = "🪫";
-            else                                       icon = "🪫";
-
-            batteryIcon.setText(icon);
-            batteryLabel.setText(pct + "%");
-            batteryLabel.setStyle(pct <= 15 ? "-fx-text-fill: #ff5555;" : "");
-        } catch (Exception ex) {
-            setBatteryNoHardware();
+                    });
+                }
+            });
+        } else {
+            // data null o tipo errato: carica comunque
+            Platform.runLater(this::loadMenu);
         }
     }
 
-    private void setBatteryNoHardware() {
-        batteryIcon.setText("🔌");
-        batteryLabel.setText("AC");
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    //  DATA
-    // ─────────────────────────────────────────────────────────────
-    private void buildCatalog() {
-        catalog.put("🍕 Pizze", List.of(
-            new Product("🍕", "Margherita",           "Pomodoro, mozzarella, basilico",              "€ 7.50"),
-            new Product("🍕", "Diavola",               "Pomodoro, mozzarella, salame piccante",       "€ 9.00"),
-            new Product("🍕", "Quattro Formaggi",     "Mozzarella, gorgonzola, asiago, brie",        "€ 10.50"),
-            new Product("🍕", "Capricciosa",          "Prosciutto, funghi, carciofi, olive",         "€ 11.00"),
-            new Product("🍕", "Bufalina",              "Pomodorini, bufala DOP, rucola",              "€ 12.00"),
-            new Product("🍕", "Tonno e Cipolla",      "Tonno, cipolla, origano",                     "€ 9.50"),
-            new Product("🍕", "Vegana",                "Verdure grigliate, pesto di basilico",        "€ 10.00"),
-            new Product("🍕", "Calzone",               "Ricotta, salame, mozzarella (chiuso)",        "€ 11.50"),
-            new Product("🍕", "Norma",                 "Melanzane fritte, pomodoro, ricotta salata",  "€ 10.00"),
-            new Product("🍕", "Marinara",              "Pomodoro, aglio, origano, EVOO",              "€ 6.50"),
-            new Product("🍕", "Prosciutto e Funghi",  "Prosciutto cotto, funghi champignon",         "€ 10.00"),
-            new Product("🍕", "Salsiccia e Friarielli","Salsiccia napoletana, friarielli",           "€ 12.00"),
-            new Product("🍕", "Speck e Brie",         "Speck alto adige, brie fuso, rucola",         "€ 13.00"),
-            new Product("🍕", "Ortolana",              "Zucchine, peperoni, melanzane, pomodoro",     "€ 10.50"),
-            new Product("🍕", "Nduja",                 "Nduja calabrese, pomodoro, fior di latte",   "€ 11.50"),
-            new Product("🍕", "Patate e Rosmarino",   "Patate a fette, rosmarino, scamorza",         "€ 10.00"),
-            new Product("🍕", "Bianca al Tartufo",    "Crema di tartufo, mozzarella, funghi",        "€ 15.00"),
-            new Product("🍕", "Bresaola e Grana",     "Bresaola, grana, rucola, limone",             "€ 13.50"),
-            new Product("🍕", "Wurstel e Patatine",   "Wurstel, patatine fritte, ketchup",           "€ 9.00"),
-            new Product("🍕", "Doppio Impasto",       "Ripiena: prosciutto, ricotta, mozzarella",    "€ 14.00")
-        ));
-        catalog.put("🥪 Panini", List.of(
-            new Product("🥪", "Classico",              "Prosciutto cotto, formaggio",                 "€ 5.00"),
-            new Product("🥪", "Crudo e Fichi",        "Prosciutto crudo, fichi, rucola",             "€ 7.00"),
-            new Product("🥪", "Pollo Grill",           "Pollo alla griglia, lattuga, maionese",       "€ 6.50"),
-            new Product("🥪", "Veggie",                "Avocado, pomodoro, hummus",                   "€ 6.00"),
-            new Product("🥪", "Club Sandwich",        "Bacon, uovo, lattuga, tomate",                "€ 8.00"),
-            new Product("🥪", "Mozzarella Pesto",     "Mozzarella, pesto, pomodori secchi",          "€ 6.50"),
-            new Product("🥪", "Porchetta",             "Porchetta romana, salsa verde, cipolla",      "€ 7.50"),
-            new Product("🥪", "Lampredotto",           "Quinto quarto fiorentino, salsa verde",       "€ 6.00"),
-            new Product("🥪", "Hamburger Classico",   "Manzo 180g, lattuga, pomodoro, cipolla",      "€ 9.00"),
-            new Product("🥪", "Hamburger Bacon",      "Manzo 180g, bacon croccante, cheddar",        "€ 11.00"),
-            new Product("🥪", "Hamburger Vegano",     "Patty di legumi, avocado, cipolla caramellata","€ 10.00"),
-            new Product("🥪", "BLT",                   "Bacon, lattuga, pomodoro, maionese",          "€ 7.00"),
-            new Product("🥪", "Tonno e Olive",        "Tonno, olive, pomodoro, rucola",              "€ 6.50"),
-            new Product("🥪", "Caprese",               "Mozzarella, pomodoro, basilico, EVOO",        "€ 6.00"),
-            new Product("🥪", "Speck e Brie",         "Speck, brie, miele di acacia",                "€ 8.00"),
-            new Product("🥪", "Pulled Pork",           "Maiale sfilacciato BBQ, coleslaw",            "€ 9.50"),
-            new Product("🥪", "Falafel",               "Falafel, tzatziki, insalatina, pomodori",     "€ 8.00"),
-            new Product("🥪", "Salmone Affumicato",   "Salmone, cream cheese, capperi, limone",      "€ 9.00")
-        ));
-        catalog.put("🍝 Primi", List.of(
-            new Product("🍝", "Carbonara",             "Guanciale, uova, pecorino, pepe",             "€ 12.00"),
-            new Product("🍝", "Amatriciana",           "Guanciale, pomodoro, pecorino",               "€ 11.50"),
-            new Product("🍝", "Cacio e Pepe",         "Pecorino, pepe nero",                         "€ 10.00"),
-            new Product("🍝", "Lasagne",               "Ragù di carne, besciamella",                  "€ 13.00"),
-            new Product("🍝", "Risotto Funghi",       "Porcini, parmigiano, burro",                  "€ 13.50"),
-            new Product("🍝", "Gnocchi al Ragù",      "Gnocchi di patate, ragù bolognese",           "€ 12.50"),
-            new Product("🍝", "Spaghetti Pomodoro",   "Pomodoro San Marzano, basilico, EVOO",        "€ 9.00"),
-            new Product("🍝", "Penne all'Arrabbiata", "Pomodoro, aglio, peperoncino",                "€ 9.50"),
-            new Product("🍝", "Tagliatelle al Ragù",  "Ragù bolognese DOP, parmigiano",              "€ 13.00"),
-            new Product("🍝", "Orecchiette Cime",     "Cime di rapa, salsiccia, aglio",              "€ 12.00"),
-            new Product("🍝", "Pappardelle Cinghiale","Ragù di cinghiale, rosmarino",                "€ 15.00"),
-            new Product("🍝", "Risotto al Nero",      "Nero di seppia, gamberi, prezzemolo",         "€ 16.00"),
-            new Product("🍝", "Rigatoni alla Gricia", "Guanciale, pecorino, pepe",                   "€ 11.00"),
-            new Product("🍝", "Linguine Vongole",     "Vongole veraci, aglio, prezzemolo, vino",     "€ 15.00"),
-            new Product("🍝", "Trofie al Pesto",      "Pesto genovese DOP, patate, fagiolini",       "€ 12.00"),
-            new Product("🍝", "Minestrone",            "Verdure di stagione, legumi, pasta",          "€ 9.00"),
-            new Product("🍝", "Zuppa di Pesce",       "Brodo di pesce, crostacei, crostini",         "€ 18.00"),
-            new Product("🍝", "Tortellini Panna",     "Tortellini emiliani, panna, prosciutto",      "€ 13.00"),
-            new Product("🍝", "Paccheri Frutti di Mare","Cozze, vongole, gamberi, pomodorini",      "€ 17.00"),
-            new Product("🍝", "Gnocchi Sorrentini",   "Pomodoro, mozzarella, basilico al forno",     "€ 12.50")
-        ));
-        catalog.put("🥩 Secondi", List.of(
-            new Product("🥩", "Tagliata",              "Manzo, rucola, grana, limone",                "€ 18.00"),
-            new Product("🥩", "Pollo Arrosto",        "Pollo intero al forno con patate",           "€ 14.00"),
-            new Product("🥩", "Salmone Grigliato",    "Salmone al limone e erbe",                    "€ 16.00"),
-            new Product("🥩", "Bistecca T-Bone",      "250g, sale grosso, rosmarino",                "€ 24.00"),
-            new Product("🥩", "Cotoletta",             "Vitello panato, insalatina",                  "€ 15.00"),
-            new Product("🥩", "Filetto al Pepe Verde","Filetto di manzo, salsa pepe verde",          "€ 26.00"),
-            new Product("🥩", "Entrecôte",             "200g, burro alle erbe, patatine",             "€ 22.00"),
-            new Product("🥩", "Scottadito",            "Costolette di agnello alla brace",            "€ 20.00"),
-            new Product("🥩", "Pollo alla Cacciatora","Pomodoro, olive, capperi, vino bianco",       "€ 14.00"),
-            new Product("🥩", "Branzino al Sale",     "Branzino 400g, sale grosso, limone",          "€ 22.00"),
-            new Product("🥩", "Calamari Fritti",      "Calamari freschissimi, salsa tartara",        "€ 16.00"),
-            new Product("🥩", "Gamberi alla Busara",  "Gamberi, pomodoro, aglio, vino bianco",       "€ 20.00"),
-            new Product("🥩", "Ossobuco",              "Ossobuco di vitello, gremolata, risotto",     "€ 22.00"),
-            new Product("🥩", "Polpette al Sugo",     "Polpette di manzo, sugo di pomodoro",         "€ 13.00"),
-            new Product("🥩", "Stinco al Forno",      "Stinco di maiale, patate, rosmarino",         "€ 18.00"),
-            new Product("🥩", "Merluzzo al Vapore",   "Merluzzo, capperi, olive, pomodorini",        "€ 17.00")
-        ));
-        catalog.put("🥗 Insalate", List.of(
-            new Product("🥗", "Caesar",                "Lattuga, crouton, parmigiano, Caesar",        "€ 9.00"),
-            new Product("🥗", "Greca",                 "Feta, olive, pomodoro, cetriolo",             "€ 9.50"),
-            new Product("🥗", "Caprese",               "Mozzarella, pomodoro, basilico, EVOO",        "€ 10.00"),
-            new Product("🥗", "Mista di Stagione",    "Verdure fresche, dressing a scelta",          "€ 7.00"),
-            new Product("🥗", "Nizzarda",              "Tonno, uova, fagiolini, olive nere",          "€ 11.00"),
-            new Product("🥗", "Pollo e Avocado",      "Pollo grigliato, avocado, mais, rucola",      "€ 12.00"),
-            new Product("🥗", "Spinaci e Noci",       "Spinacino, noci, grana, aceto di mele",       "€ 10.00"),
-            new Product("🥗", "Panzanella",            "Pane toscano, pomodoro, basilico, cipolla",   "€ 9.00"),
-            new Product("🥗", "Cous Cous Verdure",    "Cous cous, verdure grigliate, spezie",        "€ 10.50"),
-            new Product("🥗", "Bulgur e Feta",        "Bulgur, feta, melagrana, rucola",             "€ 11.00"),
-            new Product("🥗", "Salmone e Sesamo",     "Salmone crudo, sesamo, salsa di soia",        "€ 13.00"),
-            new Product("🥗", "Insalata di Lenticchie","Lenticchie, pomodori secchi, rucola",        "€ 9.50")
-        ));
-        catalog.put("🍺 Bevande", List.of(
-            new Product("🍺", "Birra alla Spina",      "0.3 L / 0.5 L chiara o rossa",               "€ 3.50"),
-            new Product("🍺", "Birra Artigianale IPA", "Luppolata, amara, 0.4 L",                     "€ 5.50"),
-            new Product("🍺", "Birra Artigianale Stout","Scura, caffè e cioccolato, 0.4 L",           "€ 5.50"),
-            new Product("🍺", "Birra Weizen",          "Frumento, banana, garofano, 0.5 L",           "€ 4.50"),
-            new Product("🥤", "Coca-Cola",              "33 cl, ghiaccio e limone",                    "€ 2.50"),
-            new Product("🥤", "Fanta Arancia",         "33 cl",                                       "€ 2.50"),
-            new Product("🥤", "Sprite",                 "33 cl",                                       "€ 2.50"),
-            new Product("🥤", "Tè Freddo Pesca",       "500 ml, fatto in casa",                       "€ 3.00"),
-            new Product("🥤", "Limonata",               "Limoni freschi, zucchero, ghiaccio",          "€ 3.50"),
-            new Product("💧", "Acqua Naturale",        "500 ml",                                      "€ 1.50"),
-            new Product("💧", "Acqua Frizzante",       "500 ml",                                      "€ 1.50"),
-            new Product("🍷", "Vino Rosso",            "Bicchiere, Montepulciano d'Abruzzo",          "€ 5.00"),
-            new Product("🍷", "Vino Bianco",           "Bicchiere, Pinot Grigio",                     "€ 5.00"),
-            new Product("🍷", "Prosecco",               "Bicchiere, DOC Treviso, 0.2 L",               "€ 5.50"),
-            new Product("🍷", "Vino Rosato",           "Bicchiere, Cerasuolo d'Abruzzo",              "€ 5.00"),
-            new Product("🍾", "Bottiglia Vino Rosso",  "750 ml, selezione del sommelier",             "€ 22.00"),
-            new Product("🍾", "Bottiglia Prosecco",    "750 ml, DOC Treviso",                         "€ 18.00"),
-            new Product("🍹", "Aperol Spritz",         "Prosecco, Aperol, soda",                      "€ 7.00"),
-            new Product("🍹", "Hugo",                   "Prosecco, sciroppo sambuco, menta",           "€ 7.00"),
-            new Product("🍹", "Negroni",                "Gin, vermouth rosso, Campari",                "€ 8.00"),
-            new Product("🍹", "Mojito",                 "Rum, menta, lime, soda",                      "€ 8.00"),
-            new Product("🍹", "Daiquiri Fragola",      "Rum, fragole, lime, sciroppo",                "€ 8.50"),
-            new Product("🍹", "Cosmopolitan",           "Vodka, triple sec, lime, cranberry",          "€ 8.50"),
-            new Product("🧃", "Succo ACE",              "200 ml",                                      "€ 2.00"),
-            new Product("🧃", "Succo Pesca",            "200 ml",                                      "€ 2.00"),
-            new Product("🧃", "Succo Albicocca",       "200 ml",                                      "€ 2.00")
-        ));
-        catalog.put("☕ Caffetteria", List.of(
-            new Product("☕", "Espresso",               "Arabica 100%",                                "€ 1.00"),
-            new Product("☕", "Espresso Doppio",        "Doppia dose di arabica",                      "€ 1.60"),
-            new Product("☕", "Cappuccino",             "Latte montato, schiuma vellutata",            "€ 1.50"),
-            new Product("☕", "Cappuccino di Soia",    "Latte vegetale di soia montato",              "€ 2.00"),
-            new Product("🧋", "Latte Macchiato",       "Latte caldo, espresso",                       "€ 1.80"),
-            new Product("🧋", "Latte Macchiato Freddo","Latte freddo, espresso, ghiaccio",            "€ 2.50"),
-            new Product("🧋", "Flat White",             "Doppio espresso, latte vellutato",            "€ 3.00"),
-            new Product("🧋", "Matcha Latte",           "Tè matcha, latte di avena, miele",            "€ 4.00"),
-            new Product("🧋", "Frappuccino",            "Caffè, ghiaccio, latte, sciroppo vaniglia",   "€ 4.50"),
-            new Product("🧊", "Caffè Freddo",          "Espresso sciroppo, ghiaccio",                 "€ 2.00"),
-            new Product("🧊", "Cold Brew",              "Infusione a freddo 12h, ghiaccio",            "€ 3.50"),
-            new Product("🍵", "Tè Verde",               "Sencha giapponese",                           "€ 2.00"),
-            new Product("🍵", "Tè Nero",                "English Breakfast",                           "€ 2.00"),
-            new Product("🍵", "Camomilla",              "Fiori di camomilla essiccati",                "€ 2.00"),
-            new Product("🍵", "Tè Zenzero Limone",     "Zenzero fresco, limone, miele",               "€ 2.50"),
-            new Product("🍵", "Rooibos",                "Rosso sudafricano, vaniglia",                 "€ 2.50"),
-            new Product("🍫", "Cioccolata Calda",      "Fondente, al latte o bianca",                 "€ 3.00"),
-            new Product("🍫", "Cioccolata Viennese",   "Con panna montata fresca",                    "€ 3.50"),
-            new Product("☕", "Marocchino",             "Espresso, cacao, latte montato",              "€ 2.00"),
-            new Product("☕", "Caffè Americano",       "Espresso allungato con acqua calda",           "€ 1.50")
-        ));
-        catalog.put("🍰 Dolci", List.of(
-            new Product("🍰", "Tiramisù",               "Classico, ricetta della casa",                "€ 5.50"),
-            new Product("🍮", "Panna Cotta",            "Con coulis di frutti di bosco",               "€ 5.00"),
-            new Product("🍫", "Brownie",                "Cioccolato fondente, noci",                   "€ 4.50"),
-            new Product("🍦", "Gelato Artigianale",    "2 gusti a scelta",                            "€ 3.50"),
-            new Product("🥐", "Cannolo Siciliano",     "Ricotta, gocce di cioccolato",                "€ 4.00"),
-            new Product("🍮", "Cheesecake",             "New York style, frutti rossi",                "€ 6.00"),
-            new Product("🍮", "Crème Brûlée",          "Vaniglia Bourbon, zucchero caramellato",      "€ 6.50"),
-            new Product("🧁", "Cupcake Cioccolato",    "Base cacao, frosting ganache",                "€ 3.00"),
-            new Product("🧁", "Cupcake Red Velvet",    "Impasto rosso, frosting cream cheese",        "€ 3.50"),
-            new Product("🥞", "Pancake Stack",          "3 pancake, sciroppo d'acero, burro",          "€ 6.00"),
-            new Product("🥞", "Pancake Nutella",        "3 pancake, Nutella, banane, zucchero a velo", "€ 7.00"),
-            new Product("🍓", "Fragole e Panna",       "Fragole fresche, panna montata, zucchero",    "€ 5.00"),
-            new Product("🍨", "Coppa Gelato",           "3 palline, panna, cioccolato fondente",       "€ 5.50"),
-            new Product("🍧", "Granita al Limone",     "Limoni siciliani, fatta in casa",             "€ 3.50"),
-            new Product("🍩", "Donuts",                 "Glassata, cioccolato o zucchero",             "€ 2.50"),
-            new Product("🥐", "Croissant Artigianale", "Burro, mandorle o crema pasticcera",          "€ 2.50"),
-            new Product("🎂", "Torta della Casa",      "Cambia ogni giorno, chiedi al banco",          "€ 5.00"),
-            new Product("🍰", "Millefoglie",            "Pasta sfoglia, crema chantilly",              "€ 5.50"),
-            new Product("🍮", "Budino al Cioccolato",  "Fondente 70%, crema vaniglia",                "€ 4.50"),
-            new Product("🥧", "Crostata Marmellata",   "Frolla, marmellata albicocca artigianale",    "€ 4.00")
-        ));
-        catalog.put("🍟 Contorni", List.of(
-            new Product("🍟", "Patatine Fritte",        "Patate fresche, sale, rosmarino",             "€ 4.00"),
-            new Product("🍟", "Patatine a Spicchi",    "Con paprika affumicata e aglio",              "€ 4.50"),
-            new Product("🥦", "Verdure Grigliate",     "Zucchine, peperoni, melanzane, EVOO",         "€ 5.00"),
-            new Product("🧅", "Cipolla Caramellata",   "Cipolla rossa, aceto balsamico, timo",        "€ 4.00"),
-            new Product("🍄", "Funghi Trifolati",      "Porcini e champignon, aglio, prezzemolo",     "€ 5.50"),
-            new Product("🥦", "Broccoli all'Aglio",    "Broccoli saltati, aglio, peperoncino",        "€ 4.50"),
-            new Product("🫘", "Fagioli all'Uccelletto","Fagioli cannellini, pomodoro, salvia",        "€ 5.00"),
-            new Product("🥗", "Insalata Semplice",     "Lattuga, pomodoro, carota, dressing",         "€ 4.00"),
-            new Product("🍆", "Melanzane alla Parmigiana","Melanzane, pomodoro, mozzarella al forno", "€ 6.00"),
-            new Product("🧀", "Formaggi Misti",        "Selezione di 4 formaggi, miele, noci",        "€ 10.00"),
-            new Product("🥓", "Affettati Misti",       "Prosciutto crudo, salame, coppa, bresaola",   "€ 12.00"),
-            new Product("🍞", "Bruschette (3 pz)",     "Pomodoro, aglio, basilico, EVOO",             "€ 5.00")
-        ));
-        catalog.put("🌮 Cucina del Mondo", List.of(
-            new Product("🌮", "Tacos al Pastor",        "Maiale marinato, ananas, coriandolo",         "€ 9.00"),
-            new Product("🌮", "Burrito Manzo",          "Manzo, riso, fagioli, guacamole",             "€ 11.00"),
-            new Product("🌮", "Nachos con Guacamole",  "Tortilla chips, guacamole, jalapeño",         "€ 8.00"),
-            new Product("🍜", "Ramen Tonkotsu",         "Brodo di maiale, noodles, uovo, nori",        "€ 14.00"),
-            new Product("🍜", "Pad Thai",               "Noodles riso, gamberi, arachidi, lime",       "€ 13.00"),
-            new Product("🍛", "Curry Pollo",            "Pollo, latte di cocco, riso basmati",         "€ 13.00"),
-            new Product("🍛", "Curry Vegetariano",     "Ceci, spinaci, pomodoro, riso",               "€ 11.00"),
-            new Product("🥟", "Gyoza (6 pz)",           "Ravioli giapponesi, maiale, cavolo",          "€ 8.00"),
-            new Product("🥟", "Dim Sum (4 pz)",         "Vapore, gamberetti, erba cipollina",          "€ 9.00"),
-            new Product("🫔", "Kebab nel Pane",         "Manzo-agnello, verdure, salsa yogurt",        "€ 8.00"),
-            new Product("🧆", "Piatto Greco",           "Souvlaki, tzatziki, pita, insalata",          "€ 14.00"),
-            new Product("🍱", "Bento Box",              "Riso, salmone teriyaki, edamame, miso",       "€ 16.00"),
-            new Product("🌯", "Wrap Caesar",            "Pollo, lattuga, crouton, salsa Caesar",       "€ 9.00"),
-            new Product("🌯", "Wrap Vegano",            "Hummus, falafel, verdure, tahini",            "€ 9.00")
-        ));
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    //  CATEGORIES
-    // ─────────────────────────────────────────────────────────────
-    private void buildCategoryButtons() {
-        catalog.forEach((category, products) -> {
-            Label btn = new Label(category);
-            btn.getStyleClass().add("cat-btn");
-            btn.setMaxWidth(Double.MAX_VALUE);
-            btn.setAlignment(Pos.CENTER_LEFT);
-            btn.setOnMouseClicked(e -> selectCategory(category));
-            categoriesPane.getChildren().add(btn);
-        });
-    }
-
-    private void selectCategory(String category) {
-        selectedCategory = category;
-        categoryTitleLabel.setText(category);
-
-        // aggiorna stile bottoni
-        categoriesPane.getChildren().forEach(n -> {
-            n.getStyleClass().remove("cat-btn-active");
-            if (n instanceof Label lbl && lbl.getText().equals(category)) {
-                lbl.getStyleClass().add("cat-btn-active");
+    /** Fallback: carica il menu direttamente (se navigato senza dati). */
+    public void loadMenu() {
+        if (cachedMenu != null) return;
+        new Thread(() -> {
+            try {
+                JsonObject r = ViewsService.getMenu();
+                JsonArray cats = extractCategories(r);
+                if (cats == null || cats.isEmpty()) {
+                    Platform.runLater(() -> showInfo("Menu vuoto."));
+                    return;
+                }
+                Platform.runLater(() -> buildUI(cats));
+            } catch (Exception e) {
+                RemoteLogger.error("ShopPage", "Errore caricamento menu", e);
+                Platform.runLater(() -> showInfo("Errore: " + e.getMessage()));
             }
-        });
+        }, "load-menu").start();
+    }
 
-        // ricostruisci prodotti
+    private void updateDateTime() {
+        LocalDateTime now = LocalDateTime.now();
+        if (dateLabel  != null) dateLabel.setText(now.format(dateFmt));
+        if (clockLabel != null) clockLabel.setText(now.format(timeFmt));
+    }
+
+    // ── Menu ──────────────────────────────────────────────────────────
+
+    private JsonArray extractCategories(JsonObject r) {
+        if (r.has("data") && r.get("data").isJsonObject()) {
+            JsonObject d = r.getAsJsonObject("data");
+            if (d.has("categorie") && d.get("categorie").isJsonArray()) return d.getAsJsonArray("categorie");
+            if (d.has("menu")      && d.get("menu").isJsonArray())      return d.getAsJsonArray("menu");
+        }
+        if (r.has("data")     && r.get("data").isJsonArray())      return r.getAsJsonArray("data");
+        if (r.has("categorie") && r.get("categorie").isJsonArray()) return r.getAsJsonArray("categorie");
+        return null;
+    }
+
+    private void buildUI(JsonArray categories) {
+        categoriesPane.getChildren().clear();
         productsPane.getChildren().clear();
-        productsScroll.setVvalue(0);
 
-        List<Product> products = catalog.getOrDefault(category, List.of());
-        for (Product p : products) {
-            productsPane.getChildren().add(buildProductCard(p));
+        for (int i = 0; i < categories.size(); i++) {
+            JsonObject cat    = categories.get(i).getAsJsonObject();
+            final String name = str(cat, "nome", "Categoria " + (i + 1));
+            final JsonArray p = jsonArr(cat, "prodotti");
+
+            Label tab = new Label(name);
+            tab.getStyleClass().add("category-tab");
+            tab.setMaxWidth(Double.MAX_VALUE);
+            Animations.touchFeedback(tab);
+            tab.setOnMouseClicked(ev -> selectCategory(tab, name, p != null ? p : new JsonArray()));
+            categoriesPane.getChildren().add(tab);
+        }
+
+        // Seleziona prima categoria
+        if (!categoriesPane.getChildren().isEmpty()) {
+            JsonObject first = categories.get(0).getAsJsonObject();
+            selectCategory((Label) categoriesPane.getChildren().get(0),
+                str(first, "nome", ""),
+                jsonArr(first, "prodotti") != null ? jsonArr(first, "prodotti") : new JsonArray());
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    //  PRODUCT CARD
-    // ─────────────────────────────────────────────────────────────
-    private VBox buildProductCard(Product p) {
-        Label emoji = new Label(p.emoji());
-        emoji.getStyleClass().add("prod-emoji");
+    private void selectCategory(Label tab, String name, JsonArray prodotti) {
+        if (activeCategory != null) activeCategory.getStyleClass().remove("category-tab-active");
+        activeCategory = tab;
+        tab.getStyleClass().add("category-tab-active");
+        if (categoryTitleLabel != null) categoryTitleLabel.setText(name);
+        showProducts(prodotti);
+    }
 
-        Label name = new Label(p.name());
-        name.getStyleClass().add("prod-name");
-        name.setWrapText(true);
+    // ── Prodotti ──────────────────────────────────────────────────────
 
-        Label desc = new Label(p.description());
-        desc.getStyleClass().add("prod-desc");
-        desc.setWrapText(true);
+    private void showProducts(JsonArray prodotti) {
+        productsPane.getChildren().clear();
+        if (prodotti == null || prodotti.isEmpty()) { showInfo("Nessun prodotto."); return; }
 
-        Label price = new Label(p.price());
-        price.getStyleClass().add("prod-price");
+        for (JsonElement el : prodotti) {
+            if (!el.isJsonObject()) continue;
+            JsonObject p = el.getAsJsonObject();
 
-        VBox card = new VBox(10, emoji, name, desc, price);
-        card.getStyleClass().add("prod-card");
-        card.setMaxWidth(Double.MAX_VALUE);
-        card.setMaxHeight(Double.MAX_VALUE);
-        VBox.setVgrow(desc, Priority.ALWAYS);
+            String nome     = str(p, "nome",       "Prodotto");
+            String prezzo   = str(p, "prezzo",      "");
+            String descr    = str(p, "descrizione", "");
+            String prezzoFmt = prezzo.isBlank() ? "" : "€ " + prezzo;
+            double prezzoVal = 0;
+            try { prezzoVal = Double.parseDouble(prezzo.replace(',', '.')); } catch (Exception ignored) {}
 
-        Animations.touchFeedback(card); // feedback touch pre-allocato, non si accumula
+            List<String> allergeni   = toStringList(jsonArr(p, "allergeni"));
+            List<String> ingredienti = toIngredientNames(jsonArr(p, "ingredienti"));
 
-        return card;
+            final double pv = prezzoVal;
+            ProductCard card = new ProductCard(nome, prezzoFmt, descr, allergeni);
+            // NO touchFeedback qui — la card gestisce internamente il feedback
+            // visivo tramite MOUSE_PRESSED/RELEASED per non interferire con il click
+            card.setOnMouseClicked(ev -> {
+                // Risponde a qualsiasi button (touch sintetizza PRIMARY)
+                showModal(nome, prezzoFmt, pv, descr, allergeni, ingredienti);
+            });
+            productsPane.getChildren().add(card);
+        }
+
+        double w = productsScroll.getViewportBounds().getWidth();
+        if (w > 0) resizeCards(w);
+        Platform.runLater(() -> resizeCards(productsScroll.getViewportBounds().getWidth()));
+        productsScroll.setVvalue(0);
+    }
+
+    private void resizeCards(double vw) {
+        if (productsPane == null || vw <= 0) return;
+        double pad = 32, gap = productsPane.getHgap(), usable = vw - pad;
+        int    cols = Math.max(1, (int) Math.floor((usable + gap) / (240 + gap)));
+        double w    = (usable - (cols - 1) * gap) / cols;
+        for (var node : productsPane.getChildren())
+            node.setStyle("-fx-pref-width:" + w + ";-fx-min-width:" + w + ";-fx-max-width:" + w + ";");
+    }
+
+    // ── Modal ─────────────────────────────────────────────────────────
+
+    private void showModal(String name, String price, double priceVal,
+                           String desc, List<String> allergens, List<String> ingredients) {
+        if (modalOverlay == null) return;
+
+        currentModalName      = name;
+        currentModalPrice     = price;
+        currentModalPriceVal  = priceVal;
+        currentModalProductId = 0;
+        currentModalIva       = 0;
+        currentModalSku       = null;
+        currentModalAllergens = allergens;
+
+        modalTitle.setText(name);
+        modalPrice.setText(price);
+        modalDesc.setText(desc == null ? "" : desc);
+        addToCartBtn.setText(I18n.t("add_to_cart"));
+
+        // Allergeni
+        modalAllergenChips.getChildren().clear();
+        if (allergens != null && !allergens.isEmpty()) {
+            for (String a : allergens) {
+                Label c = new Label(a); c.getStyleClass().add("allergen-chip");
+                modalAllergenChips.getChildren().add(c);
+            }
+            modalAllergenSection.setVisible(true); modalAllergenSection.setManaged(true);
+        } else {
+            modalAllergenSection.setVisible(false); modalAllergenSection.setManaged(false);
+        }
+
+        // Ingredienti
+        modalIngredients.getChildren().clear();
+        if (ingredients != null && !ingredients.isEmpty()) {
+            for (String i : ingredients) {
+                Label c = new Label(i); c.getStyleClass().add("ingredient-chip");
+                modalIngredients.getChildren().add(c);
+            }
+            modalIngredientSection.setVisible(true); modalIngredientSection.setManaged(true);
+        } else {
+            modalIngredientSection.setVisible(false); modalIngredientSection.setManaged(false);
+        }
+
+        if (rootStack != null && modalCard != null) {
+            double w = Math.min(860, rootStack.getWidth()  * 0.88);
+            double h = Math.min(920, rootStack.getHeight() * 0.88);
+            modalCard.setMaxWidth(w); modalCard.setPrefWidth(w); modalCard.setMaxHeight(h);
+        }
+
+        modalOverlay.setManaged(true); modalOverlay.setVisible(true);
+        modalClose.requestFocus();
+    }
+
+    @FXML private void hideModal() {
+        if (modalOverlay == null) return;
+        modalOverlay.setVisible(false); modalOverlay.setManaged(false);
+    }
+
+    @FXML private void onModalOverlayClicked(javafx.scene.input.MouseEvent e) {
+        if (e.getTarget() == modalOverlay) hideModal();
+    }
+
+    // ── Carrello ──────────────────────────────────────────────────────
+
+    @FXML
+    private void onAddToCart() {
+        if (currentModalName == null) return;
+        CartManager.get().addItem(currentModalProductId, currentModalName,
+                currentModalPrice, currentModalPriceVal,
+                currentModalIva, currentModalSku, currentModalAllergens);
+        hideModal();
+        updateCartBadge();
+        showToast(I18n.t("added"));
+        animateCartButton();
+    }
+
+    /** Animazione rimbalzo del pulsante carrello quando si aggiunge un prodotto. */
+    private void animateCartButton() {
+        if (cartBtn == null) return;
+        // Spring bounce: scale up → overshoot → settle
+        SequentialTransition bounce = new SequentialTransition(
+            scaleNode(cartBtn, 1.0, 1.35, 120, javafx.animation.Interpolator.EASE_OUT),
+            scaleNode(cartBtn, 1.35, 0.88, 90,  javafx.animation.Interpolator.EASE_IN),
+            scaleNode(cartBtn, 0.88, 1.10, 80,  javafx.animation.Interpolator.EASE_OUT),
+            scaleNode(cartBtn, 1.10, 1.0,  70,  javafx.animation.Interpolator.EASE_IN)
+        );
+        bounce.play();
+
+        // Badge pop-in
+        if (cartBadge != null && cartBadge.isVisible()) {
+            cartBadge.setScaleX(0.4); cartBadge.setScaleY(0.4);
+            SequentialTransition badgePop = new SequentialTransition(
+                scaleNode(cartBadge, 0.4, 1.3, 150, javafx.animation.Interpolator.EASE_OUT),
+                scaleNode(cartBadge, 1.3, 1.0,  80, javafx.animation.Interpolator.EASE_IN)
+            );
+            badgePop.play();
+        }
+    }
+
+    private javafx.animation.ScaleTransition scaleNode(
+            javafx.scene.Node n, double from, double to, int ms,
+            javafx.animation.Interpolator interp) {
+        javafx.animation.ScaleTransition st =
+                new javafx.animation.ScaleTransition(
+                        javafx.util.Duration.millis(ms), n);
+        st.setFromX(from); st.setFromY(from);
+        st.setToX(to);     st.setToY(to);
+        st.setInterpolator(interp);
+        return st;
+    }
+
+    @FXML
+    private void onCartClick() {
+        Navigator.goTo(Navigator.Screen.CART);
+    }
+
+    private void updateCartBadge() {
+        if (cartBadge == null) return;
+        int count = CartManager.get().totalItems();
+        if (count > 0) {
+            cartBadge.setText(String.valueOf(count));
+            cartBadge.setVisible(true);  cartBadge.setManaged(true);
+            if (cartBtn != null) {
+                cartBtn.setDisable(false);
+                cartBtn.setOpacity(1.0);
+            }
+        } else {
+            cartBadge.setVisible(false); cartBadge.setManaged(false);
+            if (cartBtn != null) {
+                cartBtn.setDisable(true);
+                cartBtn.setOpacity(0.35);
+            }
+        }
+    }
+
+    /** Toast "Aggiunto!" che appare in basso e svanisce. */
+    private void showToast(String msg) {
+        if (toastBox == null) return;
+        if (toastLabel != null) toastLabel.setText(msg);
+        toastBox.setVisible(true); toastBox.setManaged(true);
+        toastBox.setOpacity(0); toastBox.setTranslateY(20);
+
+        Timeline tl = new Timeline(
+            new KeyFrame(Duration.millis(0),
+                new KeyValue(toastBox.opacityProperty(), 0),
+                new KeyValue(toastBox.translateYProperty(), 20)),
+            new KeyFrame(Duration.millis(250),
+                new KeyValue(toastBox.opacityProperty(), 1),
+                new KeyValue(toastBox.translateYProperty(), 0)),
+            new KeyFrame(Duration.millis(1400),
+                new KeyValue(toastBox.opacityProperty(), 1)),
+            new KeyFrame(Duration.millis(1800),
+                new KeyValue(toastBox.opacityProperty(), 0))
+        );
+        tl.setOnFinished(e -> { toastBox.setVisible(false); toastBox.setManaged(false); });
+        tl.play();
+    }
+
+    // ── Tema / Connettività ───────────────────────────────────────────
+
+    @FXML private void toggleTheme() { ThemeManager.toggle(); refreshThemeButton(); }
+
+    public void refreshThemeButton() {
+        if (themeIcon != null) {
+            themeIcon.setIconLiteral(ThemeManager.isDark()
+                    ? "mdi2w-weather-sunny" : "mdi2w-weather-night");
+        }
+    }
+
+    /**
+     * Chiamato da Navigator quando si torna al menu dalla cache.
+     * Aggiorna il badge del carrello (potrebbe essere cambiato).
+     */
+    @Override
+    public void onReturn() {
+        updateCartBadge();
+        // Ri-registra il listener (potrebbe essere stato sovrascritto da altri screen)
+        NetworkWatchdog.setListener(this::setOnline);
+    }
+
+    public void setOnline(boolean online) {
+
+        if (internetLabel != null) internetLabel.setText(online ? "Online" : "Offline");
+    }
+
+    public void showError(String msg) { showInfo(msg); }
+
+    private void showInfo(String msg) {
+        if (productsPane == null) return;
+        productsPane.getChildren().clear();
+        Label l = new Label(msg); l.getStyleClass().add("info-label");
+        l.setWrapText(true); productsPane.getChildren().add(l);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────
+
+    private String str(JsonObject o, String k, String fb) {
+        return (o.has(k) && !o.get(k).isJsonNull()) ? o.get(k).getAsString() : fb;
+    }
+    private JsonArray jsonArr(JsonObject o, String k) {
+        return (o.has(k) && o.get(k).isJsonArray()) ? o.getAsJsonArray(k) : null;
+    }
+    private List<String> toStringList(JsonArray arr) {
+        List<String> out = new ArrayList<>();
+        if (arr == null) return out;
+        for (JsonElement el : arr) if (!el.isJsonNull()) out.add(el.getAsString());
+        return out;
+    }
+    private List<String> toIngredientNames(JsonArray arr) {
+        List<String> out = new ArrayList<>();
+        if (arr == null) return out;
+        for (JsonElement el : arr) {
+            if (!el.isJsonObject()) continue;
+            JsonObject o = el.getAsJsonObject();
+            if (o.has("nome") && !o.get("nome").isJsonNull()) out.add(o.get("nome").getAsString());
+        }
+        return out;
     }
 }

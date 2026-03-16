@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<StackPane xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.example.WelcomeController"
+           styleClass="welcome-root">
+
+    <VBox fx:id="welcomeContainer" alignment="CENTER" spacing="0"
+          styleClass="welcome-container">
+
+        <!-- Logo icona MDI -->
+        <FontIcon iconLiteral="mdi2f-food-fork-drink" iconSize="90"
+                  styleClass="welcome-logo-icon" />
+
+        <Label fx:id="titleLabel"    text="Benvenuto"         styleClass="welcome-title" />
+        <Label fx:id="subtitleLabel" text="Tocca per iniziare" styleClass="welcome-subtitle" />
+
+        <Region prefHeight="36" />
+
+        <Label fx:id="chooseLangLabel" text="Scegli la lingua"
+               styleClass="welcome-choose-lang" />
+
+        <Region prefHeight="24" />
+
+        <VBox spacing="18" alignment="CENTER">
+            <HBox spacing="20" alignment="CENTER">
+                <Button fx:id="btnIt" onAction="#onLangIt" styleClass="lang-btn" text="🇮🇹  Italiano" />
+                <Button fx:id="btnEn" onAction="#onLangEn" styleClass="lang-btn" text="🇬🇧  English" />
+                <Button fx:id="btnDe" onAction="#onLangDe" styleClass="lang-btn" text="🇩🇪  Deutsch" />
+            </HBox>
+            <HBox spacing="20" alignment="CENTER">
+                <Button fx:id="btnFr" onAction="#onLangFr" styleClass="lang-btn" text="🇫🇷  Français" />
+                <Button fx:id="btnAr" onAction="#onLangAr" styleClass="lang-btn" text="🇸🇦  عربي" />
+            </HBox>
+        </VBox>
+
+        <Region prefHeight="48" />
+
+        <Button fx:id="startBtn" onAction="#onStart"
+                styleClass="start-btn"
+                text="Inizia l'ordine  →"
+                visible="false" managed="false">
+            <graphic>
+                <FontIcon iconLiteral="mdi2a-arrow-right-circle" iconSize="28"
+                          styleClass="start-btn-icon" />
+            </graphic>
+        </Button>
+
+    </VBox>
+</StackPane>

@@ -1,829 +1,769 @@
-/* ══════════════════════════════════════════════════════════════════════
- *  TouchUI — Dark Theme (Touch-Optimized)
- *
- *  All interactive elements sized >= 48px for comfortable finger taps.
- *  Generous padding, larger text, wider spacing.
- * ══════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════════
+ *  DARK THEME — Totem Touch UI
+ * ══════════════════════════════════════════════════════════════════════════════ */
 
-/* ── Root palette ────────────────────────────────────────────────────── */
 .root {
-    -fx-base:        #18181e;
-    -fx-background:  #18181e;
-    -fx-control-inner-background: #1f1f28;
-    -fx-text-fill:   #e0e0ea;
-    -fx-font-family: "Segoe UI", "Ubuntu", "Cantarell", "Noto Sans", sans-serif;
-    -fx-font-size:   15px;
-    -fx-focus-color: transparent;
-    -fx-faint-focus-color: transparent;
+    -color-bg:       #16161e;
+    -color-surface:  #1e1e2a;
+    -color-surface2: #252534;
+    -color-border:   #2c2c40;
+    -color-sidebar:  #111118;
+    -color-accent:   #5b9cf5;
+    -color-text:     #e4e4f0;
+    -color-muted:    #9090b0;
+    -color-dim:      #606080;
+    -color-green:    #4ec97a;
+    -color-orange:   #e0a040;
+    -color-red:      #e05555;
+
+    -fx-base:                     -color-surface;
+    -fx-background:               -color-bg;
+    -fx-control-inner-background: -color-surface;
+    -fx-text-fill:                -color-text;
+    -fx-font-family:              "Segoe UI", "Noto Color Emoji", "Noto Emoji", "Apple Color Emoji", "Ubuntu", sans-serif;
+    -fx-font-size:                16px;
+    -fx-focus-color:              transparent;
+    -fx-faint-focus-color:        transparent;
 }
 
-/* ── Labels ──────────────────────────────────────────────────────────── */
-.label {
-    -fx-text-fill: #e0e0ea;
-}
-.field-label {
-    -fx-text-fill: #b0b0c0;
-    -fx-min-width: 160;
-    -fx-font-size: 15px;
-}
-.input-label {
-    -fx-text-fill: #8888a0;
-    -fx-font-size: 12px;
-}
-.section-label {
-    -fx-text-fill: #5b9cf5;
-    -fx-font-weight: bold;
-    -fx-font-size: 14px;
-    -fx-padding: 6 0 3 0;
-}
+/* ── Struttura ───────────────────────────────────────────────────────────── */
+.main-pane    { -fx-background-color: -color-bg; }
+.top-container { -fx-background-color: transparent; }
 
-/* ── Card sections ───────────────────────────────────────────────────── */
-.card-section {
-    -fx-background-color: #1f1f28;
-    -fx-padding: 24;
-    -fx-background-radius: 14;
-    -fx-border-color: #2a2a3a;
-    -fx-border-radius: 14;
-}
-
-/* ── Header panel ────────────────────────────────────────────────────── */
-.header-panel {
-    -fx-background-color: linear-gradient(to right, #14141e, #1a1a28, #14141e);
-    -fx-padding: 20 24;
-    -fx-border-color: transparent transparent #2a2a3a transparent;
+/* ── Status bar ──────────────────────────────────────────────────────────── */
+.status-bar {
+    -fx-background-color: #0d0d14;
+    -fx-padding: 6 22;
+    -fx-min-height: 38;
+    -fx-border-color: transparent transparent -color-border transparent;
     -fx-border-width: 0 0 1 0;
 }
-.header-title {
-    -fx-font-size: 24px;
+.status-clock { -fx-text-fill: -color-text;  -fx-font-size: 15px; -fx-font-weight: bold; -fx-font-family: monospace; }
+.status-date  { -fx-text-fill: -color-muted; -fx-font-size: 14px; -fx-font-family: monospace; }
+.status-text  { -fx-text-fill: -color-muted; -fx-font-size: 14px; }
+
+.status-dot-online {
+    -fx-background-color: -color-green; -fx-background-radius: 50%;
+    -fx-min-width: 11px; -fx-min-height: 11px; -fx-max-width: 11px; -fx-max-height: 11px;
+    -fx-effect: dropshadow(gaussian, rgba(78,201,122,0.7), 5, 0, 0, 0);
+}
+.status-dot-offline {
+    -fx-background-color: -color-red; -fx-background-radius: 50%;
+    -fx-min-width: 11px; -fx-min-height: 11px; -fx-max-width: 11px; -fx-max-height: 11px;
+    -fx-effect: dropshadow(gaussian, rgba(224,85,85,0.7), 5, 0, 0, 0);
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.shop-header {
+    -fx-background-color: #10101a;
+    -fx-padding: 16 24;
+    -fx-min-height: 72;
+    -fx-border-color: transparent transparent -color-border transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.shop-header-icon  { -fx-font-size: 32px; }
+.shop-header-title { -fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: -color-accent; }
+.shop-header-hint  { -fx-font-size: 15px; -fx-text-fill: -color-muted; }
+
+.theme-btn {
+    -fx-background-color: -color-surface2;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 50%; -fx-background-radius: 50%;
+    -fx-font-size: 18px;
+    -fx-min-width: 44px; -fx-min-height: 44px;
+    -fx-max-width: 44px; -fx-max-height: 44px;
+    -fx-cursor: hand; -fx-padding: 0;
+}
+.theme-btn:pressed { -fx-background-color: -color-border; }
+
+/* ── Categorie (sinistra) ────────────────────────────────────────────────── */
+.categories-scroll {
+    -fx-background: -color-sidebar;
+    -fx-background-color: -color-sidebar;
+    -fx-border-color: transparent -color-border transparent transparent;
+    -fx-border-width: 0 1 0 0;
+    -fx-pref-width: 280; -fx-min-width: 260; -fx-max-width: 320;
+}
+.categories-scroll > .viewport { -fx-background-color: -color-sidebar; }
+
+.categories-pane {
+    -fx-background-color: -color-sidebar;
+    -fx-padding: 12 8;
+}
+
+.category-tab {
+    -fx-font-size: 22px;
     -fx-font-weight: bold;
-    -fx-text-fill: #5b9cf5;
-    -fx-effect: dropshadow(gaussian, rgba(91,156,245,0.15), 6, 0, 0, 0);
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
- *  BUTTONS — Touch-sized (min 48px height)
- * ═══════════════════════════════════════════════════════════════════════ */
-.button {
-    -fx-background-color: #2c2c3a;
-    -fx-text-fill: #e0e0ea;
-    -fx-background-radius: 10;
-    -fx-border-radius: 10;
-    -fx-border-color: #38384a;
-    -fx-border-width: 1;
-    -fx-cursor: hand;
-    -fx-padding: 7 16;
-    -fx-font-size: 14px;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 2, 0, 0, 1);
-}
-.button:pressed {
-    -fx-background-color: #242436;
-    -fx-border-color: #38384a;
-    -fx-effect: none;
-}
-
-.touch-btn {
-    -fx-min-height: 48;
-    -fx-padding: 12 24;
-    -fx-font-size: 15px;
-    -fx-background-radius: 12;
-    -fx-border-radius: 12;
-}
-
-.button.accent {
-    -fx-background-color: linear-gradient(to bottom, #5fa0f5, #4888e0);
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-border-color: #4a80d0;
-}
-.button.accent:pressed {
-    -fx-background-color: #3a72c0;
-}
-
-.button.green {
-    -fx-background-color: linear-gradient(to bottom, #4ec97a, #32f1a8);
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-border-color: #38a060;
-}
-.button.green:pressed {
-    -fx-background-color: #2e9858;
-}
-
-.button.orange {
-    -fx-background-color: linear-gradient(to bottom, #e09040, #c87830);
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-border-color: #b87028;
-}
-.button.orange:pressed {
-    -fx-background-color: #b06828;
-}
-
-.button.red {
-    -fx-background-color: linear-gradient(to bottom, #e05555, #c84040);
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-border-color: #b83838;
-}
-.button.red:pressed {
-    -fx-background-color: #a83030;
-}
-
-.button.small {
-    -fx-min-height: 36;
-    -fx-padding: 6 14;
-    -fx-font-size: 13px;
-    -fx-background-radius: 8;
-    -fx-border-radius: 8;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
- *  TEXT FIELDS — Touch-sized (min 48px)
- * ═══════════════════════════════════════════════════════════════════════ */
-.text-field, .touch-field {
-    -fx-background-color: #141420;
-    -fx-text-fill: #e0e0ea;
-    -fx-prompt-text-fill: #606078;
-    -fx-border-color: #38384a;
-    -fx-border-radius: 10;
-    -fx-background-radius: 10;
-    -fx-border-width: 1;
-    -fx-padding: 12 16;
-    -fx-font-size: 15px;
-    -fx-min-height: 48;
-}
-.text-field:focused, .touch-field:focused {
-    -fx-border-color: #5b9cf5;
-    -fx-effect: dropshadow(gaussian, rgba(91,156,245,0.2), 6, 0, 0, 0);
-}
-
-.password-field {
-    -fx-background-color: #141420;
-    -fx-text-fill: #e0e0ea;
-    -fx-prompt-text-fill: #606078;
-    -fx-border-color: #38384a;
-    -fx-border-radius: 10;
-    -fx-background-radius: 10;
-    -fx-border-width: 1;
-    -fx-padding: 12 16;
-    -fx-font-size: 15px;
-    -fx-min-height: 48;
-}
-.password-field:focused {
-    -fx-border-color: #5b9cf5;
-    -fx-effect: dropshadow(gaussian, rgba(91,156,245,0.2), 6, 0, 0, 0);
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
- *  CHECK BOXES — Touch-sized (larger box + padding)
- * ═══════════════════════════════════════════════════════════════════════ */
-.check-box, .touch-check {
-    -fx-text-fill: #e0e0ea;
-    -fx-font-size: 15px;
-    -fx-cursor: hand;
-    -fx-padding: 8 0;
-}
-.check-box .box, .touch-check .box {
-    -fx-background-color: #1f1f28;
-    -fx-border-color: #38384a;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
-    -fx-padding: 5;
-    -fx-min-width: 24;
-    -fx-min-height: 24;
-    -fx-pref-width: 24;
-    -fx-pref-height: 24;
-}
-.check-box:selected .box, .touch-check:selected .box {
-    -fx-background-color: #5b9cf5;
-    -fx-border-color: #5b9cf5;
-}
-.check-box .mark, .touch-check .mark {
-    -fx-background-color: white;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
- *  RADIO BUTTONS — Touch-sized
- * ═══════════════════════════════════════════════════════════════════════ */
-.radio-button, .touch-radio {
-    -fx-text-fill: #e0e0ea;
-    -fx-font-size: 15px;
-    -fx-cursor: hand;
-    -fx-padding: 8 0;
-}
-.radio-button .radio, .touch-radio .radio {
-    -fx-background-color: #1f1f28;
-    -fx-border-color: #38384a;
-    -fx-border-radius: 14;
-    -fx-background-radius: 14;
-    -fx-padding: 5;
-    -fx-min-width: 24;
-    -fx-min-height: 24;
-}
-.radio-button:selected .radio, .touch-radio:selected .radio {
-    -fx-background-color: #5b9cf5;
-    -fx-border-color: #5b9cf5;
-}
-.radio-button .dot, .touch-radio .dot {
-    -fx-background-color: white;
-    -fx-background-radius: 7;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
- *  SPINNER — Touch-sized
- * ═══════════════════════════════════════════════════════════════════════ */
-.spinner, .touch-spinner {
+    -fx-text-fill: -color-muted;
+    -fx-padding: 20 20;
+    -fx-min-height: 80;
     -fx-background-color: transparent;
-    -fx-border-color: #38384a;
-    -fx-border-radius: 10;
     -fx-background-radius: 10;
-    -fx-min-height: 48;
-}
-.spinner .text-field, .touch-spinner .text-field {
-    -fx-background-color: #141420;
-    -fx-background-radius: 10 0 0 10;
-    -fx-border-radius: 10 0 0 10;
     -fx-border-color: transparent;
-    -fx-font-size: 15px;
-}
-.spinner .increment-arrow-button,
-.spinner .decrement-arrow-button {
-    -fx-background-color: #2c2c3a;
+    -fx-border-radius: 10;
     -fx-cursor: hand;
-    -fx-min-width: 36;
+    -fx-alignment: center-left;
+    -fx-wrap-text: true;
 }
-.spinner .increment-arrow-button .increment-arrow,
-.spinner .decrement-arrow-button .decrement-arrow {
-    -fx-background-color: #8888a0;
+.category-tab:hover {
+    -fx-background-color: rgba(91,156,245,0.10);
+    -fx-text-fill: -color-text;
+}
+.category-tab-active {
+    -fx-background-color: rgba(91,156,245,0.18);
+    -fx-text-fill: -color-accent;
+    -fx-border-color: transparent -color-accent transparent transparent;
+    -fx-border-width: 0 3 0 0;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
- *  COMBO BOX — Touch-sized
- * ═══════════════════════════════════════════════════════════════════════ */
-.combo-box, .touch-combo {
-    -fx-background-color: #1f1f28;
-    -fx-border-color: #38384a;
-    -fx-border-radius: 10;
-    -fx-background-radius: 10;
-    -fx-cursor: hand;
-    -fx-min-height: 48;
-    -fx-font-size: 15px;
+/* ── Prodotti (FlowPane) ─────────────────────────────────────────────────── */
+.products-scroll {
+    -fx-background: -color-bg;
+    -fx-background-color: -color-bg;
 }
-.combo-box .list-cell {
-    -fx-text-fill: #e0e0ea;
-    -fx-background-color: transparent;
-    -fx-padding: 8 12;
-    -fx-font-size: 15px;
-}
-.combo-box .arrow-button {
-    -fx-background-color: transparent;
-    -fx-min-width: 36;
-}
-.combo-box .arrow {
-    -fx-background-color: #8888a0;
-}
-.combo-box-popup .list-view {
-    -fx-background-color: #252530;
-    -fx-border-color: #38384a;
-    -fx-border-radius: 10;
-    -fx-background-radius: 10;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 12, 0, 0, 4);
-}
-.combo-box-popup .list-view .list-cell {
-    -fx-text-fill: #e0e0ea;
-    -fx-background-color: transparent;
-    -fx-padding: 12 16;
-    -fx-font-size: 15px;
-}
-.combo-box-popup .list-view .list-cell:filled:selected {
-    -fx-background-color: #3d3d54;
+.products-scroll > .viewport { -fx-background-color: -color-bg; }
+
+.products-pane {
+    -fx-background-color: -color-bg;
+    -fx-padding: 16;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
- *  PROGRESS BAR — Touch-visible (taller track)
- * ═══════════════════════════════════════════════════════════════════════ */
-.progress-bar, .touch-progress {
-    -fx-min-height: 14;
+/* ── Card prodotto ───────────────────────────────────────────────────────── */
+.prod-card {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 16;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 16;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+    -fx-min-height: 200;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.30), 6, 0, 0, 2);
 }
-.progress-bar > .track {
-    -fx-background-color: #1a1a24;
-    -fx-background-radius: 7;
+.prod-card:hover {
+    -fx-border-color: -color-accent;
+    -fx-background-color: -color-surface2;
+    -fx-effect: dropshadow(gaussian, rgba(91,156,245,0.22), 12, 0, 0, 3);
+}
+
+.prod-name  { -fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: -color-text; }
+.prod-price { -fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: -color-accent; }
+.prod-desc  { -fx-font-size: 14px; -fx-text-fill: -color-muted; }
+
+/* Mini chip allergeni sulla card */
+.prod-allergen-chips { -fx-background-color: transparent; }
+.prod-allergen-chip {
+    -fx-background-color: rgba(224,160,64,0.15);
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(224,160,64,0.4);
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-text-fill: -color-orange;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 3 9;
+}
+
+/* ── Modal ───────────────────────────────────────────────────────────────── */
+.modal-overlay { -fx-background-color: rgba(0,0,0,0.75); }
+
+.modal-card {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 22;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 22;
+    -fx-border-width: 1;
+    -fx-max-width: 860;
+    -fx-min-width: 400;
+    -fx-max-height: 920;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.65), 28, 0, 0, 10);
+    /* overflow hidden: il bottone verde rimane dentro i bordi arrotondati */
+}
+
+/* Header colorato del modal */
+.modal-header {
+    -fx-background-color: linear-gradient(to bottom, #1a2545, #14182e);
+    -fx-padding: 32 32 26 32;
+    -fx-background-radius: 22 22 0 0;
+    -fx-border-color: transparent transparent rgba(91,156,245,0.25) transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.modal-title {
+    -fx-font-size: 32px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffffff;
+    -fx-wrap-text: true;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 2, 0, 0, 1);
+}
+.modal-price {
+    -fx-font-size: 42px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #7dd4fc;
+}
+
+/* Body modal scrollabile */
+.modal-body-scroll {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+.modal-body-scroll > .viewport { -fx-background-color: transparent; }
+
+.modal-body {
+    -fx-background-color: transparent;
+    -fx-padding: 22 28 28 28;
+}
+
+.modal-desc {
+    -fx-font-size: 17px;
+    -fx-text-fill: -color-muted;
+    -fx-line-spacing: 3;
+}
+
+.modal-section-label {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-dim;
+    -fx-padding: 0 0 4 0;
+}
+
+/* Chips allergeni nel modal — più grandi e visibili */
+.allergen-chips-pane { -fx-background-color: transparent; }
+.allergen-chip {
+    -fx-background-color: rgba(224,160,64,0.18);
+    -fx-background-radius: 22;
+    -fx-border-color: -color-orange;
+    -fx-border-radius: 22;
+    -fx-border-width: 1.5;
+    -fx-text-fill: -color-orange;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-padding: 8 18;
+}
+
+/* Chips ingredienti nel modal */
+.ingredients-pane { -fx-background-color: transparent; }
+.ingredient-chip {
+    -fx-background-color: -color-surface2;
+    -fx-background-radius: 10;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-text-fill: -color-text;
+    -fx-font-size: 15px;
+    -fx-padding: 8 16;
+}
+
+/* Pulsante chiudi modal */
+.modal-close {
+    -fx-min-width: 46px; -fx-min-height: 46px;
+    -fx-max-width: 46px; -fx-max-height: 46px;
+    -fx-font-size: 18px; -fx-font-weight: bold;
+    -fx-background-radius: 50%; -fx-border-radius: 50%;
+    -fx-background-color: rgba(255,255,255,0.08);
+    -fx-border-color: rgba(255,255,255,0.20);
+    -fx-text-fill: -color-text;
+    -fx-cursor: hand; -fx-padding: 0;
+}
+.modal-close:pressed {
+    -fx-background-color: rgba(224,85,85,0.30);
+    -fx-border-color: -color-red;
+}
+
+/* ── Info / errore ───────────────────────────────────────────────────────── */
+.info-label {
+    -fx-font-size: 20px;
+    -fx-text-fill: -color-muted;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+    -fx-padding: 60 40;
+    -fx-wrap-text: true;
+}
+
+/* ── Label base ──────────────────────────────────────────────────────────── */
+.label { -fx-text-fill: -color-text; }
+
+/* ── Scroll bars ─────────────────────────────────────────────────────────── */
+.scroll-bar { -fx-background-color: transparent; -fx-padding: 1; }
+.scroll-bar:vertical   { -fx-pref-width: 6;  -fx-min-width: 6;  -fx-max-width: 6;  }
+.scroll-bar:horizontal { -fx-pref-height: 6; -fx-min-height: 6; -fx-max-height: 6; }
+.scroll-bar .track  { -fx-background-color: transparent; }
+.scroll-bar .thumb  { -fx-background-color: rgba(150,150,200,0.22); -fx-background-radius: 3; }
+.scroll-bar .thumb:pressed { -fx-background-color: rgba(150,150,200,0.50); }
+.scroll-bar .increment-button, .scroll-bar .decrement-button {
+    -fx-background-color: transparent; -fx-padding: 0;
+    -fx-pref-width: 0; -fx-pref-height: 0; -fx-min-width: 0; -fx-min-height: 0; -fx-max-width: 0; -fx-max-height: 0;
+}
+.scroll-bar .increment-arrow, .scroll-bar .decrement-arrow {
+    -fx-background-color: transparent; -fx-padding: 0; -fx-shape: "";
+    -fx-min-width: 0; -fx-min-height: 0; -fx-max-width: 0; -fx-max-height: 0;
+}
+.scroll-pane             { -fx-background-color: transparent; -fx-padding: 0; }
+.scroll-pane > .viewport { -fx-background-color: transparent; }
+.scroll-pane > .corner   { -fx-background-color: transparent; }
+
+/* ── Button base ─────────────────────────────────────────────────────────── */
+.button {
+    -fx-background-color: -color-surface2;
+    -fx-text-fill: -color-text;
+    -fx-background-radius: 10; -fx-border-radius: 10;
+    -fx-border-color: -color-border; -fx-border-width: 1;
+    -fx-cursor: hand; -fx-padding: 10 20; -fx-font-size: 15px;
+}
+.button:pressed { -fx-background-color: -color-border; -fx-effect: none; }
+
+/* ══════════════════════════════════════════════════════════════════════
+ *  NUOVE SCHERMATE — Welcome / Cart / Payment / Confirm
+ * ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Radice schermate ────────────────────────────────────────────────── */
+.screen-root   { -fx-background-color: -color-bg; }
+.screen-header {
+    -fx-background-color: #10101a;
+    -fx-padding: 14 24;
+    -fx-min-height: 72;
+    -fx-border-color: transparent transparent -color-border transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.screen-title {
+    -fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: -color-text;
+}
+.back-btn {
+    -fx-background-color: -color-surface2;
+    -fx-text-fill: -color-text;
+    -fx-font-size: 22px; -fx-font-weight: bold;
+    -fx-background-radius: 12; -fx-border-radius: 12;
+    -fx-border-color: -color-border;
+    -fx-min-width: 56; -fx-min-height: 56;
+    -fx-cursor: hand;
+}
+.back-btn:pressed { -fx-background-color: -color-border; }
+
+/* ── CTA button (verde) ──────────────────────────────────────────────── */
+.cta-btn {
+    -fx-background-color: linear-gradient(to bottom, #3dbb6e, #2ea058);
+    -fx-text-fill: white;
+    -fx-font-size: 22px; -fx-font-weight: bold;
+    -fx-background-radius: 16; -fx-border-radius: 16;
+    -fx-padding: 22 40;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(46,160,88,0.35), 10, 0, 0, 3);
+}
+.cta-btn:pressed { -fx-background-color: #267a44; -fx-effect: none; }
+.cta-btn:disabled { -fx-opacity: 0.4; }
+
+/* ── Pulsante aggiungi al carrello nel modal ─────────────────────────── */
+.add-to-cart-btn {
+    -fx-background-color: linear-gradient(to bottom, #3dbb6e, #2ea058);
+    -fx-text-fill: white;
+    -fx-font-size: 22px; -fx-font-weight: bold;
+    -fx-background-radius: 0 0 20 20;
+    -fx-border-radius: 0 0 20 20;
+    -fx-padding: 22 24;
+    -fx-cursor: hand;
+    -fx-min-height: 72;
+}
+.add-to-cart-btn:pressed { -fx-background-color: #1e7a3e; -fx-effect: none; }
+
+/* ── Pulsante carrello nell'header ───────────────────────────────────── */
+.cart-btn {
+    -fx-background-color: -color-surface2;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 16; -fx-background-radius: 16;
+    -fx-font-size: 28px;
+    -fx-min-width: 64; -fx-min-height: 64;
+    -fx-max-width: 64; -fx-max-height: 64;
+    -fx-cursor: hand; -fx-padding: 0;
+}
+.cart-btn:pressed { -fx-background-color: -color-border; }
+
+.cart-badge {
+    -fx-background-color: -color-red;
+    -fx-background-radius: 14;
+    -fx-text-fill: white;
+    -fx-font-size: 14px; -fx-font-weight: bold;
+    -fx-min-width: 28; -fx-min-height: 28;
+    -fx-max-width: 28; -fx-max-height: 28;
+    -fx-alignment: center;
+    -fx-translate-x: 8; -fx-translate-y: -8;
+}
+
+/* ── Toast "Aggiunto!" ───────────────────────────────────────────────── */
+.toast-label {
+    -fx-background-color: rgba(46,160,88,0.92);
+    -fx-background-radius: 30;
+    -fx-text-fill: white;
+    -fx-font-size: 20px; -fx-font-weight: bold;
+    -fx-padding: 16 36;
+    -fx-translate-y: -40;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 8, 0, 0, 3);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+ *  WELCOME SCREEN
+ * ══════════════════════════════════════════════════════════════════════ */
+.welcome-root {
+    -fx-background-color: linear-gradient(to bottom, #0d0d18, #16161e);
+}
+.welcome-container { -fx-padding: 60 40; }
+.welcome-logo      { -fx-font-size: 90px; }
+.welcome-title {
+    -fx-font-size: 56px; -fx-font-weight: bold;
+    -fx-text-fill: -color-text;
+    -fx-padding: 12 0 0 0;
+}
+.welcome-subtitle  { -fx-font-size: 24px; -fx-text-fill: -color-muted; -fx-padding: 0 0 10 0; }
+.welcome-choose-lang {
+    -fx-font-size: 20px; -fx-text-fill: -color-dim;
+    -fx-font-weight: bold; -fx-padding: 0 0 8 0;
+}
+
+/* Pulsanti lingua */
+.lang-btn {
+    -fx-background-color: -color-surface;
+    -fx-text-fill: -color-text;
+    -fx-font-size: 22px; -fx-font-weight: bold;
+    -fx-background-radius: 18; -fx-border-radius: 18;
+    -fx-border-color: -color-border; -fx-border-width: 2;
+    -fx-min-width: 200; -fx-min-height: 72;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 6, 0, 0, 2);
+}
+.lang-btn:pressed { -fx-background-color: -color-surface2; -fx-effect: none; }
+.lang-btn-active {
+    -fx-background-color: rgba(91,156,245,0.18);
+    -fx-border-color: -color-accent; -fx-border-width: 2.5;
+    -fx-text-fill: -color-accent;
+}
+
+/* Pulsante start */
+.start-btn {
+    -fx-background-color: linear-gradient(to bottom right, #4888e0, #3060c0);
+    -fx-text-fill: white;
+    -fx-font-size: 26px; -fx-font-weight: bold;
+    -fx-background-radius: 20; -fx-border-radius: 20;
+    -fx-padding: 24 60;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(72,136,224,0.45), 14, 0, 0, 4);
+}
+.start-btn:pressed { -fx-background-color: #2a50a0; -fx-effect: none; }
+
+/* ══════════════════════════════════════════════════════════════════════
+ *  CART SCREEN
+ * ══════════════════════════════════════════════════════════════════════ */
+.cart-scroll { -fx-background: -color-bg; -fx-background-color: -color-bg; }
+.cart-scroll > .viewport { -fx-background-color: -color-bg; }
+
+.cart-list { -fx-background-color: -color-bg; -fx-padding: 20 24; }
+
+.cart-row {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 16; -fx-border-color: -color-border;
+    -fx-border-radius: 16; -fx-border-width: 1;
+    -fx-padding: 20 22;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.20), 4, 0, 0, 1);
+}
+
+.cart-item-name  { -fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: -color-text; }
+.cart-item-price { -fx-font-size: 16px; -fx-text-fill: -color-muted; }
+.cart-item-total { -fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: -color-accent; }
+
+.cart-total-badge {
+    -fx-background-color: -color-accent;
+    -fx-text-fill: white;
+    -fx-font-size: 18px; -fx-font-weight: bold;
+    -fx-background-radius: 14; -fx-padding: 8 18;
+}
+
+.qty-btn {
+    -fx-background-color: -color-surface2;
+    -fx-text-fill: -color-text;
+    -fx-font-size: 22px; -fx-font-weight: bold;
+    -fx-background-radius: 10; -fx-border-color: -color-border;
+    -fx-border-radius: 10;
+    -fx-min-width: 52; -fx-min-height: 52;
+    -fx-cursor: hand;
+}
+.qty-btn:pressed { -fx-background-color: -color-border; }
+.qty-label { -fx-font-size: 22px; -fx-font-weight: bold; -fx-min-width: 44; -fx-alignment: center; }
+
+.cart-footer {
+    -fx-background-color: #10101a;
+    -fx-border-color: -color-border transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
     -fx-padding: 0;
 }
-.progress-bar > .bar {
-    -fx-background-color: linear-gradient(to right, #4888e0, #5b9cf5);
-    -fx-background-radius: 7;
-    -fx-padding: 6;
+.cart-total-row  { -fx-padding: 20 28; }
+.cart-total-label  { -fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: -color-muted; }
+.cart-total-amount { -fx-font-size: 34px; -fx-font-weight: bold; -fx-text-fill: -color-accent; }
+
+.cart-empty-label {
+    -fx-font-size: 24px; -fx-text-fill: -color-dim;
+    -fx-padding: 80 40; -fx-alignment: center; -fx-text-alignment: center;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
- *  SLIDER — Touch-sized (larger thumb)
- * ═══════════════════════════════════════════════════════════════════════ */
-.slider .track, .touch-slider .track {
-    -fx-background-color: #2a2a3a;
+/* ══════════════════════════════════════════════════════════════════════
+ *  PAYMENT SCREEN
+ * ══════════════════════════════════════════════════════════════════════ */
+.payment-container { -fx-background-color: -color-bg; -fx-padding: 0 60 60 60; }
+.payment-topbar    { -fx-padding: 20 0 0 0; }
+.payment-title {
+    -fx-font-size: 38px; -fx-font-weight: bold;
+    -fx-text-fill: -color-text; -fx-padding: 20 0 0 0;
+    -fx-text-alignment: center; -fx-alignment: center;
+}
+.payment-total {
+    -fx-font-size: 52px; -fx-font-weight: bold; -fx-text-fill: -color-accent;
+    -fx-text-alignment: center; -fx-alignment: center;
+}
+
+.payment-card {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 24; -fx-border-color: -color-border;
+    -fx-border-radius: 24; -fx-border-width: 2;
+    -fx-padding: 50 60;
+    -fx-min-width: 300; -fx-min-height: 280;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 10, 0, 0, 3);
+}
+.payment-card:hover {
+    -fx-border-color: -color-accent;
+    -fx-background-color: -color-surface2;
+    -fx-effect: dropshadow(gaussian, rgba(91,156,245,0.30), 16, 0, 0, 4);
+}
+.payment-card-selected {
+    -fx-border-color: -color-green;
+    -fx-background-color: rgba(78,201,122,0.12);
+}
+
+.payment-icon        { -fx-font-size: 64px; }
+.payment-method-title { -fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: -color-text; }
+.payment-method-sub   { -fx-font-size: 18px; -fx-text-fill: -color-muted; }
+
+/* ══════════════════════════════════════════════════════════════════════
+ *  CONFIRM SCREEN
+ * ══════════════════════════════════════════════════════════════════════ */
+.confirm-root {
+    -fx-background-color: linear-gradient(to bottom, #0a1a0e, #12241a, #16161e);
+}
+.confirm-container { -fx-padding: 60 40; }
+
+.check-circle {
+    -fx-background-color: linear-gradient(to bottom right, #3dbb6e, #2ea058);
+    -fx-background-radius: 50%;
+    -fx-min-width: 160; -fx-min-height: 160;
+    -fx-max-width: 160; -fx-max-height: 160;
+    -fx-effect: dropshadow(gaussian, rgba(46,160,88,0.55), 24, 0, 0, 6);
+}
+.check-icon {
+    -fx-font-size: 80px; -fx-font-weight: bold;
+    -fx-text-fill: white;
+}
+
+.confirm-title {
+    -fx-font-size: 48px; -fx-font-weight: bold;
+    -fx-text-fill: -color-text; -fx-text-alignment: center;
+}
+.confirm-number-sub { -fx-font-size: 22px; -fx-text-fill: -color-muted; }
+.confirm-number {
+    -fx-font-size: 120px; -fx-font-weight: bold;
+    -fx-text-fill: -color-accent;
+    -fx-effect: dropshadow(gaussian, rgba(91,156,245,0.4), 16, 0, 0, 0);
+}
+.confirm-msg {
+    -fx-font-size: 24px; -fx-text-fill: -color-muted;
+    -fx-text-alignment: center; -fx-alignment: center;
+    -fx-line-spacing: 6;
+}
+.confirm-countdown {
+    -fx-font-size: 18px; -fx-text-fill: -color-dim;
+}
+
+/* ── Cart allergen warning ─────────────────────────────────────────── */
+.cart-allergen-warning {
+    -fx-background-color: rgba(224,160,64,0.12);
+    -fx-border-color: rgba(224,160,64,0.35);
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 16 24;
+}
+.cart-allergen-icon  { -fx-font-size: 28px; }
+.cart-allergen-title {
+    -fx-font-size: 16px; -fx-font-weight: bold;
+    -fx-text-fill: -color-orange;
+}
+.cart-item-allergen-chip {
+    -fx-background-color: rgba(224,160,64,0.12);
+    -fx-background-radius: 5; -fx-border-color: rgba(224,160,64,0.30);
+    -fx-border-radius: 5; -fx-border-width: 1;
+    -fx-text-fill: -color-orange; -fx-font-size: 11px;
+    -fx-padding: 2 7;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+ *  SPLASH SCREEN
+ * ══════════════════════════════════════════════════════════════════════ */
+.splash-root {
+    -fx-background-color: linear-gradient(to bottom right, #0d0d1a, #111128, #0a0a16);
+}
+
+/* Cerchi decorativi animati */
+.splash-circle-1 {
+    -fx-background-color: rgba(91,156,245,0.06);
+    -fx-background-radius: 50%;
+    -fx-border-color: rgba(91,156,245,0.12);
+    -fx-border-radius: 50%;
+    -fx-border-width: 1;
+    -fx-min-width: 600; -fx-min-height: 600;
+    -fx-max-width: 600; -fx-max-height: 600;
+}
+.splash-circle-2 {
+    -fx-background-color: rgba(91,156,245,0.04);
+    -fx-background-radius: 50%;
+    -fx-border-color: rgba(91,156,245,0.08);
+    -fx-border-radius: 50%;
+    -fx-border-width: 1;
+    -fx-min-width: 380; -fx-min-height: 380;
+    -fx-max-width: 380; -fx-max-height: 380;
+}
+
+.splash-container { -fx-padding: 80 60; }
+
+.splash-logo {
+    -fx-font-size: 100px;
+    -fx-effect: dropshadow(gaussian, rgba(91,156,245,0.4), 20, 0, 0, 0);
+}
+
+.splash-app-name {
+    -fx-font-size: 38px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+    -fx-padding: 16 0 6 0;
+}
+
+.splash-app-sub {
+    -fx-font-size: 18px;
+    -fx-text-fill: rgba(255,255,255,0.45);
+}
+
+.splash-step-icon {
+    -fx-font-size: 36px;
+    -fx-padding: 0 0 10 0;
+}
+
+.splash-step-label {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(255,255,255,0.90);
+    -fx-padding: 0 0 6 0;
+}
+
+.splash-detail {
+    -fx-font-size: 15px;
+    -fx-text-fill: rgba(255,255,255,0.40);
+}
+
+/* Barra progresso custom */
+.splash-progress {
+    -fx-accent: -color-accent;
+    -fx-background-color: rgba(255,255,255,0.08);
     -fx-background-radius: 5;
     -fx-pref-height: 8;
 }
-.slider .thumb, .touch-slider .thumb {
-    -fx-background-color: #5b9cf5;
-    -fx-background-radius: 16;
-    -fx-cursor: hand;
-    -fx-padding: 12;
-    -fx-effect: dropshadow(gaussian, rgba(91,156,245,0.3), 6, 0, 0, 1);
+.splash-progress > .track {
+    -fx-background-color: rgba(255,255,255,0.08);
+    -fx-background-radius: 5;
 }
-.slider .thumb:pressed, .touch-slider .thumb:pressed {
-    -fx-background-color: #4888e0;
-}
-.slider .axis .tick-mark {
-    -fx-stroke: #38384a;
-}
-.slider .axis .tick-label {
-    -fx-text-fill: #606078;
-    -fx-font-size: 11px;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
- *  TABLES — Touch-sized rows
- * ═══════════════════════════════════════════════════════════════════════ */
-.table-view, .touch-table {
-    -fx-background-color: #18181e;
-    -fx-border-color: #2a2a3a;
-    -fx-border-radius: 10;
-    -fx-background-radius: 10;
-    -fx-table-cell-border-color: transparent;
-    -fx-padding: 0;
-}
-.table-view:focused {
-    -fx-border-color: #38384a;
-}
-
-.table-view .column-header-background {
-    -fx-background-color: #1f1f28;
-    -fx-background-radius: 10 10 0 0;
-}
-.table-view .column-header-background .filler {
-    -fx-background-color: #1f1f28;
-}
-.table-view .column-header {
-    -fx-background-color: transparent;
-    -fx-border-color: transparent transparent #2a2a3a transparent;
-    -fx-border-width: 0 0 2 0;
-    -fx-padding: 12 8;
-}
-.table-view .column-header .label {
-    -fx-text-fill: #8888a0;
-    -fx-font-weight: bold;
-    -fx-font-size: 12px;
-}
-
-.table-view .table-row-cell {
-    -fx-background-color: transparent;
-    -fx-border-color: transparent transparent #1a1a24 transparent;
-    -fx-border-width: 0 0 1 0;
-    -fx-padding: 2 0;
-    -fx-min-height: 44;
-}
-.table-view .table-row-cell:odd {
-    -fx-background-color: rgba(255,255,255,0.015);
-}
-.table-view .table-row-cell:selected {
-    -fx-background-color: rgba(91,156,245,0.14);
-}
-
-.table-view .table-cell {
-    -fx-text-fill: #d0d0da;
-    -fx-font-size: 13px;
-    -fx-padding: 10 10;
-}
-.table-view .placeholder .label {
-    -fx-text-fill: #606078;
-    -fx-font-style: italic;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
- *  SCROLLBARS — Touch-friendly (wider thumb)
- * ═══════════════════════════════════════════════════════════════════════ */
-.scroll-bar {
-    -fx-background-color: transparent;
-    -fx-padding: 2;
-}
-.scroll-bar:vertical {
-    -fx-pref-width: 12;
-    -fx-min-width: 12;
-    -fx-max-width: 12;
-}
-.scroll-bar:horizontal {
-    -fx-pref-height: 12;
-    -fx-min-height: 12;
-    -fx-max-height: 12;
-}
-.scroll-bar .track {
-    -fx-background-color: transparent;
-    -fx-background-radius: 6;
-    -fx-border-color: transparent;
-}
-.scroll-bar .thumb {
-    -fx-background-color: rgba(140,140,180,0.22);
-    -fx-background-radius: 6;
+.splash-progress > .bar {
+    -fx-background-color: linear-gradient(to right, #3a78e0, -color-accent);
+    -fx-background-radius: 5;
     -fx-background-insets: 0;
 }
-.scroll-bar .thumb:pressed {
-    -fx-background-color: rgba(140,140,180,0.55);
-}
-.scroll-bar .increment-button,
-.scroll-bar .decrement-button {
-    -fx-background-color: transparent;
-    -fx-padding: 0;
-    -fx-pref-width: 0;
-    -fx-pref-height: 0;
-    -fx-min-width: 0;
-    -fx-min-height: 0;
-    -fx-max-width: 0;
-    -fx-max-height: 0;
-}
-.scroll-bar .increment-arrow,
-.scroll-bar .decrement-arrow {
-    -fx-background-color: transparent;
-    -fx-padding: 0;
-    -fx-shape: "";
-    -fx-min-width: 0;
-    -fx-min-height: 0;
-    -fx-max-width: 0;
-    -fx-max-height: 0;
-}
 
-.scroll-pane {
-    -fx-background-color: transparent;
-    -fx-padding: 0;
-}
-.scroll-pane > .viewport {
-    -fx-background-color: transparent;
-}
-.scroll-pane > .corner {
-    -fx-background-color: transparent;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
- *  TAB PANE — Touch-sized tabs
- * ═══════════════════════════════════════════════════════════════════════ */
-.tab-pane, .touch-tabs {
-    -fx-background-color: #1f1f28;
-}
-.tab-pane > .tab-header-area {
-    -fx-padding: 0;
-}
-.tab-pane > .tab-header-area > .tab-header-background {
-    -fx-background-color: #18181e;
-    -fx-border-color: transparent transparent #2a2a3a transparent;
-    -fx-border-width: 0 0 2 0;
-}
-.tab-pane > .tab-header-area > .headers-region > .tab {
-    -fx-background-color: transparent;
-    -fx-padding: 14 24;
-    -fx-border-color: transparent transparent transparent transparent;
-    -fx-border-width: 0 0 3 0;
-}
-.tab-pane > .tab-header-area > .headers-region > .tab .tab-label {
-    -fx-text-fill: #606078;
-    -fx-font-weight: bold;
-    -fx-font-size: 15px;
-}
-.tab-pane > .tab-header-area > .headers-region > .tab:selected {
-    -fx-border-color: transparent transparent #5b9cf5 transparent;
-}
-.tab-pane > .tab-header-area > .headers-region > .tab:selected .tab-label {
-    -fx-text-fill: #e0e0ea;
-}
-.tab-pane:focused > .tab-header-area > .headers-region > .tab:selected .focus-indicator {
-    -fx-border-color: transparent;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
- *  TOGGLE SWITCHES — Custom animated toggles
- * ═══════════════════════════════════════════════════════════════════════ */
-
-/* ── Skewed Toggle ────────────────────────────────────────────────────── */
-.tgl-skewed {
-    -fx-cursor: hand;
-}
-.tgl-skewed-bg {
-    -fx-background-color: #888888;
-    -fx-background-radius: 8;
-}
-.tgl-skewed-label-off,
-.tgl-skewed-label-on {
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-font-size: 16px;
-    -fx-font-family: "Segoe UI", "Ubuntu", sans-serif;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 2, 0, 0, 1);
-}
-
-/* ── Flip Toggle ──────────────────────────────────────────────────────── */
-.tgl-flip {
-    -fx-cursor: hand;
-}
-.tgl-flip-front {
-    -fx-background-color: #FF3A19;
-    -fx-background-radius: 8;
-    -fx-alignment: center;
-}
-.tgl-flip-back {
-    -fx-background-color: #7FC6A6;
-    -fx-background-radius: 8;
-    -fx-alignment: center;
-}
-.tgl-flip-text {
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-font-size: 16px;
-    -fx-font-family: "Segoe UI", "Ubuntu", sans-serif;
-}
-
-/* ── Slide Toggle (iOS style) ─────────────────────────────────────────── */
-.tgl-slide {
-    -fx-cursor: hand;
-}
-.tgl-slide-track {
-    -fx-background-color: #555555;
-    -fx-background-radius: 18;
-}
-.tgl-slide-track-on {
-    -fx-background-color: #4ec97a;
-    -fx-background-radius: 18;
-}
-.tgl-slide-thumb {
-    -fx-fill: white;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 5, 0, 0, 1);
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
- *  STATUS INDICATORS
- * ═══════════════════════════════════════════════════════════════════════ */
-.status-active {
-    -fx-text-fill: #4ec97a;
-    -fx-font-weight: bold;
-    -fx-font-size: 16px;
-}
-.status-paused {
-    -fx-text-fill: #8888a0;
-    -fx-font-weight: bold;
-    -fx-font-size: 16px;
-}
-.status-warning {
-    -fx-text-fill: #e0b84d;
-    -fx-font-weight: bold;
-    -fx-font-size: 15px;
-}
-.status-error {
-    -fx-text-fill: #e05555;
-    -fx-font-weight: bold;
-    -fx-font-size: 15px;
-}
-
-/* ── Category pill labels ────────────────────────────────────────────── */
-.category-pill {
-    -fx-font-weight: bold;
+.splash-version {
     -fx-font-size: 13px;
-    -fx-padding: 6 14;
-    -fx-background-color: rgba(255,255,255,0.05);
-    -fx-background-radius: 16;
-    -fx-border-radius: 16;
-    -fx-border-width: 1;
-}
-.category-documenti  { -fx-text-fill: #5b9cf5; -fx-border-color: #3a6aaf; }
-.category-immagini   { -fx-text-fill: #b075e0; -fx-border-color: #7a50a0; }
-.category-video      { -fx-text-fill: #e05555; -fx-border-color: #a03838; }
-.category-audio      { -fx-text-fill: #e0b84d; -fx-border-color: #a08030; }
-.category-codice     { -fx-text-fill: #4ec97a; -fx-border-color: #38905a; }
-.category-archivi    { -fx-text-fill: #e0b84d; -fx-border-color: #a08030; }
-
-/* ── Filter buttons (pill shape, touch-sized) ────────────────────────── */
-.filter-button {
-    -fx-background-color: #252530;
-    -fx-text-fill: #b0b0c0;
-    -fx-padding: 10 18;
-    -fx-font-size: 13px;
-    -fx-font-weight: bold;
-    -fx-background-radius: 20;
-    -fx-border-radius: 20;
-    -fx-border-color: #38384a;
-    -fx-border-width: 1;
-    -fx-cursor: hand;
-    -fx-min-height: 40;
+    -fx-text-fill: rgba(255,255,255,0.20);
+    -fx-padding: 0 0 20 0;
 }
 
-.reindex-button {
-    -fx-text-fill: #e0b84d;
-    -fx-border-color: #8a7030;
-}
+/* ══════════════════════════════════════════════════════════════════════
+ *  IKONLI — Stili icone MDI2
+ * ══════════════════════════════════════════════════════════════════════ */
 
-/* ═══════════════════════════════════════════════════════════════════════
- *  TOOLTIP
- * ═══════════════════════════════════════════════════════════════════════ */
-.tooltip {
-    -fx-background-color: #2c2c3a;
-    -fx-text-fill: #e0e0ea;
-    -fx-font-size: 14px;
-    -fx-padding: 10 14;
-    -fx-background-radius: 10;
-    -fx-border-radius: 10;
-    -fx-border-color: #38384a;
-    -fx-border-width: 1;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 8, 0, 0, 3);
-}
+/* Icone status bar */
+.status-icon         { -fx-icon-color: -color-muted; }
+.status-icon-online  { -fx-icon-color: -color-green; }
+.status-icon-offline { -fx-icon-color: -color-red; }
 
-/* ═══════════════════════════════════════════════════════════════════════
- *  CONTEXT MENU
- * ═══════════════════════════════════════════════════════════════════════ */
-.context-menu {
-    -fx-background-color: #252530;
-    -fx-border-color: #38384a;
-    -fx-border-radius: 10;
-    -fx-background-radius: 10;
-    -fx-padding: 6;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 14, 0, 0, 4);
-}
-.context-menu .menu-item {
-    -fx-background-color: transparent;
-    -fx-padding: 12 20;
-}
-.context-menu .menu-item .label {
-    -fx-text-fill: #e0e0ea;
-    -fx-font-size: 15px;
-}
-.context-menu .separator .line {
-    -fx-border-color: #2a2a3a;
-}
+/* Icone tema */
+.theme-icon    { -fx-icon-color: -color-muted; }
+.theme-btn     { -fx-background-color: -color-surface2; -fx-border-color: -color-border;
+                 -fx-border-radius: 50%; -fx-background-radius: 50%;
+                 -fx-min-width: 44; -fx-min-height: 44; -fx-max-width: 44; -fx-max-height: 44;
+                 -fx-cursor: hand; -fx-padding: 0; }
+.theme-btn:pressed { -fx-background-color: -color-border; }
 
-/* ═══════════════════════════════════════════════════════════════════════
- *  LIST VIEW
- * ═══════════════════════════════════════════════════════════════════════ */
-.list-view {
-    -fx-background-color: #141420;
-    -fx-border-color: #38384a;
-    -fx-border-radius: 10;
-    -fx-background-radius: 10;
-}
-.list-view .list-cell {
-    -fx-background-color: transparent;
-    -fx-text-fill: #d0d0da;
-    -fx-font-size: 14px;
-    -fx-padding: 10 14;
-    -fx-min-height: 44;
-}
-.list-view .list-cell:filled:selected {
-    -fx-background-color: rgba(91,156,245,0.18);
-    -fx-text-fill: #e0e0ea;
-}
+/* Icona header menu */
+.shop-header-icon  { -fx-icon-color: -color-accent; }
+.screen-header-icon { -fx-icon-color: -color-accent; }
 
-/* ═══════════════════════════════════════════════════════════════════════
- *  DIALOG PANE
- * ═══════════════════════════════════════════════════════════════════════ */
-.dialog-pane {
-    -fx-background-color: #1f1f28;
-}
-.dialog-pane > .button-bar > .container {
-    -fx-background-color: #1f1f28;
-}
-/* ═══════════════════════════════════════════════════════════════════════
- *  CARD COMPONENTS — Custom styles for card sections, headers, and content
- * ═══════════════════════════════════════════════════════════════════════ */
-.card {
-    -fx-background-color: #ffffff; /* Bianco */
-    -fx-border-color: #d1242496;     /* Rosso acceso */
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.10), 8, 0, 0, 2);
-    -fx-text-fill: #18181e;        /* Testo scuro */
-    -fx-text-alignment: center;
-    -fx-font-size: 24px;
-    
-}
-.card-header {
-    -fx-background-color: #e05555; /* Rosso acceso per header */
-    -fx-font-weight: bold;
-    -fx-text-fill: #ffffff;        /* Bianco */
-    -fx-effect: dropshadow(gaussian, rgba(224,85,85,0.15), 6, 0, 0, 0);
-    -fx-padding: 24 24 8 24;
-}
-.card-content {
-    -fx-background-color: #ffffff; /* Body bianco */
-    -fx-text-fill: #18181e;        /* Testo scuro */
-    -fx-font-size: 15px;
-    -fx-padding: 8 24 12 24;
-    -fx-background-radius: 0 0 14 14;
-}
-.card-footer {
-    -fx-alignment: center-right;
-    -fx-font-size: 13px;
-    -fx-text-fill: #8888a0;        /* Testo grigio */
-    -fx-padding: 0 24 16 24;
-    -fx-background-color: transparent;
-}
+/* Icone carrello */
+.cart-btn-icon  { -fx-icon-color: -color-text; }
+.cart-btn       { -fx-background-color: -color-surface2; -fx-border-color: -color-border;
+                  -fx-border-radius: 16; -fx-background-radius: 16;
+                  -fx-min-width: 64; -fx-min-height: 64; -fx-max-width: 64; -fx-max-height: 64;
+                  -fx-cursor: hand; -fx-padding: 0; }
+.cart-btn:pressed { -fx-background-color: -color-border; }
 
-/* ═══════════════════════════════════════════════════════════════════════
- *  SHOP PAGE
- * ═══════════════════════════════════════════════════════════════════════ */
+/* Icona aggiungi al carrello */
+.add-to-cart-icon { -fx-icon-color: white; }
 
-/* ── Header ── */
-.shop-header {
-    -fx-background-color: #13131c;
-    -fx-padding: 0 28;
-    -fx-min-height: 64;
-    -fx-border-color: transparent transparent #2a2a3a transparent;
-    -fx-border-width: 0 0 1 0;
-}
-.shop-header-title {
-    -fx-font-size: 22px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #5b9cf5;
-    -fx-effect: dropshadow(gaussian, rgba(91,156,245,0.25), 8, 0, 0, 0);
-}
-.shop-header-hint {
-    -fx-font-size: 15px;
-    -fx-text-fill: #8888a0;
-}
+/* Icona modal chiudi */
+.modal-close      { -fx-background-color: rgba(255,255,255,0.08);
+                    -fx-border-color: rgba(255,255,255,0.20);
+                    -fx-border-radius: 50%; -fx-background-radius: 50%;
+                    -fx-min-width: 46; -fx-min-height: 46;
+                    -fx-max-width: 46; -fx-max-height: 46;
+                    -fx-cursor: hand; -fx-padding: 0; }
+.modal-close:pressed { -fx-background-color: rgba(224,85,85,0.30); -fx-border-color: -color-red; }
+.modal-close-icon { -fx-icon-color: -color-text; }
 
-/* ── Category buttons ── */
-.cat-btn {
-    -fx-font-size: 16px;
-    -fx-text-fill: #c0c0d0;
-    -fx-padding: 16 20;
-    -fx-min-height: 56;
-    -fx-background-color: transparent;
-    -fx-border-color: transparent transparent #24243a transparent;
-    -fx-border-width: 0 0 1 0;
-    -fx-cursor: hand;
-}
-.cat-btn-active {
-    -fx-background-color: #1e2038 !important;
-    -fx-text-fill: #5b9cf5 !important;
-    -fx-font-weight: bold;
-    -fx-border-color: transparent transparent #24243a #5b9cf5 !important;
-    -fx-border-width: 0 0 1 3 !important;
-}
+/* Icone sezioni modal */
+.allergen-icon   { -fx-icon-color: -color-orange; }
+.ingredient-icon { -fx-icon-color: -color-muted; }
 
-/* ── Product card ── */
-.prod-card {
-    -fx-background-color: #1f1f2c;
-    -fx-background-radius: 16;
-    -fx-border-color: #2a2a3e;
-    -fx-border-radius: 16;
-    -fx-border-width: 1;
-    -fx-padding: 24 20 20 20;
-    -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 6, 0, 0, 2);
-}
-.prod-emoji {
-    -fx-font-size: 44px;
-}
-.prod-name {
-    -fx-font-size: 18px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #e0e0ea;
-}
-.prod-desc {
-    -fx-font-size: 13px;
-    -fx-text-fill: #7878a0;
-    -fx-wrap-text: true;
-}
-/* ── Status bar ──────────────────────────────────────────────────────── */
-.status-bar {
-    -fx-background-color: #0f0f18;
-    -fx-padding: 5 20;
-    -fx-border-color: #2a2a3a transparent transparent transparent;
-    -fx-border-width: 1 0 0 0;
-    -fx-min-height: 32px;
-}
-.status-clock {
-    -fx-text-fill: #e0e0ea;
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
-    -fx-font-family: monospace;
-}
-.status-date {
-    -fx-text-fill: #8888aa;
-    -fx-font-size: 13px;
-    -fx-font-family: monospace;
-}
-.status-text {
-    -fx-text-fill: #8888aa;
-    -fx-font-size: 13px;
-}
-.status-dot-online {
-    -fx-background-color: #44dd66;
-    -fx-background-radius: 50%;
-    -fx-min-width: 10px;
-    -fx-min-height: 10px;
-    -fx-max-width: 10px;
-    -fx-max-height: 10px;
-    -fx-effect: dropshadow(gaussian, rgba(68,221,102,0.6), 4, 0, 0, 0);
-}
-.status-dot-offline {
-    -fx-background-color: #dd4444;
-    -fx-background-radius: 50%;
-    -fx-min-width: 10px;
-    -fx-min-height: 10px;
-    -fx-max-width: 10px;
-    -fx-max-height: 10px;
-    -fx-effect: dropshadow(gaussian, rgba(221,68,68,0.6), 4, 0, 0, 0);
-}
+/* Icone pagamento */
+.payment-header-icon   { -fx-icon-color: -color-accent; }
+.payment-cash-icon     { -fx-icon-color: -color-green; }
+.payment-card-icon-style { -fx-icon-color: -color-accent; }
+
+/* Icona back */
+.back-icon  { -fx-icon-color: -color-text; }
+.back-btn   { -fx-background-color: -color-surface2; -fx-text-fill: -color-text;
+              -fx-background-radius: 12; -fx-border-radius: 12;
+              -fx-border-color: -color-border;
+              -fx-min-width: 56; -fx-min-height: 56; -fx-cursor: hand; }
+.back-btn:pressed { -fx-background-color: -color-border; }
+
+/* CTA icon */
+.cta-icon { -fx-icon-color: white; }
+
+/* Toast */
+.toast-icon { -fx-icon-color: white; }
+.toast-text { -fx-text-fill: white; -fx-font-size: 20px; -fx-font-weight: bold; }
+
+/* Welcome logo */
+.welcome-logo-icon { -fx-icon-color: -color-accent;
+                     -fx-effect: dropshadow(gaussian, rgba(91,156,245,0.4), 20, 0, 0, 0); }
+
+/* Start btn icon */
+.start-btn-icon { -fx-icon-color: white; }
+
+/* Splash */
+.splash-logo-icon    { -fx-icon-color: -color-accent;
+                       -fx-effect: dropshadow(gaussian, rgba(91,156,245,0.4), 20, 0, 0, 0); }
+.splash-step-icon-node { -fx-icon-color: -color-accent; }
+
+/* Confirm check */
+.check-icon { -fx-icon-color: white; }
+
+/* Cart allergen icon */
+.cart-allergen-icon { -fx-icon-color: -color-orange; }

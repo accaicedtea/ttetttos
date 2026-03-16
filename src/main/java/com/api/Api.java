@@ -7,224 +7,149 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Map;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// API — Client HTTP base, equivalente Java di api.js
-//
-// Questa classe non viene usata direttamente dall'applicazione: i servizi
-// (AuthService, ProductsService, ecc.) la usano internamente.
-//
-// METODI DISPONIBILI per i servizi:
-//
-//   apiGetPublic(endpoint)          → GET senza token  (endpoint pubblici)
-//   apiPostPublic(endpoint, body)   → POST senza token (login, registrazione)
-//   apiGet(endpoint)                → GET con token    (richiede login)
-//   apiPost(endpoint, body)         → POST con token
-//   apiPut(endpoint, body)          → PUT con token
-//   apiDelete(endpoint)             → DELETE con token
-//
-// Tutti i metodi lanciano Exception in caso di:
-//   - rete non raggiungibile
-//   - risposta non-2xx dal server (usa il campo "message" come messaggio)
-//   - risposta non JSON valida
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Client HTTP base.
+ * Retry automatico fino a 3 volte su IOException (connection reset, ecc.)
+ */
 public class Api {
 
-    // URL base del backend — cambia solo questo se cambia il server
-    private static final String BASE_URL = "https://thisisnotmysite.altervista.org/mytotem/api/";
+    private static final String BASE_URL = "https://hasanabdelaziz.altervista.org/api/v1/totem/";
 
-    // HttpClient è thread-safe e costoso da creare: una sola istanza per tutta l'app
+    // HttpClient standard — identico alla versione originale che funzionava
     private static final HttpClient httpClient = HttpClient.newHttpClient();
 
-    // -------------------------------------------------------------------------
-    // Helpers privati
-    // -------------------------------------------------------------------------
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private static String getBaseUrl() {
-        return BASE_URL;
-    }
-
-    /**
-     * Aggiunge Content-Type: application/json e, se presente il token JWT,
-     * l'header Authorization: Bearer <token>.
-     * Chiamato da tutti i metodi che richiedono autenticazione.
-     */
-    private static HttpRequest.Builder applyAuthHeaders(HttpRequest.Builder builder) {
-        builder.header("Content-Type", "application/json");
-
+    private static HttpRequest.Builder applyAuthHeaders(HttpRequest.Builder b) {
+        b.header("Content-Type", "application/json");
         String token = SessionManager.getToken();
         if (token != null && !token.isBlank()) {
-            builder.header("Authorization", "Bearer " + token);
+            b.header("Authorization", "Bearer " + token);
+            b.header("X-Api-Key", token);
         }
-
-        return builder;
+        return b;
     }
 
-    /**
-     * Interpreta la risposta HTTP:
-     *   - tenta di parsare il body come JsonObject
-     *   - se lo status è 2xx restituisce il JsonObject
-     *   - altrimenti lancia un'eccezione con il messaggio dal campo "message"
-     *
-     * Tutti i metodi pubblici passano per qui, quindi gli errori del server
-     * vengono propagati come Exception con testo leggibile.
-     */
     private static JsonObject handleResponse(HttpResponse<String> response) throws Exception {
-        String responseText = response.body();
-        System.out.println("Response status: " + response.statusCode());
-        System.out.println("Response text: " + responseText);
-
+        String body = response.body();
         JsonObject result;
         try {
-            result = JsonParser.parseString(responseText).getAsJsonObject();
-        } catch (Exception parseError) {
-            System.err.println("Errore parsing JSON: " + parseError.getMessage());
-            System.err.println("Response non è JSON valido: " +
-                    responseText.substring(0, Math.min(responseText.length(), 500)));
-            throw new Exception("Risposta server non valida (non è JSON)");
+            result = JsonParser.parseString(body).getAsJsonObject();
+        } catch (Exception e) {
+            throw new Exception("Risposta non JSON: " + body.substring(0, Math.min(body.length(), 200)));
         }
-
         int status = response.statusCode();
-        if (status >= 200 && status < 300) {
-            return result;
-        } else {
-            String message = result.has("message")
-                    ? result.get("message").getAsString()
-                    : "Errore nella richiesta";
-            throw new Exception(message);
-        }
+        if (status >= 200 && status < 300) return result;
+        // Log corpo completo per debug (utile per 422 Unprocessable Entity)
+        System.err.println("[Api] HTTP " + status + " body: " + body);
+        String msg = result.has("message") ? result.get("message").getAsString()
+                   : result.has("error")   ? result.get("error").getAsString()
+                   : "Errore HTTP " + status;
+        throw new Exception("HTTP " + status + ": " + msg);
     }
 
-    /**
-     * Verifica che ci sia un token in SessionManager.
-     * Chiamato dai metodi che richiedono autenticazione (apiGet, apiPost, ecc.).
-     * Se l'utente non ha fatto login lancia Exception invece di mandare una
-     * richiesta destinata a fallire con 401.
-     */
     private static void requireToken() throws Exception {
-        if (!SessionManager.isLoggedIn()) {
-            throw new Exception("Token mancante, devi fare login");
+        if (!SessionManager.isLoggedIn()) throw new Exception("Token mancante, devi fare login");
+    }
+
+    /**
+     * Retry automatico su IOException (es. connection reset).
+     * Non ricrea il client — usa quello originale come prima.
+     */
+    private static HttpResponse<String> send(HttpRequest request) throws Exception {
+        int maxTries = 3;
+        Exception last = null;
+        for (int attempt = 1; attempt <= maxTries; attempt++) {
+            try {
+                return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            } catch (java.io.IOException e) {
+                last = e;
+                System.err.println("[Api] Tentativo " + attempt + "/" + maxTries + " fallito: " + e.getMessage());
+                if (attempt < maxTries) Thread.sleep(600L * attempt);
+            }
         }
+        throw last;
     }
 
-    // -------------------------------------------------------------------------
-    // Metodi HTTP pubblici
-    // -------------------------------------------------------------------------
+    // ── Pubblici ──────────────────────────────────────────────────────────────
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // METODI HTTP — usati dai servizi, non chiamare direttamente dall'app
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * POST senza token — usato da AuthService.login().
-     * endpoint: path relativo, es. "auth/login"
-     * data:     JsonObject con i campi del body (es. { email, password })
-     */
     public static JsonObject apiPostPublic(String endpoint, JsonObject data) throws Exception {
+        return apiPostPublic(endpoint, data, null);
+    }
+
+    public static JsonObject apiPostPublic(String endpoint, JsonObject data,
+                                           Map<String, String> extra) throws Exception {
         String body = data != null ? data.toString() : "{}";
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(getBaseUrl() + endpoint))
+        HttpRequest.Builder b = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + endpoint))
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(body))
-                .build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        return handleResponse(response);
+                .POST(HttpRequest.BodyPublishers.ofString(body));
+        if (extra != null) extra.forEach(b::header);
+        return handleResponse(send(b.build()));
     }
 
-    /**
-     * GET senza token — per endpoint pubblici che non richiedono login.
-     * Usato da ViewsService per le viste pubbliche (es. v_active_promotions).
-     */
     public static JsonObject apiGetPublic(String endpoint) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(getBaseUrl() + endpoint))
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + endpoint))
                 .header("Content-Type", "application/json")
-                .GET()
-                .build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        return handleResponse(response);
+                .GET().build();
+        return handleResponse(send(req));
     }
 
-    /**
-     * GET autenticato — il metodo più usato dai servizi.
-     * Lancia Exception se l'utente non è loggato (token mancante).
-     * Esempio d'uso in un servizio:
-     *   return Api.apiGet("products");           // GET /api/products
-     *   return Api.apiGet("products/" + id);     // GET /api/products/5
-     */
+    // ── Autenticati ───────────────────────────────────────────────────────────
+
     public static JsonObject apiGet(String endpoint) throws Exception {
         requireToken();
-
-        HttpRequest request = applyAuthHeaders(
+        HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
-                        .uri(URI.create(getBaseUrl() + endpoint))
+                        .uri(URI.create(BASE_URL + endpoint))
                         .GET()
         ).build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        return handleResponse(response);
+        return handleResponse(send(req));
     }
 
-    /**
-     * POST autenticato — per creare nuove risorse.
-     * Esempio:
-     *   JsonObject body = new JsonObject();
-     *   body.addProperty("name", "Nuovo prodotto");
-     *   Api.apiPost("products", body);  // POST /api/products
-     */
     public static JsonObject apiPost(String endpoint, JsonObject data) throws Exception {
         requireToken();
-
         String body = data != null ? data.toString() : "{}";
-
-        HttpRequest request = applyAuthHeaders(
+        HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
-                        .uri(URI.create(getBaseUrl() + endpoint))
+                        .uri(URI.create(BASE_URL + endpoint))
                         .POST(HttpRequest.BodyPublishers.ofString(body))
         ).build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        return handleResponse(response);
+        return handleResponse(send(req));
     }
 
-    /**
-     * PUT autenticato — per aggiornare una risorsa esistente.
-     * Esempio:
-     *   Api.apiPut("products/5", body);  // PUT /api/products/5
-     */
     public static JsonObject apiPut(String endpoint, JsonObject data) throws Exception {
         requireToken();
-
         String body = data != null ? data.toString() : "{}";
-
-        HttpRequest request = applyAuthHeaders(
+        HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
-                        .uri(URI.create(getBaseUrl() + endpoint))
+                        .uri(URI.create(BASE_URL + endpoint))
                         .PUT(HttpRequest.BodyPublishers.ofString(body))
         ).build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        return handleResponse(response);
+        return handleResponse(send(req));
     }
 
-    /**
-     * DELETE autenticato — per eliminare una risorsa.
-     * Esempio:
-     *   Api.apiDelete("products/5");  // DELETE /api/products/5
-     */
+    public static JsonObject apiPatch(String endpoint, JsonObject data) throws Exception {
+        requireToken();
+        String body = data != null ? data.toString() : "{}";
+        HttpRequest req = applyAuthHeaders(
+                HttpRequest.newBuilder()
+                        .uri(URI.create(BASE_URL + endpoint))
+                        .method("PATCH", HttpRequest.BodyPublishers.ofString(body))
+        ).build();
+        return handleResponse(send(req));
+    }
+
     public static JsonObject apiDelete(String endpoint) throws Exception {
         requireToken();
-
-        HttpRequest request = applyAuthHeaders(
+        HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
-                        .uri(URI.create(getBaseUrl() + endpoint))
+                        .uri(URI.create(BASE_URL + endpoint))
                         .DELETE()
         ).build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        return handleResponse(response);
+        return handleResponse(send(req));
     }
 }
