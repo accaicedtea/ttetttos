@@ -5,15 +5,12 @@
 # Funziona su: Debian 11/12, Ubuntu 20.04/22.04/24.04, qualsiasi distro con X11
 # Approccio: TTY1 auto-login -> .bash_profile -> startx -> .xinitrc -> JavaFX
 #
-# MODIFICHE:
-#   - Le operazioni che possono disturbare la sessione GUI (disabilitazione
-#     display manager, mascheramento TTY, cambio runlevel) vengono eseguite
-#     solo al termine dell'installazione, subito prima del riavvio.
-#   - In questo modo lo script può essere lanciato da una finestra di terminale
-#     all'interno di un ambiente grafico senza interrompere prematuramente
-#     l'esecuzione.
-#   - Dopo la configurazione, il sistema viene riavviato automaticamente
-#     (countdown di 10 secondi) per avviare la modalità kiosk.
+# MODIFICHE RECENTI (16/03/2026):
+#   - Aggiunto utente kiosk al gruppo tty (risolve "Cannot open /dev/tty0")
+#   - Corretto .bash_profile (sintassi, spazi, logica di stop)
+#   - Download librerie più robusto: se lib/ rimane vuoto dopo 3 tentativi, fail
+#   - Controllo esplicito dei permessi su /dev/tty0
+#   - Migliorata gestione errori e messaggi
 #
 # Uso:
 #   curl -fsSL https://raw.githubusercontent.com/accaicedtea/ttetttos/main/setup-kiosk.sh | bash
@@ -357,12 +354,21 @@ fi
 log "Creo utente $KIOSK_USER..."
 useradd -m -s /bin/bash -G video,input,render,audio "$KIOSK_USER" 2>/dev/null || \
 useradd -m -s /bin/bash "$KIOSK_USER" || fail "Impossibile creare $KIOSK_USER"
+
+# Aggiungo ai gruppi necessari (in particolare tty per X)
+usermod -a -G tty "$KIOSK_USER" 2>/dev/null && ok "Utente aggiunto al gruppo tty"
+
 passwd -d "$KIOSK_USER"
 
 KIOSK_HOME=$(eval echo ~"$KIOSK_USER")
 KIOSK_UID=$(id -u "$KIOSK_USER")
 ok "Utente $KIOSK_USER: UID=$KIOSK_UID home=$KIOSK_HOME"
 log "Gruppi: $(id $KIOSK_USER)"
+
+# Verifica accesso a /dev/tty0 (importante per X)
+if ! sudo -u "$KIOSK_USER" test -r /dev/tty0 2>/dev/null; then
+    warn "L'utente $KIOSK_USER non può leggere /dev/tty0 - potrebbe servire il gruppo tty"
+fi
 
 # =============================================================================
 # FASE 3 - Download app
@@ -398,28 +404,38 @@ if [ ! -f "${APP_DIR}/demo-1.jar" ]; then
     $DONE || fail "Impossibile scaricare demo-1.jar."
 fi
 
-# lib.tar.gz
+# lib.tar.gz - Download e verifica robusta
 LIB_N=$(ls "${APP_DIR}/lib/"*.jar 2>/dev/null | wc -l || echo 0)
 if [ "$LIB_N" -gt 0 ]; then
     ok "Librerie: gia presenti ($LIB_N JAR)"
 else
-    log "Download librerie..."
+    log "Download librerie (lib.tar.gz)..."
+    DOWNLOAD_OK=false
     for TRY in 1 2 3; do
         rm -f /tmp/kiosk-lib.tar.gz
         if curl -fsSL --retry 2 --max-time 180 \
                 "$LIB_URL" -o /tmp/kiosk-lib.tar.gz; then
+            # Estrai: prima senza strip, poi con strip se necessario
+            mkdir -p "${APP_DIR}/lib"
             tar -xzf /tmp/kiosk-lib.tar.gz -C "${APP_DIR}/lib/" 2>/dev/null || \
-            tar -xzf /tmp/kiosk-lib.tar.gz -C "${APP_DIR}/lib/" \
-                --strip-components=1 2>/dev/null || true
+            tar -xzf /tmp/kiosk-lib.tar.gz -C "${APP_DIR}/lib/" --strip-components=1 2>/dev/null || true
             rm -f /tmp/kiosk-lib.tar.gz
             LIB_N=$(ls "${APP_DIR}/lib/"*.jar 2>/dev/null | wc -l || echo 0)
-            ok "Librerie: $LIB_N JAR"
-            break
+            if [ "$LIB_N" -gt 0 ]; then
+                ok "Librerie: $LIB_N JAR"
+                DOWNLOAD_OK=true
+                break
+            else
+                warn "Estrazione completata ma nessun JAR trovato in ${APP_DIR}/lib/"
+            fi
+        else
+            warn "Download tentativo $TRY/3 fallito"
         fi
-        warn "Tentativo $TRY/3 fallito"
         sleep $((TRY*3))
-        [ $TRY -eq 3 ] && warn "lib.tar.gz non scaricato - continuo"
     done
+    if [ "$DOWNLOAD_OK" != "true" ]; then
+        fail "Impossibile scaricare o estrarre lib.tar.gz - directory lib/ vuota"
+    fi
 fi
 
 # =============================================================================
@@ -793,7 +809,7 @@ chown "${KIOSK_USER}:${KIOSK_USER}" "${KIOSK_HOME}/.xinitrc"
 ok ".xinitrc creato."
 
 # =============================================================================
-# FASE 9 - .bash_profile (avviato da auto-login su TTY1)
+# FASE 9 - .bash_profile (avviato da auto-login su TTY1) - VERSIONE CORRETTA
 # =============================================================================
 sep "FASE 9 - .bash_profile (auto-login TTY1)"
 
@@ -827,11 +843,11 @@ if [ "$(tty)" = "/dev/tty1" ]; then
             echo "[$(date '+%H:%M:%S')] startx uscito (cod $EC)" \
                 >> /opt/kiosk/logs/kiosk.log
             # Fermato manualmente?
-            [ -f /opt/kiosk/.stop ] && {
+            if [ -f /opt/kiosk/.stop ]; then
                 rm -f /opt/kiosk/.stop
                 echo "Kiosk fermato."
                 break
-            }
+            fi
             echo "X server uscito - riavvio in 5s..."
             sleep 5
         done
@@ -839,7 +855,7 @@ if [ "$(tty)" = "/dev/tty1" ]; then
 fi
 BPEOF
 chown "${KIOSK_USER}:${KIOSK_USER}" "${KIOSK_HOME}/.bash_profile"
-ok ".bash_profile creato."
+ok ".bash_profile creato (sintassi corretta)."
 
 # =============================================================================
 # FASE 10 - Auto-login TTY1
@@ -915,12 +931,6 @@ ok "kiosk-control installato."
 # FASE 12 - Ottimizzazioni sistema (non distruttive per la sessione corrente)
 # =============================================================================
 sep "FASE 12 - Ottimizzazioni sistema"
-
-# TTY extra: non mascheriamo ora, lo faremo in fase finale
-# per i in 2 3 4 5 6; do systemctl mask ... ; done  <-- SPOSTATO
-
-# Default target: impostiamo dopo
-# systemctl set-default multi-user.target  <-- SPOSTATO
 
 # GRUB
 if [ -f /etc/default/grub ]; then
