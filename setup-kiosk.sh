@@ -404,7 +404,7 @@ if [ ! -f "${APP_DIR}/demo-1.jar" ]; then
     $DONE || fail "Impossibile scaricare demo-1.jar."
 fi
 
-# lib.tar.gz - Download e verifica robusta
+# lib.tar.gz - Download, verifica ed estrazione robusta
 LIB_N=$(ls "${APP_DIR}/lib/"*.jar 2>/dev/null | wc -l || echo 0)
 if [ "$LIB_N" -gt 0 ]; then
     ok "Librerie: gia presenti ($LIB_N JAR)"
@@ -413,28 +413,45 @@ else
     DOWNLOAD_OK=false
     for TRY in 1 2 3; do
         rm -f /tmp/kiosk-lib.tar.gz
-        if curl -fsSL --retry 2 --max-time 180 \
-                "$LIB_URL" -o /tmp/kiosk-lib.tar.gz; then
-            # Estrai: prima senza strip, poi con strip se necessario
+        # Scarica con curl, seguito da controllo dimensione
+        if curl -fsSL --retry 2 --max-time 180 "$LIB_URL" -o /tmp/kiosk-lib.tar.gz; then
+            SIZE=$(stat -c%s /tmp/kiosk-lib.tar.gz 2>/dev/null || echo 0)
+            if [ "$SIZE" -lt 1024 ]; then
+                warn "File troppo piccolo ($SIZE byte) - tentativo $TRY/3"
+                sleep $((TRY*3))
+                continue
+            fi
+            # Analizza il contenuto del tar per decidere se usare --strip-components
+            TAR_CONTENT=$(tar -tzf /tmp/kiosk-lib.tar.gz 2>/dev/null | head -5)
+            log "Contenuto prime righe: $TAR_CONTENT"
+            FIRST_ENTRY=$(echo "$TAR_CONTENT" | head -1)
+            STRIP_OPT=""
+            if [[ "$FIRST_ENTRY" == lib/* ]] || [[ "$FIRST_ENTRY" == ./lib/* ]]; then
+                STRIP_OPT="--strip-components=1"
+                log "Rilevata directory radice 'lib/', uso --strip-components=1"
+            fi
+            # Estrai nella directory lib/
             mkdir -p "${APP_DIR}/lib"
-            tar -xzf /tmp/kiosk-lib.tar.gz -C "${APP_DIR}/lib/" 2>/dev/null || \
-            tar -xzf /tmp/kiosk-lib.tar.gz -C "${APP_DIR}/lib/" --strip-components=1 2>/dev/null || true
-            rm -f /tmp/kiosk-lib.tar.gz
-            LIB_N=$(ls "${APP_DIR}/lib/"*.jar 2>/dev/null | wc -l || echo 0)
-            if [ "$LIB_N" -gt 0 ]; then
-                ok "Librerie: $LIB_N JAR"
-                DOWNLOAD_OK=true
-                break
+            if tar -xzf /tmp/kiosk-lib.tar.gz -C "${APP_DIR}/lib/" $STRIP_OPT 2>/dev/null; then
+                LIB_N=$(ls "${APP_DIR}/lib/"*.jar 2>/dev/null | wc -l || echo 0)
+                if [ "$LIB_N" -gt 0 ]; then
+                    ok "Librerie: $LIB_N JAR estratti correttamente"
+                    DOWNLOAD_OK=true
+                    break
+                else
+                    warn "Estrazione completata ma nessun JAR trovato in ${APP_DIR}/lib/"
+                fi
             else
-                warn "Estrazione completata ma nessun JAR trovato in ${APP_DIR}/lib/"
+                warn "Errore durante l'estrazione del tar"
             fi
         else
-            warn "Download tentativo $TRY/3 fallito"
+            warn "Download fallito (tentativo $TRY/3)"
         fi
+        rm -f /tmp/kiosk-lib.tar.gz
         sleep $((TRY*3))
     done
     if [ "$DOWNLOAD_OK" != "true" ]; then
-        fail "Impossibile scaricare o estrarre lib.tar.gz - directory lib/ vuota"
+        fail "Impossibile scaricare o estrarre lib.tar.gz dopo 3 tentativi.\nVerifica che il file esista nella release: $LIB_URL\nPuoi anche controllare manualmente con: curl -I $LIB_URL"
     fi
 fi
 
