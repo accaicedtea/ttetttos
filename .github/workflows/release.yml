@@ -30,11 +30,24 @@ jobs:
       - name: Offusca JAR (ProGuard)
         run: |
           PG_VER="7.5.0"
-          PG_JAR="proguard-base-${PG_VER}.jar"
-          PG_URL="https://repo1.maven.org/maven2/com/guardsquare/proguard-base/${PG_VER}/${PG_JAR}"
-          curl -fL "$PG_URL" -o "$PG_JAR"
-          java -jar "$PG_JAR" @proguard.pro
+
+          # proguard-base = libreria (no main)
+          # proguard-core = dipendenza
+          # Scarica entrambi e li mettiamo nel classpath
+          BASE_URL="https://repo1.maven.org/maven2/com/guardsquare"
+
+          curl -fL "${BASE_URL}/proguard-base/${PG_VER}/proguard-base-${PG_VER}.jar" \
+               -o proguard-base.jar
+          curl -fL "${BASE_URL}/proguard-core/9.1.6/proguard-core-9.1.6.jar" \
+               -o proguard-core.jar
+
+          echo "Eseguo ProGuard..."
+          java -cp "proguard-base.jar:proguard-core.jar" \
+               proguard.ProGuard \
+               @proguard.pro
+
           mv target/demo-1-obf.jar target/demo-1.jar
+          echo "Offuscamento completato."
           ls -lh target/demo-1.jar
 
       - name: Verifica artifact

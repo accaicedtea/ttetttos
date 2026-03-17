@@ -418,7 +418,50 @@
 }
 
 /* Pulsanti lingua */
-
+/* ── Bottone lingua — base ────────────────────────────────────────── */
+.lang-btn {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 22;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 22;
+    -fx-border-width: 2;
+    -fx-cursor: hand;
+    -fx-alignment: center;
+    -fx-content-display: graphic-only;
+    -fx-padding: 0;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.22), 8, 0, 0, 3);
+}
+ 
+.lang-btn:hover {
+    -fx-border-color: -color-accent;
+    -fx-background-color: -color-surface2;
+    -fx-effect: dropshadow(gaussian, rgba(91,156,245,0.28), 16, 0, 0, 4);
+    -fx-scale-x: 1.04;
+    -fx-scale-y: 1.04;
+}
+ 
+.lang-btn:pressed {
+    -fx-scale-x: 0.96;
+    -fx-scale-y: 0.96;
+    -fx-effect: none;
+}
+ 
+/* Stato attivo (lingua selezionata) */
+.lang-btn-active {
+    -fx-border-color: -color-accent;
+    -fx-border-width: 3.5;
+    -fx-background-color: rgba(91,156,245,0.12);
+    -fx-effect: dropshadow(gaussian, rgba(91,156,245,0.40), 18, 0, 0, 4);
+}
+ 
+/* Testo nome lingua sotto la bandiera */
+.lang-btn-text {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-text;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+}
 /* Pulsante start */
 .start-btn {
     -fx-background-color: linear-gradient(to bottom right, #4888e0, #3060c0);

@@ -22,15 +22,17 @@ public class WelcomeController implements Navigator.DataReceiver {
     @FXML private Button btnIt, btnEn, btnDe, btnFr, btnAr;
     @FXML private Button startBtn;
 
+    // Dimensioni bandiera — grandi e leggibili da lontano
+    private static final double FLAG_W = 190;
+    private static final double FLAG_H = 130;
+
     private volatile com.google.gson.JsonObject cachedMenu = null;
     private volatile boolean loadError = false;
 
-    /** Riceve il menu pre-caricato dalla SplashScreen. */
     @Override
     public void receiveData(Object data) {
         if (data instanceof com.google.gson.JsonObject menu) {
             cachedMenu = menu;
-            System.out.println("[Welcome] Menu ricevuto dalla Splash.");
         }
     }
 
@@ -39,12 +41,11 @@ public class WelcomeController implements Navigator.DataReceiver {
         for (Button btn : new Button[]{btnIt, btnEn, btnDe, btnFr, btnAr, startBtn})
             if (btn != null) Animations.touchFeedback(btn);
 
-        // Mostriamo le bandiere accanto al nome della lingua
-        if (btnIt != null)   decorateLangButton(btnIt, "it",   "Italiano");
-        if (btnEn != null)   decorateLangButton(btnEn, "en",   "English");
-        if (btnDe != null)   decorateLangButton(btnDe, "de",   "Deutsch");
-        if (btnFr != null)   decorateLangButton(btnFr, "fr",   "Français");
-        if (btnAr != null)   decorateLangButton(btnAr, "ar",   "العربية");
+        decorateLangButton(btnIt, "it", "Italiano");
+        decorateLangButton(btnEn, "en", "English");
+        decorateLangButton(btnDe, "de", "Deutsch");
+        decorateLangButton(btnFr, "fr", "Français");
+        decorateLangButton(btnAr, "ar", "العربية");
 
         fadeIn();
         preloadMenu();
@@ -67,18 +68,27 @@ public class WelcomeController implements Navigator.DataReceiver {
         chooseLangLabel.setText(I18n.t("choose_lang"));
         startBtn.setText(I18n.t("start") + "  →");
 
+        // Deseleziona tutti
         for (Button b : new Button[]{btnIt, btnEn, btnDe, btnFr, btnAr})
             b.getStyleClass().remove("lang-btn-active");
+
+        // Seleziona il corrente con animazione
         active.getStyleClass().add("lang-btn-active");
+        ScaleTransition pulse = new ScaleTransition(Duration.millis(120), active);
+        pulse.setFromX(1.0); pulse.setFromY(1.0);
+        pulse.setToX(1.06);  pulse.setToY(1.06);
+        pulse.setAutoReverse(true);
+        pulse.setCycleCount(2);
+        pulse.play();
 
         // Mostra il pulsante start
         startBtn.setVisible(true);
         startBtn.setManaged(true);
-        startBtn.setScaleX(0.7); startBtn.setScaleY(0.7); startBtn.setOpacity(0);
+        startBtn.setScaleX(0.8); startBtn.setScaleY(0.8); startBtn.setOpacity(0);
 
         ParallelTransition show = new ParallelTransition(
-            scale(startBtn, 0.7, 1.0, 250),
-            fade(startBtn, 0, 1.0, 250)
+            scale(startBtn, 0.8, 1.0, 280),
+            fade(startBtn, 0, 1.0, 280)
         );
         show.setInterpolator(Interpolator.EASE_OUT);
         show.play();
@@ -91,26 +101,22 @@ public class WelcomeController implements Navigator.DataReceiver {
         CartManager.get().clear();
 
         if (cachedMenu != null) {
-            // Menu già pronto — naviga subito
             Navigator.goTo(Navigator.Screen.MENU, cachedMenu);
         } else if (loadError) {
-            // Errore di rete — riprova e naviga comunque (il menu si ricaricherà nel ShopPage)
             Navigator.goTo(Navigator.Screen.MENU, null);
         } else {
-            // In attesa — usa un Timeline che controlla ogni 200ms sul FX thread
             startBtn.setText("⏳  " + I18n.t("start"));
             startBtn.setDisable(true);
 
             final Timeline[] pollerRef = {null};
             pollerRef[0] = new Timeline(new KeyFrame(Duration.millis(200), e -> {
                 if (cachedMenu != null) {
-                    pollerRef[0].stop();  // ferma PRIMA di navigare
+                    pollerRef[0].stop();
                     Navigator.goTo(Navigator.Screen.MENU, cachedMenu);
                 } else if (loadError) {
-                    pollerRef[0].stop();  // ferma PRIMA di navigare
+                    pollerRef[0].stop();
                     Navigator.goTo(Navigator.Screen.MENU, null);
                 }
-                // else: continua a pollare
             }));
             pollerRef[0].setCycleCount(Timeline.INDEFINITE);
             pollerRef[0].play();
@@ -120,18 +126,11 @@ public class WelcomeController implements Navigator.DataReceiver {
     // ── Precaricamento ────────────────────────────────────────────────
 
     private void preloadMenu() {
-        // La Splash ha già fatto il carico pesante.
-        // Se per qualche motivo il menu non è arrivato via receiveData,
-        // proviamo la cache e poi la rete.
         if (cachedMenu != null) return;
 
         com.google.gson.JsonObject fromCache = MenuCache.loadFromCache();
-        if (fromCache != null) {
-            cachedMenu = fromCache;
-            return;
-        }
+        if (fromCache != null) { cachedMenu = fromCache; return; }
 
-        // Ultimo fallback: rete
         new Thread(() -> {
             for (int attempt = 1; attempt <= 3; attempt++) {
                 try {
@@ -147,6 +146,32 @@ public class WelcomeController implements Navigator.DataReceiver {
         }, "welcome-fallback").start();
     }
 
+    // ── Decorazione bottone lingua ────────────────────────────────────
+
+    private void decorateLangButton(Button btn, String lang, String label) {
+        btn.setTooltip(new javafx.scene.control.Tooltip(label));
+
+        // Nome lingua (grande, leggibile da lontano)
+        javafx.scene.control.Label text = new javafx.scene.control.Label(label);
+        text.getStyleClass().add("lang-btn-text");
+        text.setAlignment(javafx.geometry.Pos.CENTER);
+        text.setMaxWidth(220);
+        text.setWrapText(false);
+
+        // Bandiera grande
+        javafx.scene.Node flag = com.util.FlagIcon.load(lang, FLAG_W, FLAG_H);
+
+        // Container verticale: bandiera sopra, nome sotto
+        javafx.scene.layout.VBox vbox = new javafx.scene.layout.VBox(14);
+        vbox.setAlignment(javafx.geometry.Pos.CENTER);
+        vbox.setPadding(new javafx.geometry.Insets(18, 16, 18, 16));
+        vbox.getChildren().addAll(flag, text);
+
+        btn.setText("");
+        btn.setGraphic(vbox);
+        btn.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
+    }
+
     // ── Animazioni ────────────────────────────────────────────────────
 
     private void fadeIn() {
@@ -155,37 +180,6 @@ public class WelcomeController implements Navigator.DataReceiver {
         FadeTransition ft = new FadeTransition(Duration.millis(500), welcomeContainer);
         ft.setFromValue(0); ft.setToValue(1);
         ft.play();
-    }
-
-    private void decorateLangButton(Button btn, String lang, String label) {
-        // Bottone con bandiera e testo, in stile "card".
-        btn.setTooltip(new javafx.scene.control.Tooltip(label));
-
-        javafx.scene.control.Label text = new javafx.scene.control.Label(label);
-        text.getStyleClass().add("lang-btn-text");
-        text.setAlignment(javafx.geometry.Pos.CENTER);
-        text.setMaxWidth(140);
-        text.setWrapText(true);
-
-        // Flag in una VBox per il layout verticale
-        javafx.scene.layout.VBox vbox = new javafx.scene.layout.VBox(6);
-        vbox.setAlignment(javafx.geometry.Pos.CENTER);
-        vbox.setPrefWidth(180);
-        vbox.setPrefHeight(180);
-        vbox.setMinSize(140, 140);
-        vbox.setMaxSize(220, 220);
-
-        javafx.scene.Node flag = com.util.FlagIcon.load(lang, 150, 112);
-        vbox.getChildren().addAll(flag, text);
-
-        btn.setText("");
-        btn.setGraphic(vbox);
-        btn.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
-
-        // Dimensioni base: consente al layout di espandere, ma mantiene una grandezza minima
-        btn.setMinSize(120, 120);
-        btn.setPrefSize(140, 140);
-        btn.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
     }
 
     private ScaleTransition scale(javafx.scene.Node n, double from, double to, int ms) {

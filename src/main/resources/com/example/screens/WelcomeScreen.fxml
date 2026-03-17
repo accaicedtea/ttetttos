@@ -12,46 +12,56 @@
            fx:controller="com.example.controllers.WelcomeController"
            styleClass="welcome-root">
 
-    <VBox fx:id="welcomeContainer" alignment="CENTER" spacing="0"
-          styleClass="welcome-container">
+  <VBox fx:id="welcomeContainer" alignment="CENTER" spacing="0"
+        styleClass="welcome-container">
 
-        <!-- Logo icona MDI -->
-        <FontIcon iconLiteral="mdi2f-food-fork-drink" iconSize="90"
-                  styleClass="welcome-logo-icon" />
+    <!-- Logo + titoli -->
+    <FontIcon iconLiteral="mdi2f-food-fork-drink" iconSize="100"
+              styleClass="welcome-logo-icon" />
 
-        <Label fx:id="titleLabel"    text="Benvenuto"         styleClass="welcome-title" />
-        <Label fx:id="subtitleLabel" text="Tocca per iniziare" styleClass="welcome-subtitle" />
+    <Label fx:id="titleLabel"    text="Benvenuto"          styleClass="welcome-title" />
+    <Label fx:id="subtitleLabel" text="Tocca per iniziare" styleClass="welcome-subtitle" />
 
-        <Region prefHeight="36" />
+    <Region prefHeight="40" />
 
-        <Label fx:id="chooseLangLabel" text="Scegli la lingua"
-               styleClass="welcome-choose-lang" />
+    <Label fx:id="chooseLangLabel" text="Scegli la tua lingua"
+           styleClass="welcome-choose-lang" />
 
-        <Region prefHeight="24" />
+    <Region prefHeight="28" />
 
-        <VBox spacing="18" alignment="CENTER">
-            <HBox spacing="20" alignment="CENTER">
-                <Button fx:id="btnIt" onAction="#onLangIt" styleClass="lang-btn" HBox.hgrow="ALWAYS" maxWidth="Infinity" maxHeight="Infinity"/>
-                <Button fx:id="btnEn" onAction="#onLangEn" styleClass="lang-btn" HBox.hgrow="ALWAYS" maxWidth="Infinity" maxHeight="Infinity"/>
-                <Button fx:id="btnDe" onAction="#onLangDe" styleClass="lang-btn" HBox.hgrow="ALWAYS" maxWidth="Infinity" maxHeight="Infinity"/>
-            </HBox>
-            <HBox spacing="20" alignment="CENTER">
-                <Button fx:id="btnFr" onAction="#onLangFr" styleClass="lang-btn" HBox.hgrow="ALWAYS" maxWidth="Infinity" maxHeight="Infinity"/>
-                <Button fx:id="btnAr" onAction="#onLangAr" styleClass="lang-btn" HBox.hgrow="ALWAYS" maxWidth="Infinity" maxHeight="Infinity"/>
-            </HBox>
-        </VBox>
+    <!-- Riga 1: IT · EN · DE -->
+    <HBox spacing="28" alignment="CENTER">
+      <Button fx:id="btnIt" onAction="#onLangIt" styleClass="lang-btn"
+              minWidth="240" minHeight="220" maxWidth="300" maxHeight="260" />
+      <Button fx:id="btnEn" onAction="#onLangEn" styleClass="lang-btn"
+              minWidth="240" minHeight="220" maxWidth="300" maxHeight="260" />
+      <Button fx:id="btnDe" onAction="#onLangDe" styleClass="lang-btn"
+              minWidth="240" minHeight="220" maxWidth="300" maxHeight="260" />
+    </HBox>
 
-        <Region prefHeight="48" />
+    <Region prefHeight="20" />
 
-        <Button fx:id="startBtn" onAction="#onStart"
-                styleClass="start-btn"
-                text="Inizia l'ordine  →"
-                visible="false" managed="false">
-            <graphic>
-                <FontIcon iconLiteral="mdi2a-arrow-right-circle" iconSize="28"
-                          styleClass="start-btn-icon" />
-            </graphic>
-        </Button>
+    <!-- Riga 2: FR · AR (centrate, stessa larghezza) -->
+    <HBox spacing="28" alignment="CENTER">
+      <Button fx:id="btnFr" onAction="#onLangFr" styleClass="lang-btn"
+              minWidth="240" minHeight="220" maxWidth="300" maxHeight="260" />
+      <Button fx:id="btnAr" onAction="#onLangAr" styleClass="lang-btn"
+              minWidth="240" minHeight="220" maxWidth="300" maxHeight="260" />
+    </HBox>
 
-    </VBox>
+    <Region prefHeight="52" />
+
+    <!-- Pulsante start (appare dopo selezione lingua) -->
+    <Button fx:id="startBtn" onAction="#onStart"
+            styleClass="start-btn"
+            text="Inizia l'ordine"
+            minWidth="420" minHeight="86"
+            visible="false" managed="false">
+      <graphic>
+        <FontIcon iconLiteral="mdi2a-arrow-right-circle" iconSize="34"
+                  styleClass="start-btn-icon" />
+      </graphic>
+    </Button>
+
+  </VBox>
 </StackPane>
