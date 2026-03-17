@@ -152,10 +152,10 @@
           </execution>
         </executions>
         <configuration>
-          <!-- JAR di input (prodotto dallo step precedente) -->
-          <injar>${project.build.finalName}.jar</injar>
+          <!-- JAR di input (nome impostato da maven-jar-plugin) -->
+          <injar>demo-1.jar</injar>
           <!-- JAR di output (sovrascrive l'originale) -->
-          <outjar>${project.build.finalName}.jar</outjar>
+          <outjar>demo-1.jar</outjar>
           <!-- Dipendenze da includere nell'analisi ma non nel JAR finale -->
           <libs>
             <lib>${java.home}/jmods</lib>
