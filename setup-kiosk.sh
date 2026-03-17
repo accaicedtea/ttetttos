@@ -30,7 +30,6 @@ warn()  { echo -e "${YELLOW}[WARN]${NC}  $1"; }
 title() { echo -e "\n${BOLD}${CYAN}══ $1 ══${NC}\n"; }
 die()   { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
-[ "$EUID" -eq 0 ] || die "Esegui come root: sudo ./setup-kiosk.sh"
 
 # ==============================================================================
 # STEP 1 — Pacchetti
@@ -612,27 +611,54 @@ disable_kiosk() {
     echo ""
 }
 
-
 # ==============================================================================
-# ENTRY POINT
+# ENTRY POINT — deve stare ALLA FINE, dopo tutte le definizioni
 # ==============================================================================
 case "${1:-}" in
-    --disable)
-        [ "$EUID" -eq 0 ] || die "Esegui come root: sudo ./setup-kiosk.sh --disable"
-        disable_kiosk
-        ;;
+
     --help|-h)
+        echo ""
         echo "Uso: sudo ./setup-kiosk.sh [opzione]"
         echo ""
         echo "  (nessuna)   Setup completo modalità kiosk"
         echo "  --disable   Disabilita tutto: auto-login, watchdog, X11, notify"
         echo "  --help      Mostra questo help"
+        echo ""
+        exit 0
         ;;
+
+    --disable)
+        [ "$EUID" -eq 0 ] || { echo "Esegui come root: sudo ./setup-kiosk.sh --disable"; exit 1; }
+        disable_kiosk
+        exit 0
+        ;;
+
     "")
-        [ "$EUID" -eq 0 ] || die "Esegui come root: sudo ./setup-kiosk.sh"
-        run_setup
+        [ "$EUID" -eq 0 ] || { echo "Esegui come root: sudo ./setup-kiosk.sh"; exit 1; }
+        echo ""
+        echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════════════╗${NC}"
+        echo -e "${BOLD}${CYAN}║   Totem Kiosk — Setup Sistema Linux              ║${NC}"
+        echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════════╝${NC}"
+        install_packages
+        setup_kiosk_user
+        setup_ssh
+        setup_email
+        setup_email_notifier
+        setup_autologin
+        setup_xinit
+        setup_watchdog
+        setup_sudoers
+        setup_logrotate
+        setup_systemd_watchdog
+        setup_optimizations
+        send_test_email
+        print_summary
+        exit 0
         ;;
+
     *)
-        die "Opzione sconosciuta: $1 — usa --help"
+        echo "Opzione sconosciuta: $1"
+        echo "Usa: sudo ./setup-kiosk.sh --help"
+        exit 1
         ;;
 esac
