@@ -17,9 +17,9 @@ CRASH_MAX_RETRIES=5
 CRASH_RESET_AFTER=300
 
 # ── Email (modifica questi valori prima di eseguire) ───────────────────────────
-NOTIFY_EMAIL="giaccabugata@gmail.com"        # ← dove ricevi la notifica
-GMAIL_USER="giaccabugata@gmail.com"        # ← account Gmail mittente
-GMAIL_APP_PASSWORD="zytg gsty ifvn wlrn"  # ← App Password Gmail (vedi istruzioni)
+NOTIFY_EMAIL="TUA_EMAIL@gmail.com"        # ← dove ricevi la notifica
+GMAIL_USER="TUO_ACCOUNT@gmail.com"        # ← account Gmail mittente
+GMAIL_APP_PASSWORD="xxxx xxxx xxxx xxxx"  # ← App Password Gmail (vedi istruzioni)
 
 # ── Colori ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
@@ -514,24 +514,125 @@ print_summary() {
 }
 
 # ==============================================================================
-# MAIN
+# MAIN — wrappato in funzione per il case statement
 # ==============================================================================
-echo ""
-echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════════════╗${NC}"
-echo -e "${BOLD}${CYAN}║   Totem Kiosk — Setup Sistema Linux              ║${NC}"
-echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════════╝${NC}"
+run_setup() {
+    echo ""
+    echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════════════╗${NC}"
+    echo -e "${BOLD}${CYAN}║   Totem Kiosk — Setup Sistema Linux              ║${NC}"
+    echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════════╝${NC}"
 
-install_packages
-setup_kiosk_user
-setup_ssh
-setup_email
-setup_email_notifier
-setup_autologin
-setup_xinit
-setup_watchdog
-setup_sudoers
-setup_logrotate
-setup_systemd_watchdog
-setup_optimizations
-send_test_email
-print_summary
+    install_packages
+    setup_kiosk_user
+    setup_ssh
+    setup_email
+    setup_email_notifier
+    setup_autologin
+    setup_xinit
+    setup_watchdog
+    setup_sudoers
+    setup_logrotate
+    setup_systemd_watchdog
+    setup_optimizations
+    send_test_email
+    print_summary
+}
+
+# ==============================================================================
+# DISABLE — disabilita tutto il kiosk (auto-login, watchdog, SSH notify, X11)
+# ==============================================================================
+disable_kiosk() {
+    echo ""
+    echo -e "${BOLD}${RED}══ Disabilitazione modalità kiosk ══${NC}"
+    echo ""
+
+    # 1. Auto-login TTY1
+    if [ -f /etc/systemd/system/getty@tty1.service.d/autologin.conf ]; then
+        rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf
+        rmdir /etc/systemd/system/getty@tty1.service.d 2>/dev/null || true
+        ok "Auto-login TTY1 disabilitato."
+    fi
+
+    # 2. Servizi systemd kiosk
+    for svc in totem-x11-monitor totem-notify; do
+        if systemctl is-enabled "$svc" &>/dev/null; then
+            systemctl disable --now "$svc" 2>/dev/null || true
+            ok "Servizio ${svc} disabilitato."
+        fi
+    done
+
+    # 3. Watchdog e monitor (rimuove gli script)
+    for f in /usr/local/bin/totem-watchdog.sh \
+              /usr/local/bin/totem-x11-monitor.sh \
+              /usr/local/bin/totem-notify.sh; do
+        [ -f "$f" ] && rm -f "$f" && ok "Rimosso: $f"
+    done
+
+    # 4. File unit systemd
+    for f in /etc/systemd/system/totem-x11-monitor.service \
+              /etc/systemd/system/totem-notify.service; do
+        [ -f "$f" ] && rm -f "$f" && ok "Rimosso: $f"
+    done
+
+    # 5. .bashrc del kiosk (blocco startx)
+    if [ -f "${KIOSK_HOME}/.bashrc" ]; then
+        # Rimuove solo il blocco kiosk, lascia intatto il resto
+        sed -i '/# Kiosk auto-start X11/,/^fi$/d' "${KIOSK_HOME}/.bashrc"
+        ok "Auto-start X11 rimosso da .bashrc."
+    fi
+
+    # 6. Cron aggiornamento notturno
+    rm -f /etc/cron.d/totem-kiosk-update
+    ok "Cron aggiornamento rimosso."
+
+    # 7. Sudoers kiosk
+    rm -f /etc/sudoers.d/kiosk
+    ok "Sudoers kiosk rimosso."
+
+    # 8. Ripristina sleep/suspend
+    systemctl unmask sleep.target suspend.target hibernate.target hybrid-sleep.target \
+        2>/dev/null || true
+    ok "Sleep/suspend riabilitati."
+
+    # 9. Ripristina GRUB timeout a 5 secondi
+    if [ -f /etc/default/grub ]; then
+        sed -i 's/GRUB_TIMEOUT=.*/GRUB_TIMEOUT=5/' /etc/default/grub
+        update-grub 2>/dev/null || true
+        ok "GRUB timeout ripristinato a 5s."
+    fi
+
+    # 10. Ricarica systemd
+    systemctl daemon-reload
+    systemctl reset-failed 2>/dev/null || true
+
+    echo ""
+    echo -e "${BOLD}${GREEN}Kiosk disabilitato.${NC}"
+    echo -e "SSH e i file in ${LOG_DIR}/ sono stati lasciati intatti."
+    echo -e "Riavvia per applicare: ${BOLD}sudo reboot${NC}"
+    echo ""
+}
+
+
+# ==============================================================================
+# ENTRY POINT
+# ==============================================================================
+case "${1:-}" in
+    --disable)
+        [ "$EUID" -eq 0 ] || die "Esegui come root: sudo ./setup-kiosk.sh --disable"
+        disable_kiosk
+        ;;
+    --help|-h)
+        echo "Uso: sudo ./setup-kiosk.sh [opzione]"
+        echo ""
+        echo "  (nessuna)   Setup completo modalità kiosk"
+        echo "  --disable   Disabilita tutto: auto-login, watchdog, X11, notify"
+        echo "  --help      Mostra questo help"
+        ;;
+    "")
+        [ "$EUID" -eq 0 ] || die "Esegui come root: sudo ./setup-kiosk.sh"
+        run_setup
+        ;;
+    *)
+        die "Opzione sconosciuta: $1 — usa --help"
+        ;;
+esac
