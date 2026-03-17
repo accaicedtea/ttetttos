@@ -19,12 +19,11 @@
     <maven.compiler.target>17</maven.compiler.target>
     <javafx.version>21</javafx.version>
     <ikonli.version>12.3.1</ikonli.version>
-    <proguard.version>7.5.0</proguard.version>
   </properties>
 
   <dependencies>
 
-    <!-- ── JavaFX ─────────────────────────────────────────────────── -->
+    <!-- JavaFX -->
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-controls</artifactId>
@@ -41,14 +40,14 @@
       <version>${javafx.version}</version>
     </dependency>
 
-    <!-- ── Gson (JSON) ───────────────────────────────────────────── -->
+    <!-- Gson -->
     <dependency>
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
       <version>2.11.0</version>
     </dependency>
 
-    <!-- ── Ikonli (icone MDI2 vettoriali) ────────────────────────── -->
+    <!-- Ikonli -->
     <dependency>
       <groupId>org.kordamp.ikonli</groupId>
       <artifactId>ikonli-core</artifactId>
@@ -70,7 +69,7 @@
   <build>
     <plugins>
 
-      <!-- ── 1. Compilatore Java 17 ────────────────────────────────── -->
+      <!-- 1. Compilatore Java 17 -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -81,7 +80,7 @@
         </configuration>
       </plugin>
 
-      <!-- ── 2. Runner JavaFX (sviluppo locale) ───────────────────── -->
+      <!-- 2. Runner JavaFX (sviluppo locale: mvn javafx:run) -->
       <plugin>
         <groupId>org.openjfx</groupId>
         <artifactId>javafx-maven-plugin</artifactId>
@@ -96,7 +95,7 @@
         </executions>
       </plugin>
 
-      <!-- ── 3. Copia dipendenze in target/lib/ ───────────────────── -->
+      <!-- 3. Copia dipendenze in target/lib/ -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
@@ -114,7 +113,7 @@
         </executions>
       </plugin>
 
-      <!-- ── 4. JAR manifest ──────────────────────────────────────── -->
+      <!-- 4. JAR manifest — output: target/demo-1.jar -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
@@ -135,66 +134,7 @@
         </configuration>
       </plugin>
 
-      <!-- ── 5. ProGuard — offuscamento codice sorgente ───────────── -->
-      <!--
-        Rinomina classi, metodi e campi con nomi senza senso (a, b, c…).
-        Il JAR rilasciato NON è decompilabile in modo leggibile.
-        Viene eseguito DOPO il package, produce: target/demo-1.jar (sostituisce)
-      -->
-      <plugin>
-        <groupId>com.github.wvengen</groupId>
-        <artifactId>proguard-maven-plugin</artifactId>
-        <version>2.6.1</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals><goal>proguard</goal></goals>
-          </execution>
-        </executions>
-        <configuration>
-          <!-- JAR di input (nome impostato da maven-jar-plugin) -->
-          <injar>demo-1.jar</injar>
-          <!-- JAR di output (sovrascrive l'originale) -->
-          <outjar>demo-1.jar</outjar>
-          <!-- Dipendenze da includere nell'analisi ma non nel JAR finale -->
-          <libs>
-            <lib>${java.home}/jmods</lib>
-          </libs>
-          <options>
-            <!-- ── Mantieni entry point e risorse FXML/CSS ── -->
-            <option>-keep public class com.example.App { public static void main(java.lang.String[]); }</option>
-            <!-- Mantieni i controller referenziati dagli FXML -->
-            <option>-keep public class com.example.**Controller { *; }</option>
-            <!-- Mantieni modelli usati da Gson (serializzazione JSON) -->
-            <option>-keepclassmembers class com.example.model.** { *; }</option>
-            <!-- Mantieni annotazioni JavaFX FXML -->
-            <option>-keepclassmembers class * { @javafx.fxml.FXML *; }</option>
-            <!-- Mantieni nomi delle risorse (file .fxml, .css, immagini) -->
-            <option>-adaptresourcefilenames</option>
-            <option>-adaptresourcefilecontents **.fxml,**.properties</option>
-            <!-- Offuscamento aggressivo -->
-            <option>-optimizationpasses 3</option>
-            <option>-allowaccessmodification</option>
-            <option>-repackageclasses ''</option>
-            <!-- Non rimuovere attributi necessari a JavaFX runtime -->
-            <option>-keepattributes Exceptions,InnerClasses,Signature,*Annotation*</option>
-            <!-- Sopprimi avvisi per le lib esterne (javafx, ikonli) -->
-            <option>-dontwarn javafx.**</option>
-            <option>-dontwarn org.kordamp.**</option>
-            <option>-dontwarn com.google.gson.**</option>
-            <option>-dontnote</option>
-          </options>
-        </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>com.guardsquare</groupId>
-            <artifactId>proguard-base</artifactId>
-            <version>${proguard.version}</version>
-          </dependency>
-        </dependencies>
-      </plugin>
-
-      <!-- ── 6. Crea lib.tar.gz dopo il package ───────────────────── -->
+      <!-- 5. Crea lib.tar.gz -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
@@ -209,9 +149,8 @@
                 <tar destfile="${project.build.directory}/lib.tar.gz"
                      basedir="${project.build.directory}/lib"
                      compression="gzip" longfile="gnu"/>
-                <echo message="=== Artifacts pronti per il deploy ===" />
-                <echo message="JAR (offuscato): target/demo-1.jar" />
-                <echo message="Libs:            target/lib.tar.gz" />
+                <echo message="JAR:  target/demo-1.jar" />
+                <echo message="Libs: target/lib.tar.gz" />
               </target>
             </configuration>
           </execution>
