@@ -10,8 +10,6 @@ import javafx.scene.layout.*;
 import javafx.util.Duration;
 
 import com.api.services.ViewsService;
-import com.example.NetworkWatchdog;
-import com.example.RemoteLogger;
 import com.example.model.MenuCache;
 import com.example.components.ProductCard;
 import com.example.model.CartManager;

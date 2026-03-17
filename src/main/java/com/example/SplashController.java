@@ -10,9 +10,7 @@ import org.kordamp.ikonli.javafx.FontIcon;
 import javafx.util.Duration;
 
 import com.api.services.AuthService;
-import com.example.NetworkWatchdog;
 import com.example.model.OrderQueue;
-import com.example.RemoteLogger;
 import com.example.model.MenuCache;
 import com.example.model.TranslationManager;
 
@@ -243,11 +241,7 @@ public class SplashController {
         p1.setInterpolator(Interpolator.EASE_BOTH);
         p1.play();
 
-        // Cerchio 2: pulse sfasato
-        SequentialTransition p2 = new SequentialTransition(
-            new PauseTransition(Duration.seconds(2)),
-            new SequentialTransition()
-        );
+        
         ScaleTransition p2s = new ScaleTransition(Duration.seconds(5), splashCircle2);
         p2s.setFromX(1.1); p2s.setFromY(1.1); p2s.setToX(0.85); p2s.setToY(0.85);
         p2s.setAutoReverse(true); p2s.setCycleCount(Animation.INDEFINITE);

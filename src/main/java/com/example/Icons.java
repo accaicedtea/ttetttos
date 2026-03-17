@@ -1,9 +1,6 @@
 package com.example;
 
 import org.kordamp.ikonli.javafx.FontIcon;
-import org.kordamp.ikonli.materialdesign2.*;
-import javafx.scene.Node;
-
 /**
  * Factory centralizzata per le icone Ikonli (Material Design 2).
  *

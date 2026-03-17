@@ -7,8 +7,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.*;
 
-import com.example.App;
-import com.util.InfoModal;
+
 import com.example.model.CartItem;
 import com.example.model.CartManager;
 import com.example.model.I18n;

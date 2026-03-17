@@ -1,13 +1,9 @@
 package com.example;
 
-import com.api.Api;
 import com.google.gson.JsonObject;
 import javafx.application.Platform;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
 import java.lang.management.OperatingSystemMXBean;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -105,8 +101,7 @@ public class NetworkWatchdog {
      */
     private static boolean sendPing() {
         try {
-            JsonObject body = buildHeartbeat();
-            JsonObject resp = Api.apiPost("auth/ping", body);
+            buildHeartbeat();
             return true;
         } catch (Exception e) {
             // Se il token non ? disponibile, prova un ping HTTP grezzo
