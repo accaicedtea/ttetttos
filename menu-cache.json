@@ -1,5 +1,5 @@
 {
-  "cached_at": "2026-03-17T22:51:31.791855701",
+  "cached_at": "2026-03-17T22:58:08.574623812",
   "version": "",
   "menu": {
     "ok": true,
@@ -359,7 +359,7 @@
         }
       ],
       "versione": "475d3383c66d1e335cca15777b957dd1",
-      "generato_at": "2026-03-17 22:51:31",
+      "generato_at": "2026-03-17 22:58:08",
       "generated_by": "MenuController_v2"
     }
   }

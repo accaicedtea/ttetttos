@@ -14,11 +14,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. Java 17
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
@@ -26,92 +24,31 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # 3. Build JAR + lib/
       - name: Build
         run: mvn clean package -B -DskipTests
 
-      # 4. Offusca il JAR con ProGuard CLI
       - name: Offusca JAR (ProGuard)
         run: |
           PG_VER="7.5.0"
-          PG_ZIP="proguard-${PG_VER}.zip"
-          PG_URL="https://github.com/Guardsquare/proguard/releases/download/v${PG_VER}/${PG_ZIP}"
-
-          echo "Scarico ProGuard ${PG_VER}..."
-          curl -L "$PG_URL" -o "$PG_ZIP"
-          unzip -q "$PG_ZIP"
-          PG_BIN="proguard-${PG_VER}/bin/proguard.sh"
-          chmod +x "$PG_BIN"
-
-          # Costruisce il classpath delle lib per ProGuard
-          LIB_CP=$(find target/lib -name "*.jar" | tr '\n' ':' | sed 's/:$//')
-
-          # File di configurazione ProGuard
-          cat > proguard.pro << 'PRG'
-          -injars       target/demo-1.jar
-          -outjars      target/demo-1-obf.jar
-          -libraryjars  <java.home>/jmods
-          -libraryjars  target/lib
-
-          -keep public class com.example.App {
-              public static void main(java.lang.String[]);
-          }
-          -keep public class com.example.**Controller { *; }
-          -keepclassmembers class com.example.model.** { *; }
-          -keepclassmembers class * { @javafx.fxml.FXML *; }
-
-          -adaptresourcefilenames
-          -adaptresourcefilecontents **.fxml,**.properties
-
-          -optimizationpasses 3
-          -allowaccessmodification
-          -repackageclasses ''
-
-          -keepattributes Exceptions,InnerClasses,Signature,*Annotation*
-
-          -dontwarn javafx.**
-          -dontwarn org.kordamp.**
-          -dontwarn com.google.gson.**
-          -dontnote
-          PRG
-
-          echo "Eseguo ProGuard..."
-          bash "$PG_BIN" @proguard.pro
-
-          # Sostituisce il JAR originale con quello offuscato
+          PG_JAR="proguard-base-${PG_VER}.jar"
+          PG_URL="https://repo1.maven.org/maven2/com/guardsquare/proguard-base/${PG_VER}/${PG_JAR}"
+          curl -fL "$PG_URL" -o "$PG_JAR"
+          java -jar "$PG_JAR" @proguard.pro
           mv target/demo-1-obf.jar target/demo-1.jar
-          echo "Offuscamento completato."
           ls -lh target/demo-1.jar
 
-      # 5. Verifica artifact
       - name: Verifica artifact
-        run: |
-          echo "── Artifact finali ──"
-          ls -lh target/demo-1.jar target/lib.tar.gz
+        run: ls -lh target/demo-1.jar target/lib.tar.gz
 
-      # 6. Pubblica Release
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: "Release ${{ github.ref_name }}"
-          body: |
-            ## Totem Kiosk ${{ github.ref_name }}
-
-            ### Installazione rapida
-            ```bash
-            chmod +x deploy.sh
-            ./deploy.sh
-            ```
-
-            | File | Descrizione |
-            |------|-------------|
-            | `demo-1.jar` | Applicazione (offuscata) |
-            | `lib.tar.gz` | Dipendenze runtime |
           files: |
             target/demo-1.jar
             target/lib.tar.gz
           fail_on_unmatched_files: true
-          generate_release_notes: false
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
