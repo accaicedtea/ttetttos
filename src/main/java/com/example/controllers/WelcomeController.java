@@ -12,8 +12,6 @@ import com.example.model.I18n;
 import com.example.model.MenuCache;
 import com.util.Animations;
 import com.util.Navigator;
-import com.util.Navigator.DataReceiver;
-import com.util.Navigator.Screen;
 
 public class WelcomeController implements Navigator.DataReceiver {
 

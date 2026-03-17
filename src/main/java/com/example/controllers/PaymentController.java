@@ -11,7 +11,6 @@ import com.example.model.I18n;
 import com.example.model.OrderQueue;
 import com.util.Animations;
 import com.util.Navigator;
-import com.util.Navigator.Screen;
 
 public class PaymentController {
 

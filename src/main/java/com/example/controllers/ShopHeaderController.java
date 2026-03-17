@@ -11,7 +11,6 @@ import org.kordamp.ikonli.javafx.FontIcon;
 
 import com.util.Navigator;
 import com.util.ThemeManager;
-import com.util.Navigator.Screen;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
