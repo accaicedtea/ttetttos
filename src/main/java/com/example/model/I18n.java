@@ -175,7 +175,6 @@ public class I18n {
      * Merge traduzioni caricate da AI/cache in quelle hardcoded.
      * Le chiavi AI sovrascrivono quelle di fallback.
      */
-    @SuppressWarnings("unchecked")
     public static void mergeTranslations(java.util.Map<String, java.util.Map<String, String>> external) {
         // STRINGS è immutabile (Map.of), usa una mappa mutabile per il merge
         for (var langEntry : external.entrySet()) {

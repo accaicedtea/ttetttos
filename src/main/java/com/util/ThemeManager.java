@@ -1,4 +1,4 @@
-package com.example;
+package com.util;
 
 import javafx.application.Platform;
 import javafx.scene.Parent;

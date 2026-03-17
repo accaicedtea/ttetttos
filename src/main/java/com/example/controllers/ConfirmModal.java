@@ -1,4 +1,4 @@
-package com.example;
+package com.example.controllers;
 
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;

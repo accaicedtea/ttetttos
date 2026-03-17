@@ -1,4 +1,4 @@
-package com.example;
+package com.example.controllers;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -24,7 +24,7 @@ public class ConfirmModalController {
         });
     }
 
-    void show(String title, String message, Runnable onConfirm) {
+    public void show(String title, String message, Runnable onConfirm) {
         this.onConfirm = onConfirm;
         if (titleLabel != null) titleLabel.setText(title);
         if (msgLabel != null) msgLabel.setText(message);
@@ -34,7 +34,7 @@ public class ConfirmModalController {
         }
     }
 
-    void close() {
+    public void close() {
         if (confirmRoot != null) {
             confirmRoot.setVisible(false);
             confirmRoot.setManaged(false);

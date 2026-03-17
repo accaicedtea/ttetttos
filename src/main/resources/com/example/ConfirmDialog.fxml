@@ -8,7 +8,7 @@
 
 <StackPane xmlns="http://javafx.com/javafx/21"
            xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="com.example.ConfirmController"
+           fx:controller="com.example.controllers.ConfirmController"
            styleClass="confirm-root" fx:id="confirmRoot">
 
     <StackPane fx:id="bgCircle1" styleClass="confirm-bg-circle-1" />

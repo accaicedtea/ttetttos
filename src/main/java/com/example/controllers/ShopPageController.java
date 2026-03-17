@@ -1,4 +1,4 @@
-package com.example;
+package com.example.controllers;
 
 import javafx.animation.*;
 import javafx.application.Platform;
@@ -16,6 +16,11 @@ import com.example.model.CartManager;
 import com.example.model.I18n;
 import com.google.gson.*;
 import com.util.Animations;
+import com.util.Navigator;
+import com.util.NetworkWatchdog;
+import com.util.RemoteLogger;
+import com.util.Navigator.DataReceiver;
+import com.util.Navigator.ScreenReturnable;
 
 import java.util.*;
 

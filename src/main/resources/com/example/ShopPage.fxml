@@ -13,7 +13,7 @@
 <StackPane fx:id="rootStack"
            xmlns="http://javafx.com/javafx/21"
            xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="com.example.ShopPageController">
+           fx:controller="com.example.controllers.ShopPageController">
 
     <BorderPane styleClass="main-pane">
 

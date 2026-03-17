@@ -1,4 +1,4 @@
-package com.example;
+package com.example.controllers;
 
 import javafx.animation.*;
 import javafx.fxml.FXML;
@@ -10,6 +10,8 @@ import com.example.model.CartManager;
 import com.example.model.I18n;
 import com.example.model.OrderQueue;
 import com.util.Animations;
+import com.util.Navigator;
+import com.util.Navigator.Screen;
 
 public class PaymentController {
 

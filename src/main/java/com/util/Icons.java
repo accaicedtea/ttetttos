@@ -1,4 +1,4 @@
-package com.example;
+package com.util;
 
 import org.kordamp.ikonli.javafx.FontIcon;
 /**

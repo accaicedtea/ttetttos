@@ -11,7 +11,7 @@
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.example.CartController"
+            fx:controller="com.example.controllers.CartController"
             styleClass="screen-root">
 
     <top>

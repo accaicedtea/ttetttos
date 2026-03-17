@@ -1,5 +1,5 @@
 
-package com.example;
+package com.util;
 
 import javafx.animation.*;
 import javafx.application.Platform;

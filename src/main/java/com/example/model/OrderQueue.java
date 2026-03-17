@@ -50,7 +50,7 @@ public class OrderQueue {
 
     // IVA di default — il server la usa per calcolare iva_4/iva_10/iva_22
     // Cambia in base alla categoria prodotto se il server lo supporta
-    private static final int DEFAULT_IVA = 10;
+    // private static final int DEFAULT_IVA = 10;
 
     private static final ScheduledExecutorService EXECUTOR =
             Executors.newSingleThreadScheduledExecutor(r -> {

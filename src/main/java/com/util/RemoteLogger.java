@@ -1,4 +1,4 @@
-package com.example;
+package com.util;
 
 import com.api.Api;
 import com.google.gson.JsonObject;

@@ -1,4 +1,4 @@
-package com.example;
+package com.example.controllers;
 
 import javafx.animation.*;
 import javafx.fxml.FXML;
@@ -10,6 +10,9 @@ import javafx.util.Duration;
 
 import com.example.model.CartManager;
 import com.example.model.I18n;
+import com.util.Navigator;
+import com.util.Navigator.DataReceiver;
+import com.util.Navigator.Screen;
 
 import java.util.Random;
 

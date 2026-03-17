@@ -18,6 +18,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import com.util.AppController;
+import com.util.Navigator;
+import com.util.ThemeManager;
 
 /**
  * Entrypoint dell'app.

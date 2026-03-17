@@ -1,4 +1,4 @@
-package com.example;
+package com.example.controllers;
 
 import javafx.animation.*;
 import javafx.application.Platform;
@@ -13,6 +13,8 @@ import com.api.services.AuthService;
 import com.example.model.OrderQueue;
 import com.example.model.MenuCache;
 import com.example.model.TranslationManager;
+import com.util.Navigator;
+import com.util.NetworkWatchdog;
 
 /**
  * Controller della splash screen di avvio.

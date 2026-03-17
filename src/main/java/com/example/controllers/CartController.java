@@ -1,4 +1,4 @@
-package com.example;
+package com.example.controllers;
 
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
@@ -7,11 +7,12 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.*;
 
-
+import com.example.App;
 import com.example.model.CartItem;
 import com.example.model.CartManager;
 import com.example.model.I18n;
 import com.util.Animations;
+import com.util.Navigator;
 
 import java.util.*;
 

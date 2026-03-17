@@ -1,4 +1,4 @@
-package com.example;
+package com.util;
 
 import com.google.gson.JsonObject;
 import javafx.application.Platform;
