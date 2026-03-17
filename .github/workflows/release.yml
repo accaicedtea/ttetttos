@@ -30,16 +30,37 @@ jobs:
       - name: Offusca JAR (ProGuard)
         run: |
           MAVEN="https://repo1.maven.org/maven2"
-          PG="com/guardsquare"
-          LOG4J="org/apache/logging/log4j"
 
-          # Scarica ProGuard + tutte le sue dipendenze
-          curl -fL "${MAVEN}/${PG}/proguard-base/7.5.0/proguard-base-7.5.0.jar"         -o pg-base.jar
-          curl -fL "${MAVEN}/${PG}/proguard-core/9.1.6/proguard-core-9.1.6.jar"         -o pg-core.jar
-          curl -fL "${MAVEN}/${LOG4J}/log4j-api/2.23.1/log4j-api-2.23.1.jar"            -o log4j-api.jar
-          curl -fL "${MAVEN}/${LOG4J}/log4j-core/2.23.1/log4j-core-2.23.1.jar"          -o log4j-core.jar
-          curl -fL "${MAVEN}/${LOG4J}/log4j-slf4j2-impl/2.23.1/log4j-slf4j2-impl-2.23.1.jar" -o log4j-slf4j.jar
-          curl -fL "${MAVEN}/org/slf4j/slf4j-api/2.0.13/slf4j-api-2.0.13.jar"           -o slf4j-api.jar
+          # Scarica ProGuard + dipendenze
+          curl -fL "${MAVEN}/com/guardsquare/proguard-base/7.5.0/proguard-base-7.5.0.jar"              -o pg-base.jar
+          curl -fL "${MAVEN}/com/guardsquare/proguard-core/9.1.6/proguard-core-9.1.6.jar"              -o pg-core.jar
+          curl -fL "${MAVEN}/org/apache/logging/log4j/log4j-api/2.23.1/log4j-api-2.23.1.jar"           -o log4j-api.jar
+          curl -fL "${MAVEN}/org/apache/logging/log4j/log4j-core/2.23.1/log4j-core-2.23.1.jar"         -o log4j-core.jar
+          curl -fL "${MAVEN}/org/apache/logging/log4j/log4j-slf4j2-impl/2.23.1/log4j-slf4j2-impl-2.23.1.jar" -o log4j-slf4j.jar
+          curl -fL "${MAVEN}/org/slf4j/slf4j-api/2.0.13/slf4j-api-2.0.13.jar"                          -o slf4j-api.jar
+
+          # Scrive proguard.pro inline (evita problemi di file non committato)
+          printf '%s\n' \
+            "-injars       target/demo-1.jar" \
+            "-outjars      target/demo-1-obf.jar" \
+            "-libraryjars  <java.home>/jmods" \
+            "-libraryjars  target/lib(!META-INF/versions/*)" \
+            "-keep public class com.example.App { public static void main(java.lang.String[]); }" \
+            "-keep public class com.example.**Controller { *; }" \
+            "-keepclassmembers class com.example.model.** { *; }" \
+            "-keepclassmembers class * { @javafx.fxml.FXML *; }" \
+            "-adaptresourcefilenames" \
+            "-adaptresourcefilecontents **.fxml,**.properties" \
+            "-optimizationpasses 3" \
+            "-allowaccessmodification" \
+            "-repackageclasses ''" \
+            "-keepattributes Exceptions,InnerClasses,Signature,*Annotation*" \
+            "-dontwarn **" \
+            "-dontnote **" \
+            > proguard.pro
+
+          echo "=== proguard.pro ==="
+          cat proguard.pro
 
           CP="pg-base.jar:pg-core.jar:log4j-api.jar:log4j-core.jar:log4j-slf4j.jar:slf4j-api.jar"
 
