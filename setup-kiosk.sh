@@ -194,11 +194,9 @@ Questo messaggio è stato inviato automaticamente da setup-kiosk.sh
 
 echo "\${TIMESTAMP} Invio notifica a ${NOTIFY_EMAIL}..." >> "\$LOG"
 
-echo "\$BODY" | msmtp \
-    --from="${GMAIL_USER}" \
-    -a gmail \
-    "${NOTIFY_EMAIL}" \
-    -S "subject:\${SUBJECT}" 2>> "\$LOG" \
+printf "To: %s\nSubject: %s\n\n%s\n" \
+    "${NOTIFY_EMAIL}" "\${SUBJECT}" "\${BODY}" \
+    | msmtp -a gmail "${NOTIFY_EMAIL}" 2>> "\$LOG" \
     || echo "\${TIMESTAMP} Invio email fallito." >> "\$LOG"
 
 echo "\${TIMESTAMP} Notifica inviata." >> "\$LOG"
@@ -468,22 +466,12 @@ SYSCTL
 send_test_email() {
     title "Test invio email"
     LOCAL_IP=$(ip route get 1 2>/dev/null | grep -oP 'src \K[^ ]+' | head -1 || echo "sconosciuto")
+    SUBJECT="[Totem Kiosk] Setup completato — $(hostname)"
 
-    echo "Setup Totem Kiosk completato su $(hostname).
-
-Accesso SSH:
-  ssh kiosk@${LOCAL_IP}
-  Password: kiosk123
-
-Cambia la password appena possibile:
-  passwd
-
-Log: /var/log/totem-kiosk/
-" | msmtp \
-        --from="${GMAIL_USER}" \
-        -a gmail \
-        "${NOTIFY_EMAIL}" \
-        -S "subject:[Totem Kiosk] Setup completato — $(hostname)" \
+    # msmtp legge gli header direttamente dal corpo del messaggio
+    printf "To: %s\nSubject: %s\n\nSetup Totem Kiosk completato su %s.\n\nAccesso SSH:\n  ssh kiosk@%s\n  Password: kiosk123\n\nCambia la password appena possibile: passwd\n\nLog: /var/log/totem-kiosk/\n" \
+        "${NOTIFY_EMAIL}" "${SUBJECT}" "$(hostname)" "${LOCAL_IP}" \
+        | msmtp -a gmail "${NOTIFY_EMAIL}" \
     && ok "Email di test inviata a ${NOTIFY_EMAIL}." \
     || warn "Invio email fallito. Controlla GMAIL_USER e GMAIL_APP_PASSWORD nello script."
 }
