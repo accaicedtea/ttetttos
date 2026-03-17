@@ -39,6 +39,13 @@ public class WelcomeController implements Navigator.DataReceiver {
         for (Button btn : new Button[]{btnIt, btnEn, btnDe, btnFr, btnAr, startBtn})
             if (btn != null) Animations.touchFeedback(btn);
 
+        // Mostriamo le bandiere accanto al nome della lingua
+        if (btnIt != null)   decorateLangButton(btnIt, "it",   "Italiano");
+        if (btnEn != null)   decorateLangButton(btnEn, "en",   "English");
+        if (btnDe != null)   decorateLangButton(btnDe, "de",   "Deutsch");
+        if (btnFr != null)   decorateLangButton(btnFr, "fr",   "Français");
+        if (btnAr != null)   decorateLangButton(btnAr, "ar",   "العربية");
+
         fadeIn();
         preloadMenu();
     }
@@ -148,6 +155,37 @@ public class WelcomeController implements Navigator.DataReceiver {
         FadeTransition ft = new FadeTransition(Duration.millis(500), welcomeContainer);
         ft.setFromValue(0); ft.setToValue(1);
         ft.play();
+    }
+
+    private void decorateLangButton(Button btn, String lang, String label) {
+        // Bottone con bandiera e testo, in stile "card".
+        btn.setTooltip(new javafx.scene.control.Tooltip(label));
+
+        javafx.scene.control.Label text = new javafx.scene.control.Label(label);
+        text.getStyleClass().add("lang-btn-text");
+        text.setAlignment(javafx.geometry.Pos.CENTER);
+        text.setMaxWidth(140);
+        text.setWrapText(true);
+
+        // Flag in una VBox per il layout verticale
+        javafx.scene.layout.VBox vbox = new javafx.scene.layout.VBox(6);
+        vbox.setAlignment(javafx.geometry.Pos.CENTER);
+        vbox.setPrefWidth(180);
+        vbox.setPrefHeight(180);
+        vbox.setMinSize(140, 140);
+        vbox.setMaxSize(220, 220);
+
+        javafx.scene.Node flag = com.util.FlagIcon.load(lang, 150, 112);
+        vbox.getChildren().addAll(flag, text);
+
+        btn.setText("");
+        btn.setGraphic(vbox);
+        btn.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
+
+        // Dimensioni base: consente al layout di espandere, ma mantiene una grandezza minima
+        btn.setMinSize(120, 120);
+        btn.setPrefSize(140, 140);
+        btn.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
     }
 
     private ScaleTransition scale(javafx.scene.Node n, double from, double to, int ms) {

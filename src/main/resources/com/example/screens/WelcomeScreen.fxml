@@ -31,13 +31,13 @@
 
         <VBox spacing="18" alignment="CENTER">
             <HBox spacing="20" alignment="CENTER">
-                <Button fx:id="btnIt" onAction="#onLangIt" styleClass="lang-btn" text="🇮🇹  Italiano" />
-                <Button fx:id="btnEn" onAction="#onLangEn" styleClass="lang-btn" text="🇬🇧  English" />
-                <Button fx:id="btnDe" onAction="#onLangDe" styleClass="lang-btn" text="🇩🇪  Deutsch" />
+                <Button fx:id="btnIt" onAction="#onLangIt" styleClass="lang-btn" HBox.hgrow="ALWAYS" maxWidth="Infinity" maxHeight="Infinity"/>
+                <Button fx:id="btnEn" onAction="#onLangEn" styleClass="lang-btn" HBox.hgrow="ALWAYS" maxWidth="Infinity" maxHeight="Infinity"/>
+                <Button fx:id="btnDe" onAction="#onLangDe" styleClass="lang-btn" HBox.hgrow="ALWAYS" maxWidth="Infinity" maxHeight="Infinity"/>
             </HBox>
             <HBox spacing="20" alignment="CENTER">
-                <Button fx:id="btnFr" onAction="#onLangFr" styleClass="lang-btn" text="🇫🇷  Français" />
-                <Button fx:id="btnAr" onAction="#onLangAr" styleClass="lang-btn" text="🇸🇦  عربي" />
+                <Button fx:id="btnFr" onAction="#onLangFr" styleClass="lang-btn" HBox.hgrow="ALWAYS" maxWidth="Infinity" maxHeight="Infinity"/>
+                <Button fx:id="btnAr" onAction="#onLangAr" styleClass="lang-btn" HBox.hgrow="ALWAYS" maxWidth="Infinity" maxHeight="Infinity"/>
             </HBox>
         </VBox>
 

@@ -3,6 +3,7 @@ package com.example.controllers;
 import javafx.animation.*;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -12,6 +13,7 @@ import javafx.util.Duration;
 import com.api.services.ViewsService;
 import com.example.model.MenuCache;
 import com.example.components.ProductCard;
+import com.example.model.CartItem;
 import com.example.model.CartManager;
 import com.example.model.I18n;
 import com.google.gson.*;
@@ -29,6 +31,9 @@ public class ShopPageController implements Navigator.DataReceiver, Navigator.Scr
     @FXML private ShopHeaderController headerController;
     @FXML private StackPane rootStack;
     @FXML private Button addToCartBtn;
+    @FXML private Button quickCartBtn;
+
+    private Timeline quickCartPulse;
 
     // ── Prodotti ──────────────────────────────────────────────────────
     @FXML private ScrollPane productsScroll;
@@ -74,6 +79,8 @@ public class ShopPageController implements Navigator.DataReceiver, Navigator.Scr
 
         if (productsScroll   != null) Animations.inertiaScroll(productsScroll);
         if (categoriesScroll != null) Animations.inertiaScroll(categoriesScroll);
+
+        initQuickCartButton();
 
         if (productsScroll != null && productsPane != null) {
             productsScroll.viewportBoundsProperty()
@@ -289,6 +296,53 @@ public class ShopPageController implements Navigator.DataReceiver, Navigator.Scr
         if (e.getTarget() == modalOverlay) hideModal();
     }
 
+    // ── Quick cart shortcut button ──────────────────────────────────────
+
+    private void initQuickCartButton() {
+        if (quickCartBtn == null) return;
+
+        quickCartBtn.setText(I18n.t("cart"));
+        quickCartBtn.setVisible(false);
+        quickCartBtn.setManaged(false);
+
+        // Pulsing animation (slower, more relaxed)
+        quickCartPulse = new Timeline(
+            new KeyFrame(Duration.ZERO,   new KeyValue(quickCartBtn.scaleXProperty(), 1.0), new KeyValue(quickCartBtn.scaleYProperty(), 1.0)),
+            new KeyFrame(Duration.millis(500), new KeyValue(quickCartBtn.scaleXProperty(), 1.12), new KeyValue(quickCartBtn.scaleYProperty(), 1.12)),
+            new KeyFrame(Duration.millis(1000), new KeyValue(quickCartBtn.scaleXProperty(), 1.0),  new KeyValue(quickCartBtn.scaleYProperty(), 1.0))
+        );
+        quickCartPulse.setCycleCount(Animation.INDEFINITE);
+
+        // Update visibility when cart changes
+        CartManager.get().getItems().addListener((javafx.collections.ListChangeListener<CartItem>) c -> updateQuickCartButton());
+
+        updateQuickCartButton();
+
+        // Margin insets for the quick cart button (set in code to avoid FXML coercion issues)
+        if (quickCartBtn != null) {
+            StackPane.setMargin(quickCartBtn, new Insets(16));
+        }
+    }
+
+    private void updateQuickCartButton() {
+        if (quickCartBtn == null) return;
+        boolean hasItems = CartManager.get().totalItems() > 0;
+        quickCartBtn.setVisible(hasItems);
+        quickCartBtn.setManaged(hasItems);
+        if (hasItems) {
+            if (quickCartPulse != null && quickCartPulse.getStatus() != Animation.Status.RUNNING) quickCartPulse.play();
+        } else {
+            if (quickCartPulse != null) quickCartPulse.stop();
+            quickCartBtn.setScaleX(1.0);
+            quickCartBtn.setScaleY(1.0);
+        }
+    }
+
+    @FXML
+    private void onQuickCartClick() {
+        Navigator.goTo(Navigator.Screen.CART);
+    }
+
     // ── Carrello ──────────────────────────────────────────────────────
 
     @FXML
@@ -302,6 +356,7 @@ public class ShopPageController implements Navigator.DataReceiver, Navigator.Scr
             headerController.setCartCount(CartManager.get().totalItems());
             headerController.bounceCart();
         }
+        updateQuickCartButton();
         showToast(I18n.t("added"));
     }
 

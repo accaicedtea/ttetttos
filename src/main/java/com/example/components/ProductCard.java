@@ -14,9 +14,9 @@ import java.util.List;
  * Card prodotto — design leggibile da lontano.
  *
  *  ┌──────────────────────────────┐
- *  │  NOME PRODOTTO               │  22px bold
- *  │  € 12,50                     │  30px bold accent
+ *  │  NOME PRODOTTO               │  31px bold
  *  │  Descrizione breve...        │  15px grigio
+ *  │  € 12,50                     │  30px bold accent
  *  │  ⚠ Glutine  Latte            │  chips arancio
  *  └──────────────────────────────┘
  */
@@ -24,7 +24,7 @@ public class ProductCard extends VBox {
 
     public ProductCard(String name, String price, String description, List<String> allergens) {
         setSpacing(10);
-        setPadding(new Insets(22, 20, 20, 20));
+        setPadding(new Insets(31, 20, 20, 20));
         setAlignment(Pos.TOP_LEFT);
         getStyleClass().add("prod-card");
 
@@ -34,21 +34,23 @@ public class ProductCard extends VBox {
         nameLbl.setWrapText(true);
         nameLbl.setMaxWidth(Double.MAX_VALUE);
 
-        // Prezzo — grande e subito visibile
-        Label priceLbl = new Label(price == null || price.isBlank() ? "" : price);
-        priceLbl.getStyleClass().add("prod-price");
-
+        
         // Descrizione
         Label descLbl = new Label(description == null ? "" : description);
         descLbl.getStyleClass().add("prod-desc");
         descLbl.setWrapText(true);
         descLbl.setMaxHeight(60); // max ~3 righe
+        
+        // Prezzo — grande e subito visibile
+        Label priceLbl = new Label(price == null || price.isBlank() ? "" : price);
+        priceLbl.getStyleClass().add("prod-price");
 
         // Spacer per spingere allergeni in fondo
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
 
-        getChildren().addAll(nameLbl, priceLbl, descLbl, spacer);
+        // aggiungi in questo ordine: nome, descrizione, prezzo, spacer, allergeni
+        getChildren().addAll(nameLbl, descLbl, priceLbl, spacer);
 
         // Feedback visivo built-in: scale su press, NON usa touchFeedback()
         // così il click propagarsi sempre senza interferenze

@@ -14,9 +14,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ── 2. Java 17 ───────────────────────────────────────────────────────────
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
@@ -24,23 +26,44 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build JAR e dipendenze
+      # ── 3. Build (JAR offuscato + lib/) ──────────────────────────────────────
+      - name: Build
         run: mvn clean package -B -DskipTests
 
-      - name: Crea lib.tar.gz
+      # ── 4. Verifica artifact ─────────────────────────────────────────────────
+      - name: Verifica artifact
         run: |
-          cd target
-          tar -czf lib.tar.gz lib/
-          ls -lh demo-1.jar lib.tar.gz
+          echo "── Artifact generati ──"
+          ls -lh target/demo-1.jar target/lib.tar.gz
+          echo "── Dimensione JAR (offuscato) ──"
+          du -sh target/demo-1.jar
 
-      - name: Release su GitHub
+      # ── 5. Pubblica Release su GitHub ────────────────────────────────────────
+      - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
+          name: "Release ${{ github.ref_name }}"
+          body: |
+            ## Totem Kiosk ${{ github.ref_name }}
+
+            ### Installazione
+            Scarica `deploy.sh` dalla repo ed eseguilo:
+            ```bash
+            chmod +x deploy.sh
+            ./deploy.sh
+            ```
+            Lo script scarica automaticamente JAR, librerie e JavaFX.
+
+            ### File inclusi
+            | File | Descrizione |
+            |------|-------------|
+            | `demo-1.jar` | Applicazione (offuscata) |
+            | `lib.tar.gz` | Dipendenze runtime |
           files: |
             target/demo-1.jar
             target/lib.tar.gz
-          fail_on_unmatched_files: false
-          generate_release_notes: true
+          fail_on_unmatched_files: true
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

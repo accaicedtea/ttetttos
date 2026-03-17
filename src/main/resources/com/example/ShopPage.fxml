@@ -122,4 +122,14 @@
         <Label fx:id="toastLabel" text="Aggiunto!" styleClass="toast-text" />
     </HBox>
 
+    <!-- Pulsing quick cart shortcut (mostra solo quando ci sono prodotti) -->
+    <Button fx:id="quickCartBtn" text="" styleClass="quick-cart-btn"
+            visible="false" managed="false"
+            onAction="#onQuickCartClick"
+            StackPane.alignment="BOTTOM_RIGHT">
+        <graphic>
+            <FontIcon iconLiteral="mdi2c-cart" iconSize="20" styleClass="quick-cart-icon" />
+        </graphic>
+    </Button>
+
 </StackPane>

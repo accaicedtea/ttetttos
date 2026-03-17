@@ -92,10 +92,10 @@ public class ShopHeaderController {
         if (cartBtn == null) return;
         Timeline bounce = new Timeline(
             new KeyFrame(Duration.millis(0),   new KeyValue(cartBtn.scaleXProperty(), 1.0), new KeyValue(cartBtn.scaleYProperty(), 1.0)),
-            new KeyFrame(Duration.millis(120), new KeyValue(cartBtn.scaleXProperty(), 1.35), new KeyValue(cartBtn.scaleYProperty(), 1.35)),
-            new KeyFrame(Duration.millis(210), new KeyValue(cartBtn.scaleXProperty(), 0.88), new KeyValue(cartBtn.scaleYProperty(), 0.88)),
-            new KeyFrame(Duration.millis(290), new KeyValue(cartBtn.scaleXProperty(), 1.10), new KeyValue(cartBtn.scaleYProperty(), 1.10)),
-            new KeyFrame(Duration.millis(360), new KeyValue(cartBtn.scaleXProperty(), 1.0),  new KeyValue(cartBtn.scaleYProperty(), 1.0))
+            new KeyFrame(Duration.millis(60),  new KeyValue(cartBtn.scaleXProperty(), 1.35), new KeyValue(cartBtn.scaleYProperty(), 1.35)),
+            new KeyFrame(Duration.millis(120), new KeyValue(cartBtn.scaleXProperty(), 0.88), new KeyValue(cartBtn.scaleYProperty(), 0.88)),
+            new KeyFrame(Duration.millis(160), new KeyValue(cartBtn.scaleXProperty(), 1.10), new KeyValue(cartBtn.scaleYProperty(), 1.10)),
+            new KeyFrame(Duration.millis(200), new KeyValue(cartBtn.scaleXProperty(), 1.0),  new KeyValue(cartBtn.scaleYProperty(), 1.0))
         );
         bounce.play();
     }

@@ -19,8 +19,7 @@
     <maven.compiler.target>17</maven.compiler.target>
     <javafx.version>21</javafx.version>
     <ikonli.version>12.3.1</ikonli.version>
-    <!-- Classifer automatico per il sistema corrente -->
-    <javafx.platform>${os.name}-${os.arch}</javafx.platform>
+    <proguard.version>7.5.0</proguard.version>
   </properties>
 
   <dependencies>
@@ -36,7 +35,6 @@
       <artifactId>javafx-fxml</artifactId>
       <version>${javafx.version}</version>
     </dependency>
-    <!-- javafx-graphics con nativi Linux per Cage/Wayland -->
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-graphics</artifactId>
@@ -72,7 +70,7 @@
   <build>
     <plugins>
 
-      <!-- Compilatore Java 17 -->
+      <!-- ── 1. Compilatore Java 17 ────────────────────────────────── -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -83,7 +81,7 @@
         </configuration>
       </plugin>
 
-      <!-- Runner JavaFX (sviluppo locale) -->
+      <!-- ── 2. Runner JavaFX (sviluppo locale) ───────────────────── -->
       <plugin>
         <groupId>org.openjfx</groupId>
         <artifactId>javafx-maven-plugin</artifactId>
@@ -98,54 +96,7 @@
         </executions>
       </plugin>
 
-      <!--
-        Fat JAR con tutte le dipendenze incluse (per distribuzione).
-        Uso: mvn package -Pfat
-        Output: target/totem-fat.jar
-        Deployment: java -jar totem-fat.jar
-      -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.5.2</version>
-        <executions>
-          <execution>
-            <id>fat-jar</id>
-            <phase>package</phase>
-            <goals><goal>shade</goal></goals>
-            <configuration>
-              <finalName>totem-fat</finalName>
-              <createDependencyReducedPom>false</createDependencyReducedPom>
-              <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>com.example.App</mainClass>
-                </transformer>
-                <!-- Unisce i file ServiceLoader (Ikonli li usa) -->
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-              </transformers>
-              <filters>
-                <filter>
-                  <artifact>*:*</artifact>
-                  <excludes>
-                    <exclude>META-INF/*.SF</exclude>
-                    <exclude>META-INF/*.DSA</exclude>
-                    <exclude>META-INF/*.RSA</exclude>
-                  </excludes>
-                </filter>
-              </filters>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!--
-        Assembly: produce demo-1.jar + lib/ separati (per setup-kiosk.sh).
-        Uso: mvn package
-        Output:
-          target/demo-1.jar          (app senza dipendenze)
-          target/lib/*.jar           (tutte le dipendenze)
-          target/lib.tar.gz          (archivio lib/ per setup-kiosk.sh)
-      -->
+      <!-- ── 3. Copia dipendenze in target/lib/ ───────────────────── -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
@@ -163,32 +114,7 @@
         </executions>
       </plugin>
 
-      <!-- Crea lib.tar.gz dopo il package (per il deploy via setup-kiosk.sh) -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>3.1.0</version>
-        <executions>
-          <execution>
-            <id>create-lib-archive</id>
-            <phase>package</phase>
-            <goals><goal>run</goal></goals>
-            <configuration>
-              <target>
-                <tar destfile="${project.build.directory}/lib.tar.gz"
-                     basedir="${project.build.directory}/lib"
-                     compression="gzip" longfile="gnu" />
-                                <echo message="=== Deploy artifacts ===" />
-                <echo message="JAR:     target/demo-1.jar" />
-                <echo message="Libs:    target/lib.tar.gz" />
-                <echo message="Fat JAR: target/totem-fat.jar" />
-              </target>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!-- Jar manifest -->
+      <!-- ── 4. JAR manifest ──────────────────────────────────────── -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
@@ -207,6 +133,89 @@
           </archive>
           <finalName>demo-1</finalName>
         </configuration>
+      </plugin>
+
+      <!-- ── 5. ProGuard — offuscamento codice sorgente ───────────── -->
+      <!--
+        Rinomina classi, metodi e campi con nomi senza senso (a, b, c…).
+        Il JAR rilasciato NON è decompilabile in modo leggibile.
+        Viene eseguito DOPO il package, produce: target/demo-1.jar (sostituisce)
+      -->
+      <plugin>
+        <groupId>com.github.wvengen</groupId>
+        <artifactId>proguard-maven-plugin</artifactId>
+        <version>2.6.1</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals><goal>proguard</goal></goals>
+          </execution>
+        </executions>
+        <configuration>
+          <!-- JAR di input (prodotto dallo step precedente) -->
+          <injar>${project.build.finalName}.jar</injar>
+          <!-- JAR di output (sovrascrive l'originale) -->
+          <outjar>${project.build.finalName}.jar</outjar>
+          <!-- Dipendenze da includere nell'analisi ma non nel JAR finale -->
+          <libs>
+            <lib>${java.home}/jmods</lib>
+          </libs>
+          <options>
+            <!-- ── Mantieni entry point e risorse FXML/CSS ── -->
+            <option>-keep public class com.example.App { public static void main(java.lang.String[]); }</option>
+            <!-- Mantieni i controller referenziati dagli FXML -->
+            <option>-keep public class com.example.**Controller { *; }</option>
+            <!-- Mantieni modelli usati da Gson (serializzazione JSON) -->
+            <option>-keepclassmembers class com.example.model.** { *; }</option>
+            <!-- Mantieni annotazioni JavaFX FXML -->
+            <option>-keepclassmembers class * { @javafx.fxml.FXML *; }</option>
+            <!-- Mantieni nomi delle risorse (file .fxml, .css, immagini) -->
+            <option>-adaptresourcefilenames</option>
+            <option>-adaptresourcefilecontents **.fxml,**.properties</option>
+            <!-- Offuscamento aggressivo -->
+            <option>-optimizationpasses 3</option>
+            <option>-allowaccessmodification</option>
+            <option>-repackageclasses ''</option>
+            <!-- Non rimuovere attributi necessari a JavaFX runtime -->
+            <option>-keepattributes Exceptions,InnerClasses,Signature,*Annotation*</option>
+            <!-- Sopprimi avvisi per le lib esterne (javafx, ikonli) -->
+            <option>-dontwarn javafx.**</option>
+            <option>-dontwarn org.kordamp.**</option>
+            <option>-dontwarn com.google.gson.**</option>
+            <option>-dontnote</option>
+          </options>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>com.guardsquare</groupId>
+            <artifactId>proguard-base</artifactId>
+            <version>${proguard.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+
+      <!-- ── 6. Crea lib.tar.gz dopo il package ───────────────────── -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>create-lib-archive</id>
+            <phase>package</phase>
+            <goals><goal>run</goal></goals>
+            <configuration>
+              <target>
+                <tar destfile="${project.build.directory}/lib.tar.gz"
+                     basedir="${project.build.directory}/lib"
+                     compression="gzip" longfile="gnu"/>
+                <echo message="=== Artifacts pronti per il deploy ===" />
+                <echo message="JAR (offuscato): target/demo-1.jar" />
+                <echo message="Libs:            target/lib.tar.gz" />
+              </target>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
 
     </plugins>

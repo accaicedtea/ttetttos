@@ -39,6 +39,14 @@ public class ConfirmController implements Navigator.DataReceiver {
 
         CartManager.get().clear();
 
+        // Prepariamo il timer in modo che parta sempre da un valore corretto
+        // (evitiamo decrementi doppi/veloci in caso di più istanze o timer ancora attivi).
+        countdownLabel.setText(AUTO_RETURN + "s");
+        if (countdown != null) {
+            countdown.stop();
+            countdown = null;
+        }
+
         // Nascondi tutto prima delle animazioni
         contentBox.setOpacity(0);
         checkCircle.setScaleX(0); checkCircle.setScaleY(0);
@@ -156,7 +164,14 @@ public class ConfirmController implements Navigator.DataReceiver {
     }
 
     private void startCountdown() {
+        // Sicurezza: ferma eventuale timer precedente
+        if (countdown != null) {
+            countdown.stop();
+        }
+
         final int[] secs = {AUTO_RETURN};
+        countdownLabel.setText(secs[0] + "s");
+
         countdown = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
             secs[0]--;
             if (secs[0] > 0) {
@@ -170,8 +185,7 @@ public class ConfirmController implements Navigator.DataReceiver {
                 Navigator.goTo(Navigator.Screen.WELCOME);
             }
         }));
-        countdown.setCycleCount(AUTO_RETURN);
-        countdown.setDelay(Duration.seconds(1));
+        countdown.setCycleCount(Animation.INDEFINITE);
         countdown.play();
     }
 
