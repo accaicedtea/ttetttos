@@ -29,22 +29,22 @@ jobs:
 
       - name: Offusca JAR (ProGuard)
         run: |
-          PG_VER="7.5.0"
+          MAVEN="https://repo1.maven.org/maven2"
+          PG="com/guardsquare"
+          LOG4J="org/apache/logging/log4j"
 
-          # proguard-base = libreria (no main)
-          # proguard-core = dipendenza
-          # Scarica entrambi e li mettiamo nel classpath
-          BASE_URL="https://repo1.maven.org/maven2/com/guardsquare"
+          # Scarica ProGuard + tutte le sue dipendenze
+          curl -fL "${MAVEN}/${PG}/proguard-base/7.5.0/proguard-base-7.5.0.jar"         -o pg-base.jar
+          curl -fL "${MAVEN}/${PG}/proguard-core/9.1.6/proguard-core-9.1.6.jar"         -o pg-core.jar
+          curl -fL "${MAVEN}/${LOG4J}/log4j-api/2.23.1/log4j-api-2.23.1.jar"            -o log4j-api.jar
+          curl -fL "${MAVEN}/${LOG4J}/log4j-core/2.23.1/log4j-core-2.23.1.jar"          -o log4j-core.jar
+          curl -fL "${MAVEN}/${LOG4J}/log4j-slf4j2-impl/2.23.1/log4j-slf4j2-impl-2.23.1.jar" -o log4j-slf4j.jar
+          curl -fL "${MAVEN}/org/slf4j/slf4j-api/2.0.13/slf4j-api-2.0.13.jar"           -o slf4j-api.jar
 
-          curl -fL "${BASE_URL}/proguard-base/${PG_VER}/proguard-base-${PG_VER}.jar" \
-               -o proguard-base.jar
-          curl -fL "${BASE_URL}/proguard-core/9.1.6/proguard-core-9.1.6.jar" \
-               -o proguard-core.jar
+          CP="pg-base.jar:pg-core.jar:log4j-api.jar:log4j-core.jar:log4j-slf4j.jar:slf4j-api.jar"
 
           echo "Eseguo ProGuard..."
-          java -cp "proguard-base.jar:proguard-core.jar" \
-               proguard.ProGuard \
-               @proguard.pro
+          java -cp "$CP" proguard.ProGuard @proguard.pro
 
           mv target/demo-1-obf.jar target/demo-1.jar
           echo "Offuscamento completato."

@@ -15,50 +15,45 @@
   <VBox fx:id="welcomeContainer" alignment="CENTER" spacing="0"
         styleClass="welcome-container">
 
-    <!-- Logo + titoli -->
+    <!-- Logo -->
     <FontIcon iconLiteral="mdi2f-food-fork-drink" iconSize="100"
               styleClass="welcome-logo-icon" />
 
     <Label fx:id="titleLabel"    text="Benvenuto"          styleClass="welcome-title" />
     <Label fx:id="subtitleLabel" text="Tocca per iniziare" styleClass="welcome-subtitle" />
 
-    <Region prefHeight="40" />
+    <Region prefHeight="36" />
 
     <Label fx:id="chooseLangLabel" text="Scegli la tua lingua"
            styleClass="welcome-choose-lang" />
 
-    <Region prefHeight="28" />
+    <Region prefHeight="24" />
 
     <!-- Riga 1: IT · EN · DE -->
-    <HBox spacing="28" alignment="CENTER">
-      <Button fx:id="btnIt" onAction="#onLangIt" styleClass="lang-btn"
-              minWidth="240" minHeight="220" maxWidth="300" maxHeight="260" />
-      <Button fx:id="btnEn" onAction="#onLangEn" styleClass="lang-btn"
-              minWidth="240" minHeight="220" maxWidth="300" maxHeight="260" />
-      <Button fx:id="btnDe" onAction="#onLangDe" styleClass="lang-btn"
-              minWidth="240" minHeight="220" maxWidth="300" maxHeight="260" />
+    <HBox spacing="24" alignment="CENTER">
+      <Button fx:id="btnIt" onAction="#onLangIt" styleClass="lang-btn" />
+      <Button fx:id="btnEn" onAction="#onLangEn" styleClass="lang-btn" />
+      <Button fx:id="btnDe" onAction="#onLangDe" styleClass="lang-btn" />
     </HBox>
 
     <Region prefHeight="20" />
 
-    <!-- Riga 2: FR · AR (centrate, stessa larghezza) -->
-    <HBox spacing="28" alignment="CENTER">
-      <Button fx:id="btnFr" onAction="#onLangFr" styleClass="lang-btn"
-              minWidth="240" minHeight="220" maxWidth="300" maxHeight="260" />
-      <Button fx:id="btnAr" onAction="#onLangAr" styleClass="lang-btn"
-              minWidth="240" minHeight="220" maxWidth="300" maxHeight="260" />
+    <!-- Riga 2: FR · AR (centrate) -->
+    <HBox spacing="24" alignment="CENTER">
+      <Button fx:id="btnFr" onAction="#onLangFr" styleClass="lang-btn" />
+      <Button fx:id="btnAr" onAction="#onLangAr" styleClass="lang-btn" />
     </HBox>
 
-    <Region prefHeight="52" />
+    <Region prefHeight="48" />
 
-    <!-- Pulsante start (appare dopo selezione lingua) -->
+    <!-- Pulsante start -->
     <Button fx:id="startBtn" onAction="#onStart"
             styleClass="start-btn"
-            text="Inizia l'ordine"
-            minWidth="420" minHeight="86"
+            text="Inizia l'ordine  →"
+            minWidth="400" minHeight="80"
             visible="false" managed="false">
       <graphic>
-        <FontIcon iconLiteral="mdi2a-arrow-right-circle" iconSize="34"
+        <FontIcon iconLiteral="mdi2a-arrow-right-circle" iconSize="32"
                   styleClass="start-btn-icon" />
       </graphic>
     </Button>
