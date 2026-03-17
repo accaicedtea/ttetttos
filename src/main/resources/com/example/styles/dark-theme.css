@@ -767,3 +767,21 @@
 
 /* Cart allergen icon */
 .cart-allergen-icon { -fx-icon-color: -color-orange; }
+
+/* Confirm modal */
+.confirm-root {
+    -fx-background-color: rgba(0,0,0,0.55);
+}
+.confirm-container {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 24;
+    -fx-padding: 28;
+    -fx-alignment: center;
+    -fx-min-width: 340;
+}
+.confirm-title { -fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: -color-text; }
+.confirm-msg { -fx-font-size: 16px; -fx-text-fill: -color-muted; }
+.confirm-btn-primary { -fx-background-color: -color-accent; -fx-text-fill: white; }
+.confirm-btn-secondary { -fx-background-color: rgba(255,255,255,0.15); -fx-text-fill: -color-text; }
+.confirm-btn-primary:hover { -fx-background-color: rgba(91,156,245,0.9); }
+.confirm-btn-secondary:hover { -fx-background-color: rgba(255,255,255,0.25); }

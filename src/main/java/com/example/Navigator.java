@@ -1,3 +1,4 @@
+
 package com.example;
 
 import javafx.animation.*;
@@ -15,78 +16,98 @@ import java.util.Map;
  * Gestisce la navigazione tra le schermate del totem.
  *
  * CACHE: MENU e WELCOME vengono tenuti in memoria dopo il primo caricamento.
- *        Tornare al menu non ricrea l'FXML — è istantaneo.
- *        CART, PAYMENT, CONFIRM vengono ricreati ogni volta (dati freschi).
+ * Tornare al menu non ricrea l'FXML — è istantaneo.
+ * CART, PAYMENT, CONFIRM vengono ricreati ogni volta (dati freschi).
  *
  * ANIMAZIONE: slide orizzontale con fade, direzione automatica
- *             (avanti/indietro in base all'ordine delle schermate).
+ * (avanti/indietro in base all'ordine delle schermate).
  */
 public class Navigator {
 
-    public enum Screen { SPLASH, WELCOME, MENU, CART, PAYMENT, CONFIRM }
+    public enum Screen {
+        SPLASH, WELCOME, MENU, CART, PAYMENT, CONFIRM
+    }
 
     // Schermate che vengono tenute in cache (riutilizzate senza ricaricare)
     private static final java.util.Set<Screen> CACHED_SCREENS = java.util.Set.of(
-            Screen.WELCOME, Screen.MENU
-    );
+            Screen.WELCOME, Screen.MENU);
 
     private static final Screen[] ORDER = {
-        Screen.SPLASH, Screen.WELCOME, Screen.MENU,
-        Screen.CART, Screen.PAYMENT, Screen.CONFIRM
+            Screen.SPLASH, Screen.WELCOME, Screen.MENU,
+            Screen.CART, Screen.PAYMENT, Screen.CONFIRM
     };
 
     private static StackPane root;
-    private static Screen    currentScreen = null;
+    private static Screen currentScreen = null;
 
     // Cache nodi già costruiti
-    private static final Map<Screen, Node>   nodeCache       = new HashMap<>();
+    private static final Map<Screen, Node> nodeCache = new HashMap<>();
     private static final Map<Screen, Object> controllerCache = new HashMap<>();
 
     public static void init(StackPane rootPane) {
-        root          = rootPane;
+        root = rootPane;
         currentScreen = null;
         nodeCache.clear();
         controllerCache.clear();
     }
 
-    public static void goTo(Screen screen) { goTo(screen, null); }
+    /**
+     * Riapplca il tema corrente a tutte le schermate in cache.
+     * Utile quando si cambia tema senza ricaricare le schermate.
+     */
+    public static void refreshTheme() {
+        nodeCache.values().forEach(n -> {
+            if (n instanceof Parent p) ThemeManager.applyTo(p);
+        });
+    }
+
+    public static void goTo(Screen screen) {
+        currentScreen = screen;
+        // ...existing code...
+        goTo(screen, null);
+    }
 
     public static void goTo(Screen screen, Object data) {
+        currentScreen = screen;
         if (!Platform.isFxApplicationThread()) {
             Platform.runLater(() -> goTo(screen, data));
             return;
         }
 
         try {
-            Node    newNode;
-            Object  controller;
+            Node newNode;
+            Object controller;
             boolean fromCache = false;
 
             if (CACHED_SCREENS.contains(screen) && nodeCache.containsKey(screen)) {
                 // ── Schermata in cache: riuso senza ricaricare ────────────
-                newNode    = nodeCache.get(screen);
+                newNode = nodeCache.get(screen);
                 controller = controllerCache.get(screen);
-                fromCache  = true;
+                fromCache = true;
                 System.out.println("[Nav] → " + screen + " (da cache)");
             } else {
                 // ── Prima visita: carica l'FXML ───────────────────────────
                 String fxml = switch (screen) {
-                    case SPLASH  -> "/com/example/screens/SplashScreen.fxml";
+                    case SPLASH -> "/com/example/screens/SplashScreen.fxml";
                     case WELCOME -> "/com/example/screens/WelcomeScreen.fxml";
-                    case MENU    -> "/com/example/ShopPage.fxml";
-                    case CART    -> "/com/example/screens/CartScreen.fxml";
+                    case MENU -> "/com/example/ShopPage.fxml";
+                    case CART -> "/com/example/screens/CartScreen.fxml";
                     case PAYMENT -> "/com/example/screens/PaymentScreen.fxml";
                     case CONFIRM -> "/com/example/screens/ConfirmScreen.fxml";
                 };
 
                 var url = Navigator.class.getResource(fxml);
-                if (url == null) { System.err.println("[Nav] FXML non trovato: " + fxml); return; }
+                if (url == null) {
+                    System.err.println("[Nav] FXML non trovato: " + fxml);
+                    return;
+                }
 
                 FXMLLoader loader = new FXMLLoader(url);
-                newNode    = loader.load();
+                newNode = loader.load();
                 controller = loader.getController();
 
-                if (newNode instanceof Parent p) ThemeManager.applyTo(p);
+                if (newNode instanceof Parent p)
+                    ThemeManager.applyTo(p);
 
                 // Metti in cache se è una schermata cacheable
                 if (CACHED_SCREENS.contains(screen)) {
@@ -146,28 +167,35 @@ public class Navigator {
     // ── Animazione ────────────────────────────────────────────────────────────
 
     private static boolean isForward(Screen next) {
-        if (currentScreen == null) return true;
+        if (currentScreen == null)
+            return true;
         int cur = indexOf(currentScreen);
         int nxt = indexOf(next);
         return nxt >= cur;
     }
 
     private static int indexOf(Screen s) {
-        for (int i = 0; i < ORDER.length; i++) if (ORDER[i] == s) return i;
+        for (int i = 0; i < ORDER.length; i++)
+            if (ORDER[i] == s)
+                return i;
         return 0;
     }
 
     private static void doTransition(Node incoming, boolean forward) {
+
         // Rimuovi schermate extra
-        while (root.getChildren().size() > 1) root.getChildren().remove(0);
+        while (root.getChildren().size() > 1)
+            root.getChildren().remove(0);
 
         Node outgoing = root.getChildren().isEmpty() ? null
-                        : root.getChildren().get(0);
+                : root.getChildren().get(0);
 
+        root.getChildren().remove(incoming); // Evita duplicati
         root.getChildren().add(incoming);
 
         double w = root.getScene() != null ? root.getScene().getWidth() : 1080;
-        if (w <= 0) w = 1080;
+        if (w <= 0)
+            w = 1080;
         final double W = w;
 
         incoming.setTranslateX(forward ? W : -W);
@@ -199,5 +227,9 @@ public class Navigator {
         }
 
         inT.play();
+    }
+
+    public static Screen getCurrentScreen() {
+        return currentScreen;
     }
 }

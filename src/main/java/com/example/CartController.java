@@ -7,6 +7,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.*;
 
+import com.example.App;
+import com.util.InfoModal;
 import com.example.model.CartItem;
 import com.example.model.CartManager;
 import com.example.model.I18n;
@@ -110,8 +112,8 @@ public class CartController {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        // Quantità +/-
-        Button minus = new Button("−");
+        // Quantità +/− (cambia l'icona a cestino quando si arriva a 1)
+        Button minus = new Button();
         Label  qty   = new Label(String.valueOf(item.getQty()));
         Button plus  = new Button("+");
         minus.getStyleClass().add("qty-btn");
@@ -120,27 +122,40 @@ public class CartController {
         Animations.touchFeedback(minus);
         Animations.touchFeedback(plus);
 
+        // Aggiorna l'icona del pulsante meno in base alla quantità
+        Runnable updateMinusIcon = () -> minus.setText(item.getQty() <= 1 ? "🗑" : "−");
+        updateMinusIcon.run();
+
         minus.setOnAction(e -> {
             if (item.getQty() > 1) {
                 item.setQty(item.getQty() - 1);
-                qty.setText(String.valueOf(item.getQty()));
-            } else {
-                CartManager.get().removeItem(item);
-                buildCartList();
+                updateTotals();
                 return;
             }
-            updateTotals();
+
+            // Conferma rimozione se l'ultima unità viene eliminata
+            ConfirmModal.show(App.rootPane,
+                I18n.t("remove_item"),
+                I18n.t("remove_item_confirm"),
+                () -> {
+                    CartManager.get().removeItem(item);
+                    buildCartList();
+                }
+            );
         });
 
         plus.setOnAction(e -> {
             item.setQty(item.getQty() + 1);
-            qty.setText(String.valueOf(item.getQty()));
             updateTotals();
         });
 
         Label rowTotal = new Label(item.totalFormatted());
         rowTotal.getStyleClass().add("cart-item-total");
-        item.qtyProperty().addListener((obs, o, n) -> rowTotal.setText(item.totalFormatted()));
+        item.qtyProperty().addListener((obs, o, n) -> {
+            qty.setText(String.valueOf(n));
+            rowTotal.setText(item.totalFormatted());
+            updateMinusIcon.run();
+        });
 
         HBox row = new HBox(14, info, spacer, minus, qty, plus, rowTotal);
         row.getStyleClass().add("cart-row");

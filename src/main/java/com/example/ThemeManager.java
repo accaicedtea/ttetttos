@@ -25,8 +25,15 @@ public class ThemeManager {
 
     public static void set(Theme theme) {
         current = theme;
-        if (Platform.isFxApplicationThread()) apply(theme);
-        else Platform.runLater(() -> apply(theme));
+        if (Platform.isFxApplicationThread()) {
+            apply(theme);
+            Navigator.refreshTheme();
+        } else {
+            Platform.runLater(() -> {
+                apply(theme);
+                Navigator.refreshTheme();
+            });
+        }
     }
 
     public static Theme   getCurrent()    { return current; }

@@ -17,6 +17,8 @@ import javafx.stage.StageStyle;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import com.util.AppController;
+
 /**
  * Entrypoint dell'app.
  *
@@ -30,7 +32,9 @@ public class App extends Application {
 
     public static StackPane rootPane;
 
-    public static void main(String[] args) { launch(args); }
+    public static void main(String[] args) {
+        launch(args);
+    }
 
     @Override
     public void start(Stage stage) throws Exception {
@@ -41,6 +45,13 @@ public class App extends Application {
         ThemeManager.init(scene);
         Navigator.init(rootPane);
 
+        // Timeout inattività: torna a Welcome solo se non sei già in Welcome
+        AppController.getInstance().attachToScene(scene, () -> {
+            if (Navigator.getCurrentScreen() != null && !Navigator.getCurrentScreen().equals(Navigator.Screen.WELCOME)) {
+                Navigator.goTo(Navigator.Screen.WELCOME);
+            }
+        });
+        
         // Prima schermata: SPLASH (gestisce tutto il setup)
         Navigator.goTo(Navigator.Screen.SPLASH);
 
@@ -60,7 +71,10 @@ public class App extends Application {
         scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.H
                     && event.isControlDown() && event.isAltDown()) {
-                try { Files.createFile(STOP_FLAG); } catch (Exception ignored) {}
+                try {
+                    Files.createFile(STOP_FLAG);
+                } catch (Exception ignored) {
+                }
                 Platform.exit();
                 return;
             }
@@ -69,7 +83,8 @@ public class App extends Application {
                 ThemeManager.toggle();
                 return;
             }
-            if (event.getCode() == KeyCode.ESCAPE) event.consume();
+            if (event.getCode() == KeyCode.ESCAPE)
+                event.consume();
         });
 
         Platform.setImplicitExit(false);

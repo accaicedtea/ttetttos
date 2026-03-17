@@ -11,7 +11,6 @@ import javafx.util.Duration;
 
 import com.api.services.ViewsService;
 import com.example.NetworkWatchdog;
-import org.kordamp.ikonli.javafx.FontIcon;
 import com.example.RemoteLogger;
 import com.example.model.MenuCache;
 import com.example.components.ProductCard;
@@ -20,28 +19,21 @@ import com.example.model.I18n;
 import com.google.gson.*;
 import com.util.Animations;
 
-import java.time.*;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class ShopPageController implements Navigator.DataReceiver, Navigator.ScreenReturnable {
 
-    // ── Status ────────────────────────────────────────────────────────
-    @FXML private Label    dateLabel, clockLabel, internetLabel;
-    @FXML private FontIcon internetIcon;
-    @FXML private FontIcon themeIcon;
-
-    // ── Header ────────────────────────────────────────────────────────
-    @FXML private Label  categoryTitleLabel;
-    @FXML private Button themeBtn, cartBtn, addToCartBtn;
-    @FXML private Label  cartBadge;
+    // ── Header (componente riutilizzabile) ──────────────────────────────
+    @FXML private VBox header;
+    @FXML private ShopHeaderController headerController;
     @FXML private StackPane rootStack;
+    @FXML private Button addToCartBtn;
 
     // ── Prodotti ──────────────────────────────────────────────────────
     @FXML private ScrollPane productsScroll;
     @FXML private FlowPane   productsPane;
 
-    // ── Categorie ─────────────────────────────────────────────────────
+      // ── Categorie ─────────────────────────────────────────────────────
     @FXML private ScrollPane categoriesScroll;
     @FXML private VBox       categoriesPane;
 
@@ -64,8 +56,6 @@ public class ShopPageController implements Navigator.DataReceiver, Navigator.Scr
     private String       currentModalSku;
     private java.util.List<String> currentModalAllergens;
 
-    private final DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private final DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm:ss");
     private Label   activeCategory = null;
     private boolean syncStarted     = false; // evita sync multipli
 
@@ -75,16 +65,11 @@ public class ShopPageController implements Navigator.DataReceiver, Navigator.Scr
     // ─────────────────────────────────────────────────────────────────
     @FXML
     private void initialize() {
-        refreshThemeButton();
-        if (internetLabel != null) internetLabel.setText("Offline");
-        if (internetIcon  != null) internetIcon.getStyleClass().add("status-icon-offline");
-
-        // Orologio
-        Timeline clock = new Timeline(
-            new KeyFrame(Duration.ZERO, e -> updateDateTime()),
-            new KeyFrame(Duration.seconds(1)));
-        clock.setCycleCount(Timeline.INDEFINITE);
-        clock.play();
+        if (headerController != null) {
+            headerController.setOnline(false);
+            headerController.setCartCount(CartManager.get().totalItems());
+            headerController.setMenuTitle("Il Nostro Menu");
+        }
 
         if (productsScroll   != null) Animations.inertiaScroll(productsScroll);
         if (categoriesScroll != null) Animations.inertiaScroll(categoriesScroll);
@@ -94,8 +79,6 @@ public class ShopPageController implements Navigator.DataReceiver, Navigator.Scr
                 .addListener((obs, o, n) -> resizeCards(n.getWidth()));
         }
 
-        if (cartBtn != null) Animations.touchFeedback(cartBtn);
-        updateCartBadge();
         showInfo("Caricamento menu...");
 
         // Ascolta i cambi di stato rete dal watchdog
@@ -150,12 +133,6 @@ public class ShopPageController implements Navigator.DataReceiver, Navigator.Scr
         }, "load-menu").start();
     }
 
-    private void updateDateTime() {
-        LocalDateTime now = LocalDateTime.now();
-        if (dateLabel  != null) dateLabel.setText(now.format(dateFmt));
-        if (clockLabel != null) clockLabel.setText(now.format(timeFmt));
-    }
-
     // ── Menu ──────────────────────────────────────────────────────────
 
     private JsonArray extractCategories(JsonObject r) {
@@ -199,7 +176,7 @@ public class ShopPageController implements Navigator.DataReceiver, Navigator.Scr
         if (activeCategory != null) activeCategory.getStyleClass().remove("category-tab-active");
         activeCategory = tab;
         tab.getStyleClass().add("category-tab-active");
-        if (categoryTitleLabel != null) categoryTitleLabel.setText(name);
+        if (headerController != null) headerController.setCategory(name);
         showProducts(prodotti);
     }
 
@@ -320,68 +297,11 @@ public class ShopPageController implements Navigator.DataReceiver, Navigator.Scr
                 currentModalPrice, currentModalPriceVal,
                 currentModalIva, currentModalSku, currentModalAllergens);
         hideModal();
-        updateCartBadge();
+        if (headerController != null) {
+            headerController.setCartCount(CartManager.get().totalItems());
+            headerController.bounceCart();
+        }
         showToast(I18n.t("added"));
-        animateCartButton();
-    }
-
-    /** Animazione rimbalzo del pulsante carrello quando si aggiunge un prodotto. */
-    private void animateCartButton() {
-        if (cartBtn == null) return;
-        // Spring bounce: scale up → overshoot → settle
-        SequentialTransition bounce = new SequentialTransition(
-            scaleNode(cartBtn, 1.0, 1.35, 120, javafx.animation.Interpolator.EASE_OUT),
-            scaleNode(cartBtn, 1.35, 0.88, 90,  javafx.animation.Interpolator.EASE_IN),
-            scaleNode(cartBtn, 0.88, 1.10, 80,  javafx.animation.Interpolator.EASE_OUT),
-            scaleNode(cartBtn, 1.10, 1.0,  70,  javafx.animation.Interpolator.EASE_IN)
-        );
-        bounce.play();
-
-        // Badge pop-in
-        if (cartBadge != null && cartBadge.isVisible()) {
-            cartBadge.setScaleX(0.4); cartBadge.setScaleY(0.4);
-            SequentialTransition badgePop = new SequentialTransition(
-                scaleNode(cartBadge, 0.4, 1.3, 150, javafx.animation.Interpolator.EASE_OUT),
-                scaleNode(cartBadge, 1.3, 1.0,  80, javafx.animation.Interpolator.EASE_IN)
-            );
-            badgePop.play();
-        }
-    }
-
-    private javafx.animation.ScaleTransition scaleNode(
-            javafx.scene.Node n, double from, double to, int ms,
-            javafx.animation.Interpolator interp) {
-        javafx.animation.ScaleTransition st =
-                new javafx.animation.ScaleTransition(
-                        javafx.util.Duration.millis(ms), n);
-        st.setFromX(from); st.setFromY(from);
-        st.setToX(to);     st.setToY(to);
-        st.setInterpolator(interp);
-        return st;
-    }
-
-    @FXML
-    private void onCartClick() {
-        Navigator.goTo(Navigator.Screen.CART);
-    }
-
-    private void updateCartBadge() {
-        if (cartBadge == null) return;
-        int count = CartManager.get().totalItems();
-        if (count > 0) {
-            cartBadge.setText(String.valueOf(count));
-            cartBadge.setVisible(true);  cartBadge.setManaged(true);
-            if (cartBtn != null) {
-                cartBtn.setDisable(false);
-                cartBtn.setOpacity(1.0);
-            }
-        } else {
-            cartBadge.setVisible(false); cartBadge.setManaged(false);
-            if (cartBtn != null) {
-                cartBtn.setDisable(true);
-                cartBtn.setOpacity(0.35);
-            }
-        }
     }
 
     /** Toast "Aggiunto!" che appare in basso e svanisce. */
@@ -407,31 +327,19 @@ public class ShopPageController implements Navigator.DataReceiver, Navigator.Scr
         tl.play();
     }
 
-    // ── Tema / Connettività ───────────────────────────────────────────
-
-    @FXML private void toggleTheme() { ThemeManager.toggle(); refreshThemeButton(); }
-
-    public void refreshThemeButton() {
-        if (themeIcon != null) {
-            themeIcon.setIconLiteral(ThemeManager.isDark()
-                    ? "mdi2w-weather-sunny" : "mdi2w-weather-night");
-        }
-    }
-
     /**
      * Chiamato da Navigator quando si torna al menu dalla cache.
      * Aggiorna il badge del carrello (potrebbe essere cambiato).
      */
     @Override
     public void onReturn() {
-        updateCartBadge();
+        if (headerController != null) headerController.setCartCount(CartManager.get().totalItems());
         // Ri-registra il listener (potrebbe essere stato sovrascritto da altri screen)
         NetworkWatchdog.setListener(this::setOnline);
     }
 
     public void setOnline(boolean online) {
-
-        if (internetLabel != null) internetLabel.setText(online ? "Online" : "Offline");
+        if (headerController != null) headerController.setOnline(online);
     }
 
     public void showError(String msg) { showInfo(msg); }
