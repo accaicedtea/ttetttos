@@ -17,9 +17,9 @@ CRASH_MAX_RETRIES=5
 CRASH_RESET_AFTER=300
 
 # ── Email (modifica questi valori prima di eseguire) ───────────────────────────
-NOTIFY_EMAIL="TUA_EMAIL@gmail.com"        # ← dove ricevi la notifica
-GMAIL_USER="TUO_ACCOUNT@gmail.com"        # ← account Gmail mittente
-GMAIL_APP_PASSWORD="xxxx xxxx xxxx xxxx"  # ← App Password Gmail (vedi istruzioni)
+NOTIFY_EMAIL="giaccabugata@gmail.com"        # ← dove ricevi la notifica
+GMAIL_USER="giaccabugata@gmail.com"        # ← account Gmail mittente
+GMAIL_APP_PASSWORD="zytg gsty ifvn wlrn"  # ← App Password Gmail (vedi istruzioni)
 
 # ── Colori ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
