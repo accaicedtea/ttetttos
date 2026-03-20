@@ -22,7 +22,7 @@
     <Label fx:id="titleLabel"    text="Benvenuto"          styleClass="welcome-title" />
     <Label fx:id="subtitleLabel" text="Tocca per iniziare" styleClass="welcome-subtitle" />
 
-    <Region prefHeight="36" />
+    <Region prefHeight="20" />
 
     <Label fx:id="chooseLangLabel" text="Scegli la tua lingua"
            styleClass="welcome-choose-lang" />
@@ -44,7 +44,7 @@
       <Button fx:id="btnAr" onAction="#onLangAr" styleClass="lang-btn" />
     </HBox>
 
-    <Region prefHeight="48" />
+    <Region prefHeight="88" />
 
     <!-- Pulsante start -->
     <Button fx:id="startBtn" onAction="#onStart"

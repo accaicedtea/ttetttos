@@ -19,18 +19,24 @@ import com.util.Navigator;
 
 public class WelcomeController implements Navigator.DataReceiver {
 
-    @FXML private VBox   welcomeContainer;
-    @FXML private Label  titleLabel;
-    @FXML private Label  subtitleLabel;
-    @FXML private Label  chooseLangLabel;
-    @FXML private Button btnIt, btnEn, btnDe, btnFr, btnAr;
-    @FXML private Button startBtn;
+    @FXML
+    private VBox welcomeContainer;
+    @FXML
+    private Label titleLabel;
+    @FXML
+    private Label subtitleLabel;
+    @FXML
+    private Label chooseLangLabel;
+    @FXML
+    private Button btnIt, btnEn, btnDe, btnFr, btnAr;
+    @FXML
+    private Button startBtn;
 
     // Dimensioni fisse bottone — tutto interno, nessun overflow
-    private static final double BTN_W   = 240;
-    private static final double BTN_H   = 210;
-    private static final double FLAG_W  = 180;
-    private static final double FLAG_H  = 118;
+    private static final double BTN_W = 240;
+    private static final double BTN_H = 210;
+    private static final double FLAG_W = 180;
+    private static final double FLAG_H = 118;
 
     private volatile com.google.gson.JsonObject cachedMenu = null;
     private volatile boolean loadError = false;
@@ -44,8 +50,9 @@ public class WelcomeController implements Navigator.DataReceiver {
 
     @FXML
     private void initialize() {
-        for (Button btn : new Button[]{btnIt, btnEn, btnDe, btnFr, btnAr, startBtn})
-            if (btn != null) Animations.touchFeedback(btn);
+        for (Button btn : new Button[] { btnIt, btnEn, btnDe, btnFr, btnAr, startBtn })
+            if (btn != null)
+                Animations.touchFeedback(btn);
 
         decorateLangButton(btnIt, "it", "Italiano");
         decorateLangButton(btnEn, "en", "English");
@@ -59,11 +66,30 @@ public class WelcomeController implements Navigator.DataReceiver {
 
     // ── Lingua ────────────────────────────────────────────────────────
 
-    @FXML private void onLangIt() { selectLang("it", btnIt); }
-    @FXML private void onLangEn() { selectLang("en", btnEn); }
-    @FXML private void onLangDe() { selectLang("de", btnDe); }
-    @FXML private void onLangFr() { selectLang("fr", btnFr); }
-    @FXML private void onLangAr() { selectLang("ar", btnAr); }
+    @FXML
+    private void onLangIt() {
+        selectLang("it", btnIt);
+    }
+
+    @FXML
+    private void onLangEn() {
+        selectLang("en", btnEn);
+    }
+
+    @FXML
+    private void onLangDe() {
+        selectLang("de", btnDe);
+    }
+
+    @FXML
+    private void onLangFr() {
+        selectLang("fr", btnFr);
+    }
+
+    @FXML
+    private void onLangAr() {
+        selectLang("ar", btnAr);
+    }
 
     private void selectLang(String lang, Button active) {
         I18n.setLang(lang);
@@ -74,14 +100,16 @@ public class WelcomeController implements Navigator.DataReceiver {
         chooseLangLabel.setText(I18n.t("choose_lang"));
         startBtn.setText(I18n.t("start") + "  →");
 
-        for (Button b : new Button[]{btnIt, btnEn, btnDe, btnFr, btnAr})
+        for (Button b : new Button[] { btnIt, btnEn, btnDe, btnFr, btnAr })
             b.getStyleClass().remove("lang-btn-active");
         active.getStyleClass().add("lang-btn-active");
 
         // Pulse sul bottone selezionato
         ScaleTransition pulse = new ScaleTransition(Duration.millis(110), active);
-        pulse.setFromX(1.0); pulse.setFromY(1.0);
-        pulse.setToX(1.06);  pulse.setToY(1.06);
+        pulse.setFromX(1.0);
+        pulse.setFromY(1.0);
+        pulse.setToX(1.06);
+        pulse.setToY(1.06);
         pulse.setAutoReverse(true);
         pulse.setCycleCount(2);
         pulse.play();
@@ -89,11 +117,12 @@ public class WelcomeController implements Navigator.DataReceiver {
         // Mostra start
         startBtn.setVisible(true);
         startBtn.setManaged(true);
-        startBtn.setScaleX(0.8); startBtn.setScaleY(0.8); startBtn.setOpacity(0);
+        startBtn.setScaleX(0.8);
+        startBtn.setScaleY(0.8);
+        startBtn.setOpacity(0);
         new ParallelTransition(
-            scale(startBtn, 0.8, 1.0, 280),
-            fade(startBtn,  0,   1.0, 280)
-        ).play();
+                scale(startBtn, 0.8, 1.0, 280),
+                fade(startBtn, 0, 1.0, 280)).play();
     }
 
     // ── Start ─────────────────────────────────────────────────────────
@@ -108,10 +137,15 @@ public class WelcomeController implements Navigator.DataReceiver {
         } else {
             startBtn.setText("⏳  " + I18n.t("start"));
             startBtn.setDisable(true);
-            final Timeline[] ref = {null};
+            final Timeline[] ref = { null };
             ref[0] = new Timeline(new KeyFrame(Duration.millis(200), e -> {
-                if (cachedMenu != null) { ref[0].stop(); Navigator.goTo(Navigator.Screen.MENU, cachedMenu); }
-                else if (loadError)     { ref[0].stop(); Navigator.goTo(Navigator.Screen.MENU, null); }
+                if (cachedMenu != null) {
+                    ref[0].stop();
+                    Navigator.goTo(Navigator.Screen.MENU, cachedMenu);
+                } else if (loadError) {
+                    ref[0].stop();
+                    Navigator.goTo(Navigator.Screen.MENU, null);
+                }
             }));
             ref[0].setCycleCount(Timeline.INDEFINITE);
             ref[0].play();
@@ -121,9 +155,13 @@ public class WelcomeController implements Navigator.DataReceiver {
     // ── Precaricamento ────────────────────────────────────────────────
 
     private void preloadMenu() {
-        if (cachedMenu != null) return;
+        if (cachedMenu != null)
+            return;
         com.google.gson.JsonObject fromCache = MenuCache.loadFromCache();
-        if (fromCache != null) { cachedMenu = fromCache; return; }
+        if (fromCache != null) {
+            cachedMenu = fromCache;
+            return;
+        }
         new Thread(() -> {
             for (int i = 1; i <= 3; i++) {
                 try {
@@ -131,8 +169,13 @@ public class WelcomeController implements Navigator.DataReceiver {
                     MenuCache.save(cachedMenu, "");
                     return;
                 } catch (Exception e) {
-                    if (i == 3) loadError = true;
-                    else try { Thread.sleep(1000L * i); } catch (InterruptedException ignored) {}
+                    if (i == 3)
+                        loadError = true;
+                    else
+                        try {
+                            Thread.sleep(1000L * i);
+                        } catch (InterruptedException ignored) {
+                        }
                 }
             }
         }, "welcome-fallback").start();
@@ -181,22 +224,28 @@ public class WelcomeController implements Navigator.DataReceiver {
     // ── Animazioni ────────────────────────────────────────────────────
 
     private void fadeIn() {
-        if (welcomeContainer == null) return;
+        if (welcomeContainer == null)
+            return;
         welcomeContainer.setOpacity(0);
         FadeTransition ft = new FadeTransition(Duration.millis(500), welcomeContainer);
-        ft.setFromValue(0); ft.setToValue(1);
+        ft.setFromValue(0);
+        ft.setToValue(1);
         ft.play();
     }
 
     private ScaleTransition scale(Node n, double from, double to, int ms) {
         ScaleTransition st = new ScaleTransition(Duration.millis(ms), n);
-        st.setFromX(from); st.setFromY(from); st.setToX(to); st.setToY(to);
+        st.setFromX(from);
+        st.setFromY(from);
+        st.setToX(to);
+        st.setToY(to);
         return st;
     }
 
     private FadeTransition fade(Node n, double from, double to, int ms) {
         FadeTransition ft = new FadeTransition(Duration.millis(ms), n);
-        ft.setFromValue(from); ft.setToValue(to);
+        ft.setFromValue(from);
+        ft.setToValue(to);
         return ft;
     }
 }
