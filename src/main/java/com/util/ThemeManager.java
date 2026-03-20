@@ -11,8 +11,8 @@ public class ThemeManager {
     private static Theme   current = Theme.DARK;
     private static Scene   scene;
 
-    private static final String DARK_CSS  = "/com/example/styles/dark-theme.css";
-    private static final String LIGHT_CSS = "/com/example/styles/light-theme.css";
+    private static final String DARK_CSS  = "/com/app/styles/dark-theme.css";
+    private static final String LIGHT_CSS = "/com/app/styles/light-theme.css";
 
     public static void init(Scene s) {
         scene = s;

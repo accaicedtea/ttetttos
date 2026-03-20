@@ -77,7 +77,7 @@ while true; do
     else
         CRASH_COUNT=\$(( CRASH_COUNT + 1 ))
         crash "Crash (exit=\${EXIT_CODE}, durata=\${DURATION}s). #\${CRASH_COUNT}/${CRASH_MAX_RETRIES}"
-        pkill -f "com.example.App" 2>/dev/null || true
+        pkill -f "com.app.App" 2>/dev/null || true
         pkill -f "demo-1.jar"      2>/dev/null || true
         WAIT=\$(( 3 * CRASH_COUNT ))
         [ \$WAIT -gt 30 ] && WAIT=30

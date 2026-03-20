@@ -164,7 +164,7 @@ while IFS= read -r lib; do cp="\${cp}:\${lib}"; done \
     --add-opens javafx.graphics/com.sun.javafx.application=ALL-UNNAMED \\
     --add-opens javafx.controls/com.sun.javafx.scene.control=ALL-UNNAMED \\
     -cp "\${cp}" \\
-    com.example.App
+    com.app.App
 LAUNCHER
     chmod +x "$launcher"
     ok "Launcher creato: ${launcher}"
@@ -188,7 +188,7 @@ launch_app() {
         --add-opens javafx.graphics/com.sun.javafx.application=ALL-UNNAMED \
         --add-opens javafx.controls/com.sun.javafx.scene.control=ALL-UNNAMED \
         -cp "${cp}" \
-        com.example.App
+        com.app.App
 }
 
 # ==============================================================================

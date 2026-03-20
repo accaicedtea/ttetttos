@@ -88,12 +88,12 @@ public class Navigator {
             } else {
                 // ── Prima visita: carica l'FXML ───────────────────────────
                 String fxml = switch (screen) {
-                    case SPLASH -> "/com/example/screens/SplashScreen.fxml";
-                    case WELCOME -> "/com/example/screens/WelcomeScreen.fxml";
-                    case MENU -> "/com/example/ShopPage.fxml";
-                    case CART -> "/com/example/screens/CartScreen.fxml";
-                    case PAYMENT -> "/com/example/screens/PaymentScreen.fxml";
-                    case CONFIRM -> "/com/example/screens/ConfirmScreen.fxml";
+                    case SPLASH -> "/com/app/screens/SplashScreen.fxml";
+                    case WELCOME -> "/com/app/screens/WelcomeScreen.fxml";
+                    case MENU -> "/com/app/ShopPage.fxml";
+                    case CART -> "/com/app/screens/CartScreen.fxml";
+                    case PAYMENT -> "/com/app/screens/PaymentScreen.fxml";
+                    case CONFIRM -> "/com/app/screens/ConfirmScreen.fxml";
                 };
 
                 var url = Navigator.class.getResource(fxml);

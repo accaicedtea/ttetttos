@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
  * Carica bandiere SVG dalle risorse e le restituisce come nodi JavaFX
  * con dimensioni precise nel layout (usa un Pane wrapper + Scale transform).
  *
- * Risorse: src/main/resources/com/example/imgs/flags/*.svg
+ * Risorse: src/main/resources/com/app/imgs/flags/*.svg
  */
 public class FlagIcon {
 
@@ -50,7 +50,7 @@ public class FlagIcon {
             return buildArPlaceholder(maxWidth, maxHeight);
         }
 
-        String resource = "/com/example/imgs/flags/" + code + ".svg";
+        String resource = "/com/app/imgs/flags/" + code + ".svg";
 
         try (InputStream is = FlagIcon.class.getResourceAsStream(resource)) {
             if (is == null) return buildColorPlaceholder(maxWidth, maxHeight);

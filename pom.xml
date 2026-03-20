@@ -4,9 +4,9 @@
                              http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.example</groupId>
+  <groupId>com.app</groupId>
   <artifactId>totem</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.12</version>
   <packaging>jar</packaging>
 
   <name>Totem Kiosk</name>
@@ -89,7 +89,7 @@
           <execution>
             <id>default-cli</id>
             <configuration>
-              <mainClass>com.example.App</mainClass>
+              <mainClass>com.app.App</mainClass>
             </configuration>
           </execution>
         </executions>
@@ -121,7 +121,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>com.example.App</mainClass>
+              <mainClass>com.app.App</mainClass>
               <addClasspath>true</addClasspath>
               <classpathPrefix>lib/</classpathPrefix>
             </manifest>

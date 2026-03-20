@@ -3,11 +3,11 @@
 -libraryjars  <java.home>/jmods
 -libraryjars  target/lib(!META-INF/versions/*)
 
--keep public class com.example.App {
+-keep public class com.app.App {
     public static void main(java.lang.String[]);
 }
--keep public class com.example.**Controller { *; }
--keepclassmembers class com.example.model.** { *; }
+-keep public class com.app.**Controller { *; }
+-keepclassmembers class com.app.model.** { *; }
 -keepclassmembers class * { @javafx.fxml.FXML *; }
 
 -adaptresourcefilenames

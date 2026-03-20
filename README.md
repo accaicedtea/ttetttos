@@ -415,7 +415,7 @@ ttetttos/
 │   │       ├── AuthService.java      ← login/logout/ping
 │   │       ├── ViewsService.java     ← menu, versione
 │   │       └── OrdersService.java    ← CRUD ordini
-│   ├── com/example/
+│   ├── com/app/
 │   │   ├── App.java                  ← entrypoint, avvia Splash
 │   │   ├── Navigator.java            ← navigazione tra schermate (con cache)
 │   │   ├── ThemeManager.java         ← tema chiaro/scuro
@@ -439,7 +439,7 @@ ttetttos/
 │   │       └── I18n.java             ← stringhe multilingua (it/en/de/fr/ar)
 │   └── com/util/
 │       └── Animations.java           ← scroll inerziale, touch feedback
-├── src/main/resources/com/example/
+├── src/main/resources/com/app/
 │   ├── ShopPage.fxml
 │   ├── screens/
 │   │   ├── SplashScreen.fxml
@@ -487,7 +487,7 @@ java \
   --module-path /opt/kiosk/lib \
   --add-modules javafx.controls,javafx.fxml \
   -cp /opt/kiosk/demo-1.jar \
-  com.example.App
+  com.app.App
 ```
 
 ---
