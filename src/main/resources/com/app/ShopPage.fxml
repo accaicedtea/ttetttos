@@ -22,14 +22,32 @@
             <fx:include fx:id="header" source="ShopHeader.fxml" />
         </top>
 
-        <!-- ══ LEFT: Categorie ══ -->
+        <!-- ══ LEFT: Categorie + Componi Kumpir ══ -->
         <left>
-            <ScrollPane fx:id="categoriesScroll"
-                        fitToWidth="true" focusTraversable="false"
-                        hbarPolicy="NEVER" vbarPolicy="NEVER"
-                        prefWidth="280" styleClass="categories-scroll">
-                <VBox fx:id="categoriesPane" spacing="2" styleClass="categories-pane" />
-            </ScrollPane>
+            <VBox styleClass="sidebar-pane" prefWidth="220" spacing="0">
+
+                <!-- Categorie (cresce per riempire lo spazio disponibile) -->
+                <ScrollPane fx:id="categoriesScroll"
+                            fitToWidth="true"
+                            focusTraversable="false"
+                            hbarPolicy="NEVER"
+                            vbarPolicy="NEVER"
+                            styleClass="categories-scroll"
+                            VBox.vgrow="ALWAYS">
+                    <VBox fx:id="categoriesPane" spacing="2" styleClass="categories-pane" />
+                </ScrollPane>
+
+                <!-- Bottone kumpir: SOTTO le categorie, ben visibile, grande e touch-friendly -->
+                <VBox styleClass="compose-kumpir-container" alignment="CENTER" spacing="0">
+                    <Button fx:id="composeKumpirBtn"
+                            text="🥔  Componi il tuo Kumpir"
+                            styleClass="compose-kumpir-btn"
+                            maxWidth="Infinity"
+                            wrapText="true"
+                            focusTraversable="false" />
+                </VBox>
+
+            </VBox>
         </left>
 
         <!-- ══ CENTER: Prodotti ══ -->
@@ -45,7 +63,7 @@
 
     </BorderPane>
 
-    <!-- ══ MODAL ══ -->
+    <!-- ══ MODAL PRODOTTO ══ -->
     <StackPane fx:id="modalOverlay"
                visible="false" managed="false"
                styleClass="modal-overlay" alignment="CENTER"
@@ -112,7 +130,7 @@
         </VBox>
     </StackPane>
 
-    <!-- Toast -->
+    <!-- ══ TOAST ══ -->
     <HBox fx:id="toastBox" alignment="CENTER" spacing="10"
           styleClass="toast-label"
           visible="false" managed="false"
@@ -122,7 +140,7 @@
         <Label fx:id="toastLabel" text="Aggiunto!" styleClass="toast-text" />
     </HBox>
 
-    <!-- Pulsing quick cart shortcut (mostra solo quando ci sono prodotti) -->
+    <!-- ══ QUICK CART ══ -->
     <Button fx:id="quickCartBtn" text="" styleClass="quick-cart-btn"
             visible="false" managed="false"
             onAction="#onQuickCartClick"

@@ -15,7 +15,7 @@ import java.util.Map;
  */
 public class Api {
 
-    private static final String BASE_URL = "https://localhost:8080/api/v1/totem/";
+    private static final String BASE_URL = "http://localhost:8080/api/v1/totem/";
 
     // HttpClient standard — identico alla versione originale che funzionava
     private static final HttpClient httpClient = HttpClient.newHttpClient();

@@ -1,32 +1,31 @@
 /* ══════════════════════════════════════════════════════════════════════════════
- *  DARK THEME — Totem Touch UI
+ *  LIGHT THEME — Totem Touch UI
  * ══════════════════════════════════════════════════════════════════════════════ */
 
 .root {
-    -color-bg: #16161e;
-    -color-surface: #1e1e2a;
-    -color-surface2: #252534;
-    -color-border: #2c2c40;
-    -color-sidebar: #111118;
-    -color-accent: #5b9cf5;
-    -color-text: #e4e4f0;
-    -color-muted: #9090b0;
-    -color-dim: #606080;
-    -color-green: #4ec97a;
-    -color-orange: #e0a040;
-    -color-red: #e05555;
+    -color-bg: #f2f2f7;
+    -color-surface: #ffffff;
+    -color-surface2: #e8e8f0;
+    -color-border: #d0d0df;
+    -color-sidebar: #e4e4ec;
+    -color-accent: #2b6ed4;
+    -color-text: #1a1a2e;
+    -color-muted: #5a5a7a;
+    -color-dim: #9090a8;
+    -color-green: #1d8a4f;
+    -color-orange: #b06520;
+    -color-red: #c03030;
 
     -fx-base: -color-surface;
     -fx-background: -color-bg;
     -fx-control-inner-background: -color-surface;
     -fx-text-fill: -color-text;
-    -fx-font-family: "Segoe UI", "Noto Color Emoji", "Noto Emoji", "Apple Color Emoji", "Ubuntu", sans-serif;
+    -fx-font-family: "Segoe UI", "Ubuntu", "Noto Sans", sans-serif;
     -fx-font-size: 16px;
     -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
 }
 
-/* ── Struttura ───────────────────────────────────────────────────────────── */
 .main-pane {
     -fx-background-color: -color-bg;
 }
@@ -35,9 +34,8 @@
     -fx-background-color: transparent;
 }
 
-/* ── Status bar ──────────────────────────────────────────────────────────── */
 .status-bar {
-    -fx-background-color: #0d0d14;
+    -fx-background-color: #dcdce8;
     -fx-padding: 6 22;
     -fx-min-height: 38;
     -fx-border-color: transparent transparent -color-border transparent;
@@ -62,17 +60,32 @@
     -fx-font-size: 14px;
 }
 
-/* ── Header ──────────────────────────────────────────────────────────────── */
+.status-dot-online {
+    -fx-background-color: -color-green;
+    -fx-background-radius: 50%;
+    -fx-min-width: 11px;
+    -fx-min-height: 11px;
+    -fx-max-width: 11px;
+    -fx-max-height: 11px;
+}
+
+.status-dot-offline {
+    -fx-background-color: -color-red;
+    -fx-background-radius: 50%;
+    -fx-min-width: 11px;
+    -fx-min-height: 11px;
+    -fx-max-width: 11px;
+    -fx-max-height: 11px;
+}
+
 .shop-header {
-    -fx-background-color: #10101a;
+    -fx-background-color: #ffffff;
     -fx-padding: 16 24;
     -fx-min-height: 72;
     -fx-border-color: transparent transparent -color-border transparent;
     -fx-border-width: 0 0 1 0;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.06), 4, 0, 0, 2);
 }
-
-/* ⚠️ CONFLITTO: ".shop-header-icon" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
 
 .shop-header-icon {
     -fx-font-size: 32px;
@@ -89,9 +102,6 @@
     -fx-text-fill: -color-muted;
 }
 
-/* ⚠️ CONFLITTO: ".theme-btn" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
-
 .theme-btn {
     -fx-background-color: -color-surface2;
     -fx-border-color: -color-border;
@@ -106,9 +116,10 @@
     -fx-padding: 0;
 }
 
-/* RIMOSSO: .theme-btn:pressed  (duplicato esatto della riga 848) */
+.theme-btn:pressed {
+    -fx-background-color: -color-border;
+}
 
-/* ── Categorie (sinistra) ────────────────────────────────────────────────── */
 .categories-scroll {
     -fx-background: -color-sidebar;
     -fx-background-color: -color-sidebar;
@@ -129,11 +140,11 @@
 }
 
 .category-tab {
-    -fx-font-size: 22px;
+    -fx-font-size: 17px;
     -fx-font-weight: bold;
     -fx-text-fill: -color-muted;
-    -fx-padding: 20 20;
-    -fx-min-height: 80;
+    -fx-padding: 14 16;
+    -fx-min-height: 58;
     -fx-background-color: transparent;
     -fx-background-radius: 10;
     -fx-border-color: transparent;
@@ -144,18 +155,17 @@
 }
 
 .category-tab:hover {
-    -fx-background-color: rgba(91, 156, 245, 0.10);
+    -fx-background-color: rgba(43, 110, 212, 0.08);
     -fx-text-fill: -color-text;
 }
 
 .category-tab-active {
-    -fx-background-color: rgba(91, 156, 245, 0.18);
+    -fx-background-color: rgba(43, 110, 212, 0.14);
     -fx-text-fill: -color-accent;
     -fx-border-color: transparent -color-accent transparent transparent;
     -fx-border-width: 0 3 0 0;
 }
 
-/* ── Prodotti (FlowPane) ─────────────────────────────────────────────────── */
 .products-scroll {
     -fx-background: -color-bg;
     -fx-background-color: -color-bg;
@@ -170,10 +180,6 @@
     -fx-padding: 16;
 }
 
-/* ⚠️ CONFLITTO: ".prod-card" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
-
-/* ── Card prodotto ───────────────────────────────────────────────────────── */
 .prod-card {
     -fx-background-color: -color-surface;
     -fx-background-radius: 16;
@@ -182,29 +188,19 @@
     -fx-border-width: 1;
     -fx-cursor: hand;
     -fx-min-height: 200;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.30), 6, 0, 0, 2);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.10), 6, 0, 0, 2);
 }
-
-/* ⚠️ CONFLITTO: ".prod-card:hover" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
 
 .prod-card:hover {
     -fx-border-color: -color-accent;
-    -fx-background-color: -color-surface2;
-    -fx-effect: dropshadow(gaussian, rgba(91, 156, 245, 0.22), 12, 0, 0, 3);
+    -fx-effect: dropshadow(gaussian, rgba(43, 110, 212, 0.20), 12, 0, 0, 3);
 }
 
-/* ⚠️ CONFLITTO: ".prod-name" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
-
 .prod-name {
-    -fx-font-size: 31px;
+    -fx-font-size: 20px;
     -fx-font-weight: bold;
     -fx-text-fill: -color-text;
 }
-
-/* ⚠️ CONFLITTO: ".prod-price" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
 
 .prod-price {
     -fx-font-size: 30px;
@@ -212,23 +208,19 @@
     -fx-text-fill: -color-accent;
 }
 
-/* ⚠️ CONFLITTO: ".prod-desc" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
-
 .prod-desc {
     -fx-font-size: 14px;
     -fx-text-fill: -color-muted;
 }
 
-/* RIMOSSO: .prod-allergen-chips  (duplicato esatto della riga 237) */
-
-/* ⚠️ CONFLITTO: ".prod-allergen-chip" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
+.prod-allergen-chips {
+    -fx-background-color: transparent;
+}
 
 .prod-allergen-chip {
-    -fx-background-color: rgba(224, 160, 64, 0.15);
+    -fx-background-color: rgba(176, 101, 32, 0.12);
     -fx-background-radius: 6;
-    -fx-border-color: rgba(224, 160, 64, 0.4);
+    -fx-border-color: rgba(176, 101, 32, 0.40);
     -fx-border-radius: 6;
     -fx-border-width: 1;
     -fx-text-fill: -color-orange;
@@ -269,17 +261,12 @@
 /* ── Placeholder (niente immagine) ───────────────────────────────── */
 .prod-card-placeholder {
     -fx-background-color: linear-gradient(to bottom right,
-            rgba(91, 156, 245, 0.18),
-            rgba(91, 156, 245, 0.06));
+            rgba(43, 110, 212, 0.12),
+            rgba(43, 110, 212, 0.04));
 }
 
-/* ⚠️ CONFLITTO: ".prod-card-placeholder-letter" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
-
 .prod-card-placeholder-letter {
-    -fx-font-size: 64px;
-    -fx-font-weight: bold;
-    -fx-text-fill: rgba(91, 156, 245, 0.45);
+    -fx-text-fill: rgba(43, 110, 212, 0.40);
 }
 
 /* ── Separatore ──────────────────────────────────────────────────── */
@@ -326,24 +313,10 @@
     -fx-padding: 3 9;
 }
 
-/* (incolla solo nel light.css — sovrascrive i valori sopra)
 
-.prod-card-placeholder {
-    -fx-background-color: linear-gradient(
-        to bottom right,
-        rgba(43,110,212,0.12),
-        rgba(43,110,212,0.04)
-    );
-}
 
-.prod-card-placeholder-letter {
-    -fx-text-fill: rgba(43,110,212,0.40);
-}
-*/
-
-/* ── Modal ───────────────────────────────────────────────────────────────── */
 .modal-overlay {
-    -fx-background-color: rgba(0, 0, 0, 0.75);
+    -fx-background-color: rgba(0, 0, 0, 0.50);
 }
 
 .modal-card {
@@ -355,34 +328,30 @@
     -fx-max-width: 860;
     -fx-min-width: 400;
     -fx-max-height: 920;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.65), 28, 0, 0, 10);
-    /* overflow hidden: il bottone verde rimane dentro i bordi arrotondati */
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.22), 28, 0, 0, 8);
 }
 
-/* Header colorato del modal */
 .modal-header {
-    -fx-background-color: linear-gradient(to bottom, #1a2545, #14182e);
-    -fx-padding: 32 32 26 32;
+    -fx-background-color: linear-gradient(to bottom right, #e8edf8, #f0f4ff);
+    -fx-padding: 28 28 22 28;
     -fx-background-radius: 22 22 0 0;
-    -fx-border-color: transparent transparent rgba(91, 156, 245, 0.25) transparent;
+    -fx-border-color: transparent transparent -color-border transparent;
     -fx-border-width: 0 0 1 0;
 }
 
 .modal-title {
-    -fx-font-size: 32px;
+    -fx-font-size: 28px;
     -fx-font-weight: bold;
-    -fx-text-fill: #ffffff;
+    -fx-text-fill: -color-text;
     -fx-wrap-text: true;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 2, 0, 0, 1);
 }
 
 .modal-price {
-    -fx-font-size: 42px;
+    -fx-font-size: 34px;
     -fx-font-weight: bold;
-    -fx-text-fill: #7dd4fc;
+    -fx-text-fill: -color-accent;
 }
 
-/* Body modal scrollabile */
 .modal-body-scroll {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
@@ -410,13 +379,12 @@
     -fx-padding: 0 0 4 0;
 }
 
-/* Chips allergeni nel modal — più grandi e visibili */
 .allergen-chips-pane {
     -fx-background-color: transparent;
 }
 
 .allergen-chip {
-    -fx-background-color: rgba(224, 160, 64, 0.18);
+    -fx-background-color: rgba(176, 101, 32, 0.12);
     -fx-background-radius: 22;
     -fx-border-color: -color-orange;
     -fx-border-radius: 22;
@@ -427,7 +395,6 @@
     -fx-padding: 8 18;
 }
 
-/* Chips ingredienti nel modal */
 .ingredients-pane {
     -fx-background-color: transparent;
 }
@@ -443,10 +410,6 @@
     -fx-padding: 8 16;
 }
 
-/* ⚠️ CONFLITTO: ".modal-close" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
-
-/* Pulsante chiudi modal */
 .modal-close {
     -fx-min-width: 46px;
     -fx-min-height: 46px;
@@ -456,16 +419,18 @@
     -fx-font-weight: bold;
     -fx-background-radius: 50%;
     -fx-border-radius: 50%;
-    -fx-background-color: rgba(255, 255, 255, 0.08);
-    -fx-border-color: rgba(255, 255, 255, 0.20);
+    -fx-background-color: rgba(0, 0, 0, 0.06);
+    -fx-border-color: -color-border;
     -fx-text-fill: -color-text;
     -fx-cursor: hand;
     -fx-padding: 0;
 }
 
-/* RIMOSSO: .modal-close:pressed  (duplicato esatto della riga 921) */
+.modal-close:pressed {
+    -fx-background-color: rgba(192, 48, 48, 0.15);
+    -fx-border-color: -color-red;
+}
 
-/* ── Info / errore ───────────────────────────────────────────────────────── */
 .info-label {
     -fx-font-size: 20px;
     -fx-text-fill: -color-muted;
@@ -475,12 +440,10 @@
     -fx-wrap-text: true;
 }
 
-/* ── Label base ──────────────────────────────────────────────────────────── */
 .label {
     -fx-text-fill: -color-text;
 }
 
-/* ── Scroll bars ─────────────────────────────────────────────────────────── */
 .scroll-bar {
     -fx-background-color: transparent;
     -fx-padding: 1;
@@ -503,12 +466,12 @@
 }
 
 .scroll-bar .thumb {
-    -fx-background-color: rgba(150, 150, 200, 0.22);
+    -fx-background-color: rgba(80, 80, 120, 0.22);
     -fx-background-radius: 3;
 }
 
 .scroll-bar .thumb:pressed {
-    -fx-background-color: rgba(150, 150, 200, 0.50);
+    -fx-background-color: rgba(80, 80, 120, 0.50);
 }
 
 .scroll-bar .increment-button,
@@ -528,10 +491,48 @@
     -fx-background-color: transparent;
     -fx-padding: 0;
     -fx-shape: "";
-    -fx-min-width: 0;
-    -fx-min-height: 0;
-    -fx-max-width: 0;
-    -fx-max-height: 0;
+}
+
+/* Confirm modal */
+.confirm-root {
+    -fx-background-color: rgba(0, 0, 0, 0.55);
+}
+
+.confirm-container {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 24;
+    -fx-padding: 28;
+    -fx-alignment: center;
+    -fx-min-width: 340;
+}
+
+.confirm-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-text;
+}
+
+.confirm-msg {
+    -fx-font-size: 16px;
+    -fx-text-fill: -color-muted;
+}
+
+.confirm-btn-primary {
+    -fx-background-color: -color-accent;
+    -fx-text-fill: white;
+}
+
+.confirm-btn-secondary {
+    -fx-background-color: rgba(0, 0, 0, 0.1);
+    -fx-text-fill: -color-text;
+}
+
+.confirm-btn-primary:hover {
+    -fx-background-color: rgba(43, 110, 212, 0.9);
+}
+
+.confirm-btn-secondary:hover {
+    -fx-background-color: rgba(0, 0, 0, 0.15);
 }
 
 .scroll-pane {
@@ -547,7 +548,6 @@
     -fx-background-color: transparent;
 }
 
-/* ── Button base ─────────────────────────────────────────────────────────── */
 .button {
     -fx-background-color: -color-surface2;
     -fx-text-fill: -color-text;
@@ -565,21 +565,19 @@
     -fx-effect: none;
 }
 
-/* ══════════════════════════════════════════════════════════════════════
- *  NUOVE SCHERMATE — Welcome / Cart / Payment / Confirm
- * ══════════════════════════════════════════════════════════════════════ */
+/* ══ NUOVE SCHERMATE — Light ══════════════════════════════════════════ */
 
-/* ── Radice schermate ────────────────────────────────────────────────── */
 .screen-root {
     -fx-background-color: -color-bg;
 }
 
 .screen-header {
-    -fx-background-color: #10101a;
+    -fx-background-color: #ffffff;
     -fx-padding: 14 24;
     -fx-min-height: 72;
     -fx-border-color: transparent transparent -color-border transparent;
     -fx-border-width: 0 0 1 0;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.06), 4, 0, 0, 2);
 }
 
 .screen-title {
@@ -587,9 +585,6 @@
     -fx-font-weight: bold;
     -fx-text-fill: -color-text;
 }
-
-/* ⚠️ CONFLITTO: ".back-btn" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
 
 .back-btn {
     -fx-background-color: -color-surface2;
@@ -604,11 +599,12 @@
     -fx-cursor: hand;
 }
 
-/* RIMOSSO: .back-btn:pressed  (duplicato esatto della riga 939) */
+.back-btn:pressed {
+    -fx-background-color: -color-border;
+}
 
-/* ── CTA button (verde) ──────────────────────────────────────────────── */
 .cta-btn {
-    -fx-background-color: linear-gradient(to bottom, #3dbb6e, #2ea058);
+    -fx-background-color: linear-gradient(to bottom, #2eaa5e, #1e8a48);
     -fx-text-fill: white;
     -fx-font-size: 22px;
     -fx-font-weight: bold;
@@ -616,11 +612,11 @@
     -fx-border-radius: 16;
     -fx-padding: 22 40;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(46, 160, 88, 0.35), 10, 0, 0, 3);
+    -fx-effect: dropshadow(gaussian, rgba(30, 138, 72, 0.30), 10, 0, 0, 3);
 }
 
 .cta-btn:pressed {
-    -fx-background-color: #267a44;
+    -fx-background-color: #1a6e3a;
     -fx-effect: none;
 }
 
@@ -628,28 +624,20 @@
     -fx-opacity: 0.4;
 }
 
-/* ── Pulsante aggiungi al carrello nel modal ─────────────────────────── */
 .add-to-cart-btn {
-    -fx-background-color: linear-gradient(to bottom, #3dbb6e, #2ea058);
+    -fx-background-color: linear-gradient(to bottom, #2eaa5e, #1e8a48);
     -fx-text-fill: white;
-    -fx-font-size: 22px;
+    -fx-font-size: 20px;
     -fx-font-weight: bold;
-    -fx-background-radius: 0 0 20 20;
-    -fx-border-radius: 0 0 20 20;
-    -fx-padding: 22 24;
+    -fx-background-radius: 0 0 22 22;
+    -fx-padding: 20 24;
     -fx-cursor: hand;
-    -fx-min-height: 72;
 }
 
 .add-to-cart-btn:pressed {
-    -fx-background-color: #1e7a3e;
-    -fx-effect: none;
+    -fx-background-color: #1a6e3a;
 }
 
-/* ⚠️ CONFLITTO: ".cart-btn" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
-
-/* ── Pulsante carrello nell'header ───────────────────────────────────── */
 .cart-btn {
     -fx-background-color: -color-surface2;
     -fx-border-color: -color-border;
@@ -664,7 +652,68 @@
     -fx-padding: 0;
 }
 
-/* RIMOSSO: .cart-btn:pressed  (duplicato esatto della riga 860) */
+.cart-btn:pressed {
+    -fx-background-color: -color-border;
+}
+
+.quick-cart-btn {
+    -fx-background-color: -color-accent;
+    -fx-text-fill: white;
+    -fx-border-radius: 14;
+    /* pill/rounded rectangle */
+    -fx-background-radius: 14;
+    -fx-background-insets: 0;
+    -fx-border-insets: 0;
+    -fx-padding: 0 18;
+    -fx-min-width: 160;
+    -fx-min-height: 54;
+    -fx-max-width: 240;
+    -fx-max-height: 54;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.30), 14, 0, 0, 0);
+}
+
+.quick-cart-btn:hover {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.40), 18, 0, 0, 0);
+}
+
+.quick-cart-btn:pressed {
+    -fx-background-color: rgba(43, 110, 212, 0.9);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 12, 0, 0, 0);
+}
+
+.quick-cart-icon {
+    -fx-icon-color: white;
+}
+
+.compose-kumpir-btn {
+    -fx-background-color: linear-gradient(to bottom right, #2ea632, #1f8e3a);
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-border-color: #37b13c;
+    -fx-border-width: 2;
+    -fx-border-radius: 16;
+    -fx-background-radius: 16;
+    -fx-min-width: 180;
+    -fx-min-height: 52;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.30), 14, 0, 0, 0);
+}
+
+.compose-kumpir-btn:hover {
+    -fx-background-color: linear-gradient(to bottom right, #3bc74f, #2aa03b);
+}
+
+.ingredient-checkbox {
+    -fx-font-size: 16px;
+    -fx-padding: 8 12;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-border-color: -color-border;
+    -fx-background-color: -color-surface2;
+    -fx-text-fill: -color-text;
+}
 
 .cart-badge {
     -fx-background-color: -color-red;
@@ -681,27 +730,27 @@
     -fx-translate-y: -8;
 }
 
-/* ── Toast "Aggiunto!" ───────────────────────────────────────────────── */
 .toast-label {
-    -fx-background-color: rgba(46, 160, 88, 0.92);
+    -fx-background-color: rgba(30, 138, 72, 0.92);
     -fx-background-radius: 30;
     -fx-text-fill: white;
     -fx-font-size: 20px;
     -fx-font-weight: bold;
     -fx-padding: 16 36;
     -fx-translate-y: -40;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 8, 0, 0, 3);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.20), 8, 0, 0, 3);
 }
 
-/* ══════════════════════════════════════════════════════════════════════
- *  WELCOME SCREEN
- * ══════════════════════════════════════════════════════════════════════ */
 .welcome-root {
-    -fx-background-color: linear-gradient(to bottom, #0d0d18, #16161e);
+    -fx-background-color: linear-gradient(to bottom, #f0f4ff, #e8edf8);
 }
 
 .welcome-container {
     -fx-padding: 60 40;
+}
+
+.welcome-logo {
+    -fx-font-size: 90px;
 }
 
 .welcome-title {
@@ -721,10 +770,9 @@
     -fx-font-size: 20px;
     -fx-text-fill: -color-dim;
     -fx-font-weight: bold;
-    -fx-padding: 0 0 8 0;
 }
 
-/* Pulsanti lingua */
+
 /* ── Bottone lingua — base ────────────────────────────────────────── */
 .lang-btn {
     -fx-background-color: -color-surface;
@@ -765,9 +813,18 @@
     -fx-effect: dropshadow(gaussian, rgba(91, 156, 245, 0.40), 18, 0, 0, 4);
 }
 
-/* Pulsante start */
+/* Testo nome lingua sotto la bandiera */
+.lang-btn-text {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-text;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+}
+
+
 .start-btn {
-    -fx-background-color: linear-gradient(to bottom right, #4888e0, #3060c0);
+    -fx-background-color: linear-gradient(to bottom right, #2b6ed4, #1a50a0);
     -fx-text-fill: white;
     -fx-font-size: 26px;
     -fx-font-weight: bold;
@@ -775,17 +832,14 @@
     -fx-border-radius: 20;
     -fx-padding: 24 60;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(72, 136, 224, 0.45), 14, 0, 0, 4);
+    -fx-effect: dropshadow(gaussian, rgba(43, 110, 212, 0.35), 14, 0, 0, 4);
 }
 
 .start-btn:pressed {
-    -fx-background-color: #2a50a0;
+    -fx-background-color: #1a3c80;
     -fx-effect: none;
 }
 
-/* ══════════════════════════════════════════════════════════════════════
- *  CART SCREEN
- * ══════════════════════════════════════════════════════════════════════ */
 .cart-scroll {
     -fx-background: -color-bg;
     -fx-background-color: -color-bg;
@@ -800,9 +854,6 @@
     -fx-padding: 20 24;
 }
 
-/* ⚠️ CONFLITTO: ".cart-row" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
-
 .cart-row {
     -fx-background-color: -color-surface;
     -fx-background-radius: 16;
@@ -810,7 +861,7 @@
     -fx-border-radius: 16;
     -fx-border-width: 1;
     -fx-padding: 20 22;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.20), 4, 0, 0, 1);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.08), 4, 0, 0, 1);
 }
 
 .cart-item-name {
@@ -864,7 +915,7 @@
 }
 
 .cart-footer {
-    -fx-background-color: #10101a;
+    -fx-background-color: #f8f8fc;
     -fx-border-color: -color-border transparent transparent transparent;
     -fx-border-width: 1 0 0 0;
     -fx-padding: 0;
@@ -886,17 +937,23 @@
     -fx-text-fill: -color-accent;
 }
 
+.cart-proceed-hint {
+    -fx-font-size: 14px;
+    -fx-text-fill: -color-text;
+    -fx-background-color: rgba(0, 0, 0, 0.06);
+    -fx-background-radius: 14;
+    -fx-padding: 10 18;
+    -fx-alignment: center-left;
+    -fx-max-width: 100%;
+}
+
 .cart-empty-label {
     -fx-font-size: 24px;
     -fx-text-fill: -color-dim;
     -fx-padding: 80 40;
     -fx-alignment: center;
-    -fx-text-alignment: center;
 }
 
-/* ══════════════════════════════════════════════════════════════════════
- *  PAYMENT SCREEN
- * ══════════════════════════════════════════════════════════════════════ */
 .payment-container {
     -fx-background-color: -color-bg;
     -fx-padding: 0 60 60 60;
@@ -933,18 +990,21 @@
     -fx-min-width: 300;
     -fx-min-height: 280;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 10, 0, 0, 3);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.10), 10, 0, 0, 3);
 }
 
 .payment-card:hover {
     -fx-border-color: -color-accent;
-    -fx-background-color: -color-surface2;
-    -fx-effect: dropshadow(gaussian, rgba(91, 156, 245, 0.30), 16, 0, 0, 4);
+    -fx-effect: dropshadow(gaussian, rgba(43, 110, 212, 0.22), 16, 0, 0, 4);
 }
 
 .payment-card-selected {
     -fx-border-color: -color-green;
-    -fx-background-color: rgba(78, 201, 122, 0.12);
+    -fx-background-color: rgba(29, 138, 79, 0.08);
+}
+
+.payment-icon {
+    -fx-font-size: 64px;
 }
 
 .payment-method-title {
@@ -958,44 +1018,29 @@
     -fx-text-fill: -color-muted;
 }
 
-/* ⚠️ CONFLITTO: ".confirm-root" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
-
-/* ══════════════════════════════════════════════════════════════════════
- *  CONFIRM SCREEN
- * ══════════════════════════════════════════════════════════════════════ */
 .confirm-root {
-    -fx-background-color: linear-gradient(to bottom, #0a1a0e, #12241a, #16161e);
+    -fx-background-color: linear-gradient(to bottom, #eaf4ee, #f0f8f2, #f2f2f7);
 }
-
-/* ⚠️ CONFLITTO: ".confirm-container" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
 
 .confirm-container {
     -fx-padding: 60 40;
 }
 
 .check-circle {
-    -fx-background-color: linear-gradient(to bottom right, #3dbb6e, #2ea058);
+    -fx-background-color: linear-gradient(to bottom right, #2eaa5e, #1e8a48);
     -fx-background-radius: 50%;
     -fx-min-width: 160;
     -fx-min-height: 160;
     -fx-max-width: 160;
     -fx-max-height: 160;
-    -fx-effect: dropshadow(gaussian, rgba(46, 160, 88, 0.55), 24, 0, 0, 6);
+    -fx-effect: dropshadow(gaussian, rgba(30, 138, 72, 0.40), 24, 0, 0, 6);
 }
-
-/* ⚠️ CONFLITTO: ".check-icon" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
 
 .check-icon {
     -fx-font-size: 80px;
     -fx-font-weight: bold;
     -fx-text-fill: white;
 }
-
-/* ⚠️ CONFLITTO: ".confirm-title" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
 
 .confirm-title {
     -fx-font-size: 48px;
@@ -1013,11 +1058,7 @@
     -fx-font-size: 120px;
     -fx-font-weight: bold;
     -fx-text-fill: -color-accent;
-    -fx-effect: dropshadow(gaussian, rgba(91, 156, 245, 0.4), 16, 0, 0, 0);
 }
-
-/* ⚠️ CONFLITTO: ".confirm-msg" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
 
 .confirm-msg {
     -fx-font-size: 24px;
@@ -1032,26 +1073,20 @@
     -fx-text-fill: -color-dim;
 }
 
-/* ⚠️ CONFLITTO: ".cart-allergen-warning" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
+.confirm-new-btn {
+    -fx-min-width: 400;
+}
 
-/* ── Cart allergen warning ─────────────────────────────────────────── */
 .cart-allergen-warning {
-    -fx-background-color: rgba(224, 160, 64, 0.12);
-    -fx-border-color: rgba(224, 160, 64, 0.35);
+    -fx-background-color: rgba(176, 101, 32, 0.08);
+    -fx-border-color: rgba(176, 101, 32, 0.30);
     -fx-border-width: 1 0 0 0;
     -fx-padding: 16 24;
 }
 
-/* ⚠️ CONFLITTO: ".cart-allergen-icon" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
-
 .cart-allergen-icon {
     -fx-font-size: 28px;
 }
-
-/* ⚠️ CONFLITTO: ".cart-allergen-title" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
 
 .cart-allergen-title {
     -fx-font-size: 16px;
@@ -1060,9 +1095,9 @@
 }
 
 .cart-item-allergen-chip {
-    -fx-background-color: rgba(224, 160, 64, 0.12);
+    -fx-background-color: rgba(176, 101, 32, 0.10);
     -fx-background-radius: 5;
-    -fx-border-color: rgba(224, 160, 64, 0.30);
+    -fx-border-color: rgba(176, 101, 32, 0.25);
     -fx-border-radius: 5;
     -fx-border-width: 1;
     -fx-text-fill: -color-orange;
@@ -1070,14 +1105,100 @@
     -fx-padding: 2 7;
 }
 
-/* ══════════════════════════════════════════════════════════════════════
- *  SPLASH SCREEN
- * ══════════════════════════════════════════════════════════════════════ */
+/* Confirm light */
+.confirm-root {
+    -fx-background-color: linear-gradient(to bottom right, #1a7a3a, #0d5a28, #0a4020);
+}
+
+.confirm-container {
+    -fx-padding: 60 40;
+    -fx-max-width: 800;
+}
+
+.confirm-bg-circle-1 {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-radius: 50%;
+    -fx-min-width: 700;
+    -fx-min-height: 700;
+    -fx-max-width: 700;
+    -fx-max-height: 700;
+}
+
+.confirm-bg-circle-2 {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+    -fx-background-radius: 50%;
+    -fx-min-width: 500;
+    -fx-min-height: 500;
+    -fx-max-width: 500;
+    -fx-max-height: 500;
+}
+
+.confirm-bg-circle-3 {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 50%;
+    -fx-min-width: 300;
+    -fx-min-height: 300;
+    -fx-max-width: 300;
+    -fx-max-height: 300;
+}
+
+.check-circle {
+    -fx-background-color: rgba(255, 255, 255, 0.20);
+    -fx-background-radius: 50%;
+    -fx-border-color: rgba(255, 255, 255, 0.60);
+    -fx-border-radius: 50%;
+    -fx-border-width: 4;
+    -fx-min-width: 200;
+    -fx-min-height: 200;
+    -fx-max-width: 200;
+    -fx-max-height: 200;
+    -fx-effect: dropshadow(gaussian, rgba(255, 255, 255, 0.25), 30, 0, 0, 0);
+}
+
+.check-icon {
+    -fx-font-size: 100px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+}
+
+.confirm-title {
+    -fx-font-size: 52px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+}
+
+.confirm-number-sub {
+    -fx-font-size: 24px;
+    -fx-text-fill: rgba(255, 255, 255, 0.75);
+}
+
+.confirm-number {
+    -fx-font-size: 140px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+}
+
+.confirm-msg {
+    -fx-font-size: 26px;
+    -fx-text-fill: rgba(255, 255, 255, 0.85);
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+    -fx-line-spacing: 8;
+}
+
+.confirm-countdown {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(255, 255, 255, 0.55);
+}
+
+/* Splash sempre scura anche nel tema chiaro */
 .splash-root {
     -fx-background-color: linear-gradient(to bottom right, #0d0d1a, #111128, #0a0a16);
 }
 
-/* Cerchi decorativi animati */
 .splash-circle-1 {
     -fx-background-color: rgba(91, 156, 245, 0.06);
     -fx-background-radius: 50%;
@@ -1106,6 +1227,11 @@
     -fx-padding: 80 60;
 }
 
+.splash-logo {
+    -fx-font-size: 100px;
+    -fx-effect: dropshadow(gaussian, rgba(91, 156, 245, 0.4), 20, 0, 0, 0);
+}
+
 .splash-app-name {
     -fx-font-size: 38px;
     -fx-font-weight: bold;
@@ -1116,6 +1242,11 @@
 .splash-app-sub {
     -fx-font-size: 18px;
     -fx-text-fill: rgba(255, 255, 255, 0.45);
+}
+
+.splash-step-icon {
+    -fx-font-size: 36px;
+    -fx-padding: 0 0 10 0;
 }
 
 .splash-step-label {
@@ -1130,12 +1261,10 @@
     -fx-text-fill: rgba(255, 255, 255, 0.40);
 }
 
-/* Barra progresso custom */
 .splash-progress {
-    -fx-accent: -color-accent;
+    -fx-accent: #5b9cf5;
     -fx-background-color: rgba(255, 255, 255, 0.08);
     -fx-background-radius: 5;
-    -fx-pref-height: 8;
 }
 
 .splash-progress>.track {
@@ -1144,7 +1273,7 @@
 }
 
 .splash-progress>.bar {
-    -fx-background-color: linear-gradient(to right, #3a78e0, -color-accent);
+    -fx-background-color: linear-gradient(to right, #3a78e0, #5b9cf5);
     -fx-background-radius: 5;
     -fx-background-insets: 0;
 }
@@ -1155,11 +1284,7 @@
     -fx-padding: 0 0 20 0;
 }
 
-/* ══════════════════════════════════════════════════════════════════════
- *  IKONLI — Stili icone MDI2
- * ══════════════════════════════════════════════════════════════════════ */
-
-/* Icone status bar */
+/* ══ Ikonli light ══ */
 .status-icon {
     -fx-icon-color: -color-muted;
 }
@@ -1172,7 +1297,6 @@
     -fx-icon-color: -color-red;
 }
 
-/* Icone tema */
 .theme-icon {
     -fx-icon-color: -color-muted;
 }
@@ -1194,7 +1318,6 @@
     -fx-background-color: -color-border;
 }
 
-/* Icona header menu */
 .shop-header-icon {
     -fx-icon-color: -color-accent;
 }
@@ -1203,7 +1326,6 @@
     -fx-icon-color: -color-accent;
 }
 
-/* Icone carrello */
 .cart-btn-icon {
     -fx-icon-color: -color-text;
 }
@@ -1225,71 +1347,13 @@
     -fx-background-color: -color-border;
 }
 
-/* Quick cart shortcut */
-.quick-cart-btn {
-    -fx-background-color: -color-accent;
-    -fx-text-fill: white;
-    -fx-border-radius: 14;
-    /* pill/rounded rectangle */
-    -fx-background-radius: 14;
-    -fx-background-insets: 0;
-    -fx-border-insets: 0;
-    -fx-padding: 0 18;
-    -fx-min-width: 160;
-    -fx-min-height: 54;
-    -fx-max-width: 240;
-    -fx-max-height: 54;
-    -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 14, 0, 0, 0);
-}
-
-.quick-cart-btn:hover {
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 18, 0, 0, 0);
-}
-
-.quick-cart-btn:pressed {
-    -fx-background-color: rgba(91, 156, 245, 0.85);
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.28), 12, 0, 0, 0);
-}
-
-.quick-cart-icon {
-    -fx-icon-color: white;
-}
-
-/* ⚠️ CONFLITTO: ".compose-kumpir-btn" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
-
-.compose-kumpir-btn {
-    -fx-background-color: linear-gradient(to bottom right, #2ea632, #1f8c2f);
-    -fx-text-fill: white;
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
-    -fx-border-color: #37b13c;
-    -fx-border-width: 2;
-    -fx-border-radius: 16;
-    -fx-background-radius: 16;
-    -fx-min-width: 180;
-    -fx-min-height: 52;
-    -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 14, 0, 0, 0);
-}
-
-/* ⚠️ CONFLITTO: ".compose-kumpir-btn:hover" è definito più volte con contenuto diverso.
-   Verifica quale versione usare e rimuovi le altre. */
-
-.compose-kumpir-btn:hover {
-    -fx-background-color: linear-gradient(to bottom right, #35c23f, #23922e);
-}
-
-/* Icona aggiungi al carrello */
 .add-to-cart-icon {
     -fx-icon-color: white;
 }
 
-/* Icona modal chiudi */
 .modal-close {
-    -fx-background-color: rgba(255, 255, 255, 0.08);
-    -fx-border-color: rgba(255, 255, 255, 0.20);
+    -fx-background-color: rgba(0, 0, 0, 0.06);
+    -fx-border-color: -color-border;
     -fx-border-radius: 50%;
     -fx-background-radius: 50%;
     -fx-min-width: 46;
@@ -1301,7 +1365,7 @@
 }
 
 .modal-close:pressed {
-    -fx-background-color: rgba(224, 85, 85, 0.30);
+    -fx-background-color: rgba(192, 48, 48, 0.15);
     -fx-border-color: -color-red;
 }
 
@@ -1309,7 +1373,6 @@
     -fx-icon-color: -color-text;
 }
 
-/* Icone sezioni modal */
 .allergen-icon {
     -fx-icon-color: -color-orange;
 }
@@ -1318,7 +1381,6 @@
     -fx-icon-color: -color-muted;
 }
 
-/* Icone pagamento */
 .payment-header-icon {
     -fx-icon-color: -color-accent;
 }
@@ -1331,7 +1393,6 @@
     -fx-icon-color: -color-accent;
 }
 
-/* Icona back */
 .back-icon {
     -fx-icon-color: -color-text;
 }
@@ -1351,12 +1412,10 @@
     -fx-background-color: -color-border;
 }
 
-/* CTA icon */
 .cta-icon {
     -fx-icon-color: white;
 }
 
-/* Toast */
 .toast-icon {
     -fx-icon-color: white;
 }
@@ -1367,120 +1426,51 @@
     -fx-font-weight: bold;
 }
 
-/* Welcome logo */
 .welcome-logo-icon {
     -fx-icon-color: -color-accent;
-    -fx-effect: dropshadow(gaussian, rgba(91, 156, 245, 0.4), 20, 0, 0, 0);
 }
 
-/* Start btn icon */
 .start-btn-icon {
     -fx-icon-color: white;
 }
 
-/* Splash */
 .splash-logo-icon {
     -fx-icon-color: -color-accent;
-    -fx-effect: dropshadow(gaussian, rgba(91, 156, 245, 0.4), 20, 0, 0, 0);
 }
 
 .splash-step-icon-node {
     -fx-icon-color: -color-accent;
 }
 
-/* Confirm check */
 .check-icon {
     -fx-icon-color: white;
 }
 
-/* Cart allergen icon */
 .cart-allergen-icon {
     -fx-icon-color: -color-orange;
 }
 
-/* Confirm modal */
-.confirm-root {
-    -fx-background-color: rgba(0, 0, 0, 0.55);
-}
 
-.confirm-container {
-    -fx-background-color: -color-surface;
-    -fx-background-radius: 24;
-    -fx-padding: 28;
-    -fx-alignment: center;
-    -fx-min-width: 340;
-}
-
-.confirm-title {
-    -fx-font-size: 24px;
-    -fx-font-weight: bold;
-    -fx-text-fill: -color-text;
-}
-
-.confirm-msg {
-    -fx-font-size: 16px;
-    -fx-text-fill: -color-muted;
-}
-
-.confirm-btn-primary {
-    -fx-background-color: -color-accent;
-    -fx-text-fill: white;
-}
-
-.confirm-btn-secondary {
-    -fx-background-color: rgba(255, 255, 255, 0.15);
-    -fx-text-fill: -color-text;
-}
-
-.confirm-btn-primary:hover {
-    -fx-background-color: rgba(91, 156, 245, 0.9);
-}
-
-.confirm-btn-secondary:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.25);
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   KUMPIR MODAL & COMPOSE BUTTON — CSS da aggiungere al tuo stylesheet
-   ═══════════════════════════════════════════════════════════════════ */
-
-/* ── Sidebar sinistra ─────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════
+ *  KUMPIR MODAL + SIDEBAR — Light theme
+ *  Questi componenti usano una palette semi-fixed (carta/lavanda chiaro)
+ *  indipendente dal tema, con testi scuri per leggibilità.
+ * ══════════════════════════════════════════════════════════════════════ */
 
 .sidebar-pane {
-    -fx-background-color: #1a1a2e;
-    -fx-border-color: transparent #2a2a4a transparent transparent;
+    -fx-background-color: #f8f6ff;
+    -fx-border-color: transparent #d8d0f0 transparent transparent;
     -fx-border-width: 0 1 0 0;
 }
 
-/* Contenitore del bottone kumpir (padding + sfondo degradato) */
+
 .compose-kumpir-container {
-    -fx-background-color: linear-gradient(to top, #0f0f1a, #1a1a2e);
+    -fx-background-color: linear-gradient(to top, #f0ecff, #f8f6ff);
     -fx-padding: 14 12 16 12;
-    -fx-border-color: #2a2a4a transparent transparent transparent;
+    -fx-border-color: #d8d0f0 transparent transparent transparent;
     -fx-border-width: 1 0 0 0;
 }
 
-/* ── Bottone "Componi il tuo Kumpir" ──────────────────────────────── */
-
-.compose-kumpir-btn {
-    -fx-background-color: linear-gradient(to bottom right, #f7971e, #ffd200);
-    -fx-text-fill: #1a1000;
-    -fx-font-size: 15px;
-    -fx-font-weight: bold;
-    -fx-padding: 18 14;
-    -fx-background-radius: 14;
-    -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(255, 200, 0, 0.45), 14, 0.3, 0, 4);
-    -fx-wrap-text: true;
-    -fx-text-alignment: center;
-    -fx-border-radius: 14;
-    -fx-min-height: 72px;
-}
-
-.compose-kumpir-btn:hover {
-    -fx-background-color: linear-gradient(to bottom right, #ffa533, #ffe033);
-    -fx-effect: dropshadow(gaussian, rgba(255, 210, 0, 0.65), 20, 0.4, 0, 6);
-}
 
 .compose-kumpir-btn:pressed {
     -fx-background-color: linear-gradient(to bottom right, #e68a00, #ecc200);
@@ -1488,26 +1478,25 @@
     -fx-translate-y: 1;
 }
 
-/* ── Kumpir Modal Card ────────────────────────────────────────────── */
 
 .kumpir-modal-card {
-    -fx-background-color: #16162a;
+    -fx-background-color: #f5f0e8;
     -fx-background-radius: 20;
     -fx-border-color: rgba(247, 151, 30, 0.25);
     -fx-border-width: 1.5;
     -fx-border-radius: 20;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.75), 40, 0.5, 0, 10);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.30), 40, 0.5, 0, 10);
 }
 
-/* ── Header del modal kumpir ─────────────────────────────────────── */
 
 .kumpir-modal-header {
-    -fx-background-color: linear-gradient(to right, #1e1e38, #252540);
+    -fx-background-color: linear-gradient(to right, #ede8f8, #e8e4f5);
     -fx-background-radius: 20 20 0 0;
     -fx-padding: 20 24 20 24;
     -fx-border-color: transparent transparent rgba(247, 151, 30, 0.18) transparent;
     -fx-border-width: 0 0 1 0;
 }
+
 
 .kumpir-modal-title {
     -fx-font-size: 22px;
@@ -1515,32 +1504,51 @@
     -fx-text-fill: #ffd200;
 }
 
+
 .kumpir-modal-subtitle {
     -fx-font-size: 13px;
-    -fx-text-fill: #8888aa;
+    -fx-text-fill: #9999bb;
 }
 
-/* ── Barra filtri ───────────────────────────────────────────────── */
 
 .kumpir-filter-bar {
-    -fx-background-color: #1e1e38;
-    -fx-border-color: transparent transparent rgba(255, 255, 255, 0.07) transparent;
+    -fx-background-color: #ede8f8;
+    -fx-border-color: transparent transparent rgba(0, 0, 50, 0.07) transparent;
     -fx-border-width: 0 0 1 0;
 }
 
-/* ── Filter chips ────────────────────────────────────────────────── */
+
+.kumpir-search-field {
+    -fx-background-color: #f0ecfa;
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(0, 0, 50, 0.10);
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-text-fill: #1a1a2e;
+    -fx-prompt-text-fill: #9999bb;
+    -fx-font-size: 15px;
+    -fx-padding: 10 14;
+}
+
+
+.kumpir-search-field:focused {
+    -fx-border-color: rgba(247, 151, 30, 0.55);
+    -fx-effect: dropshadow(gaussian, rgba(247, 151, 30, 0.2), 8, 0.2, 0, 0);
+}
+
 
 .kumpir-filter-chip {
-    -fx-background-color: #2a2a50;
-    -fx-text-fill: #9999cc;
+    -fx-background-color: #ddd8f0;
+    -fx-text-fill: #5555aa;
     -fx-font-size: 13px;
     -fx-padding: 8 14;
     -fx-background-radius: 20;
-    -fx-border-color: rgba(255, 255, 255, 0.1);
+    -fx-border-color: rgba(0, 0, 50, 0.10);
     -fx-border-radius: 20;
     -fx-border-width: 1;
     -fx-cursor: hand;
 }
+
 
 .kumpir-filter-chip:selected {
     -fx-background-color: linear-gradient(to right, #f7971e, #ffd200);
@@ -1550,40 +1558,43 @@
     -fx-effect: dropshadow(gaussian, rgba(255, 200, 0, 0.3), 8, 0.2, 0, 0);
 }
 
-/* ── Griglia ingredienti ─────────────────────────────────────────── */
 
 .kumpir-grid-scroll {
     -fx-background-color: transparent;
     -fx-background: transparent;
 }
 
+
 .kumpir-grid-scroll>.viewport {
     -fx-background-color: transparent;
 }
+
 
 .kumpir-ingredient-grid {
     -fx-background-color: transparent;
 }
 
-/* Card-toggle per ogni ingrediente */
+
 .kumpir-ingredient-card {
-    -fx-background-color: #252545;
-    -fx-text-fill: #ccccee;
+    -fx-background-color: #f0ecfa;
+    -fx-text-fill: #2a2a50;
     -fx-background-radius: 14;
-    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-color: rgba(0, 0, 50, 0.08);
     -fx-border-radius: 14;
     -fx-border-width: 1.5;
     -fx-cursor: hand;
     -fx-alignment: center;
     -fx-padding: 0;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 6, 0.1, 0, 2);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.08), 6, 0.1, 0, 2);
 }
 
+
 .kumpir-ingredient-card:hover {
-    -fx-background-color: #2e2e58;
+    -fx-background-color: #e5e0f5;
     -fx-border-color: rgba(247, 151, 30, 0.4);
     -fx-effect: dropshadow(gaussian, rgba(247, 151, 30, 0.2), 10, 0.2, 0, 0);
 }
+
 
 .kumpir-ingredient-card:selected {
     -fx-background-color: linear-gradient(to bottom right, #2a1f00, #3d2e00);
@@ -1592,53 +1603,65 @@
     -fx-effect: dropshadow(gaussian, rgba(255, 210, 0, 0.4), 12, 0.3, 0, 0);
 }
 
+
 .kumpir-ingredient-card:pressed {
     -fx-translate-y: 1;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 4, 0.1, 0, 1);
 }
 
-/* Testi dentro la card ingrediente */
+
+.kumpir-ingredient-card.ingredient-unavailable {
+    -fx-opacity: 0.38;
+    -fx-cursor: default;
+}
+
+
 .kumpir-ingredient-name {
     -fx-font-size: 14px;
     -fx-font-weight: bold;
-    -fx-text-fill: #e0e0f8;
+    -fx-text-fill: #1a1a3a;
 }
+
 
 .kumpir-ingredient-card:selected .kumpir-ingredient-name {
     -fx-text-fill: #ffd200;
 }
 
+
 .kumpir-ingredient-price {
     -fx-font-size: 13px;
-    -fx-text-fill: #7cba5a;
+    -fx-text-fill: #2a8a3a;
     -fx-font-weight: bold;
 }
 
+
 .kumpir-ingredient-card:selected .kumpir-ingredient-price {
-    -fx-text-fill: #aadd77;
+    -fx-text-fill: #1a6a2a;
 }
+
 
 .kumpir-allergen-badge {
     -fx-font-size: 10px;
-    -fx-text-fill: #e8a040;
+    -fx-text-fill: #b06520;
     -fx-padding: 2 6 2 6;
     -fx-background-color: rgba(232, 160, 64, 0.12);
     -fx-background-radius: 6;
 }
 
-/* ── Barra totale ────────────────────────────────────────────────── */
 
 .kumpir-total-bar {
-    -fx-background-color: linear-gradient(to right, #1e1e38, #252540);
+    -fx-background-color: linear-gradient(to right, #ede8f8, #e8e4f5);
     -fx-background-radius: 0 0 20 20;
     -fx-border-color: rgba(247, 151, 30, 0.18) transparent transparent transparent;
     -fx-border-width: 1 0 0 0;
 }
 
+
 .kumpir-count-label {
     -fx-font-size: 13px;
-    -fx-text-fill: #7777aa;
+    -fx-text-fill: #8888bb;
 }
+
 
 .kumpir-total-label {
     -fx-font-size: 26px;
@@ -1647,7 +1670,7 @@
     -fx-effect: dropshadow(gaussian, rgba(255, 210, 0, 0.3), 8, 0.2, 0, 0);
 }
 
-/* Bottone aggiungi al carrello kumpir */
+
 .kumpir-add-btn {
     -fx-background-color: linear-gradient(to bottom right, #28a745, #1e7e34);
     -fx-text-fill: white;
@@ -1661,10 +1684,12 @@
     -fx-min-height: 56px;
 }
 
+
 .kumpir-add-btn:hover {
     -fx-background-color: linear-gradient(to bottom right, #34c45a, #28a745);
     -fx-effect: dropshadow(gaussian, rgba(40, 200, 80, 0.5), 16, 0.4, 0, 6);
 }
+
 
 .kumpir-add-btn:pressed {
     -fx-background-color: linear-gradient(to bottom right, #1e7e34, #155724);
@@ -1672,31 +1697,6 @@
     -fx-translate-y: 1;
 }
 
-/* ═══════════════════════════════════════════════════════
-   CART — stili aggiuntivi (da aggiungere al CSS esistente)
-   ═══════════════════════════════════════════════════════ */
-
-/* ── Banner allergeni in fondo ─────────────────────────── */
-
-.cart-allergen-warning {
-    -fx-background-color: linear-gradient(to right, #2a1500, #3d2200);
-    -fx-border-color: rgba(255, 160, 30, 0.35) transparent transparent transparent;
-    -fx-border-width: 1.5 0 0 0;
-    -fx-padding: 14 20 14 20;
-}
-
-.cart-allergen-icon {
-    -fx-icon-color: #f7971e;
-    -fx-fill: #f7971e;
-}
-
-.cart-allergen-title {
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #ffb347;
-}
-
-/* ── Ingredienti nella riga carrello ───────────────────── */
 
 .cart-item-ingredients {
     -fx-font-size: 12px;
@@ -1706,28 +1706,9 @@
     -fx-padding: 0 0 2 0;
 }
 
-/* ── Riga carrello (aggiustamento dopo aggiunta ingredienti) ── */
 
-.cart-row {
-    -fx-background-color: #1e1e38;
-    -fx-background-radius: 14;
-    -fx-border-color: rgba(255, 255, 255, 0.06);
-    -fx-border-radius: 14;
-    -fx-border-width: 1;
-    -fx-padding: 14 16;
-}
-
-/* ── Ingrediente non disponibile ────────────────────────── */
-
-/* Card disabilitata: opacità ridotta + cursore not-allowed */
-.kumpir-ingredient-card.ingredient-unavailable {
-    -fx-opacity: 0.38;
-    -fx-cursor: default;
-}
-
-/* Etichetta "Non disponibile" al posto del prezzo */
 .kumpir-ingredient-unavailable-label {
     -fx-font-size: 11px;
-    -fx-text-fill: #cc6666;
+    -fx-text-fill: #b03030;
     -fx-font-style: italic;
 }

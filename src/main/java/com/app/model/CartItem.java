@@ -1,64 +1,117 @@
 package com.app.model;
 
-import javafx.beans.property.*;
+import com.app.pojo.Product;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 /**
- * Singola voce del carrello.
+ * Voce del carrello.
  *
- * Contiene tutti i campi necessari per costruire il payload
- * dell'ordine nel formato atteso da OrdiniController::create().
+ * Refactoring rispetto all'originale:
+ *  - Aggiunto Builder per costruzione leggibile
+ *  - Costruzione diretta da {@link Product} POJO
+ *  - Campi tipizzati (int productId, int iva invece di Object)
+ *  - qtyProperty() per binding reattivo (invariato)
  */
 public class CartItem {
 
-    private final StringProperty  name      = new SimpleStringProperty();
-    private final StringProperty  price     = new SimpleStringProperty();
-    private final DoubleProperty  priceVal  = new SimpleDoubleProperty();
-    private final IntegerProperty qty       = new SimpleIntegerProperty(1);
-    private final List<String>    allergens;
+    private final int              productId;
+    private final String           name;
+    private final String           priceLabel;   // "€ 7,50" (già formattato)
+    private final String           category;     // categoria del prodotto (es. "Pizze", "Bibite")
+    private final double           priceVal;
+    private final int              iva;
+    private final String           sku;
+    private final List<String>     allergens;
+    private final IntegerProperty  qty = new SimpleIntegerProperty(1);
+    private List<String> ingredienti = List.of();
+    // ── Costruttore privato (via Builder) ────────────────────────────
 
-    // Campi richiesti dal server
-    private final int    productId; // id prodotto dal DB (0 se non disponibile)
-    private final int    iva;       // aliquota IVA: 4, 10, 22 (default 10)
-    private final String sku;       // codice prodotto (null se non disponibile)
-
-    // Costruttore completo (con id, iva, sku dal menu)
-    public CartItem(int productId, String name, String priceFormatted,
-                    double priceVal, int iva, String sku, List<String> allergens) {
-        this.productId = productId;
-        this.iva       = iva;
-        this.sku       = sku;
-        this.allergens = allergens != null ? allergens : Collections.emptyList();
-        this.name.set(name);
-        this.price.set(priceFormatted);
-        this.priceVal.set(priceVal);
+    private CartItem(Builder b) {
+        this.productId  = b.productId;
+        this.name       = b.name;
+        this.priceLabel = b.priceLabel;
+        this.priceVal   = b.priceVal;
+        this.iva        = b.iva;
+        this.sku        = b.sku;
+        this.allergens  = Collections.unmodifiableList(b.allergens);
+        this.category   = b.category;
+        this.ingredienti = Collections.unmodifiableList(b.ingredienti);
+        this.qty.set(b.qty);
     }
 
-    // Costruttore compatibilita (senza id/iva/sku)
-    public CartItem(String name, String priceFormatted,
-                    double priceVal, List<String> allergens) {
-        this(0, name, priceFormatted, priceVal, 10, null, allergens);
+    // ── Factory methods ──────────────────────────────────────────────
+
+    /** Crea un CartItem direttamente da un Product POJO. */
+    public static CartItem fromProduct(Product p) {
+        return new Builder(p.id, p.nome, p.prezzoFmt, p.prezzo)
+                .iva(p.iva)
+                .sku(p.sku)
+                .allergens(p.allergeni)
+                .category(p.category != null ? p.category : "")
+                .ingredienti(p.ingredienti)
+                .build();
     }
 
-    // ── Getters ───────────────────────────────────────────────────────
+    /** Builder fluente per costruzione esplicita (es. da JSON legacy). */
+    public static Builder builder(int productId, String name, String priceLabel, double priceVal) {
+        return new Builder(productId, name, priceLabel, priceVal);
+    }
 
-    public int          getProductId() { return productId;     }
-    public String       getName()      { return name.get();    }
-    public String       getPrice()     { return price.get();   }
-    public double       getPriceVal()  { return priceVal.get();}
-    public int          getQty()       { return qty.get();     }
-    public void         setQty(int q)  { qty.set(q);           }
-    public int          getIva()       { return iva;           }
-    public String       getSku()       { return sku;           }
-    public List<String> getAllergens()  { return allergens;     }
+    // ── Getters ──────────────────────────────────────────────────────
 
-    public StringProperty  nameProperty()  { return name;  }
-    public StringProperty  priceProperty() { return price; }
-    public IntegerProperty qtyProperty()   { return qty;   }
+    public int           getProductId()  { return productId; }
+    public String        getName()       { return name; }
+    public String        getPrice()      { return priceLabel; }
+    public double        getPriceVal()   { return priceVal; }
+    public int           getIva()        { return iva; }
+    public String        getSku()        { return sku; }
+    public List<String>  getAllergens()  { return allergens; }
+    public String        getCategory()  { return category; }
+    public int           getQty()        { return qty.get(); }
+    public void          setQty(int q)   { qty.set(q); }
+    public IntegerProperty qtyProperty() { return qty; }
+    public List<String> getIngredienti() { return ingredienti; }    
+    // ── Calcoli ──────────────────────────────────────────────────────
 
-    public double total()           { return priceVal.get() * qty.get(); }
-    public String totalFormatted()  {
-        return String.format("€ %.2f", total()).replace('.', ',');
+    public double totalPrice()          { return Math.round(priceVal * qty.get() * 100.0) / 100.0; }
+    public String totalFormatted()      {
+        return String.format("€ %.2f", totalPrice()).replace('.', ',');
+    }
+
+    // ── Builder ──────────────────────────────────────────────────────
+
+    public static final class Builder {
+        private final int    productId;
+        private final String name;
+        private final String priceLabel;
+        private final double priceVal;
+
+        private int          iva       = 10;
+        private String       sku       = null;
+        private String       category  = "";
+        private List<String> allergens = new ArrayList<>();
+        private List<String> ingredienti = new ArrayList<>();
+        private int          qty       = 1;
+
+        public Builder(int productId, String name, String priceLabel, double priceVal) {
+            this.productId  = productId;
+            this.name       = name;
+            this.priceLabel = priceLabel;
+            this.priceVal   = priceVal;
+        }
+
+        public Builder iva(int iva)               { this.iva = iva; return this; }
+        public Builder sku(String sku)             { this.sku = sku; return this; }
+        public Builder category(String category)   { this.category = category != null ? category : ""; return this; }
+        public Builder allergens(List<String> al)  { if (al != null) this.allergens = al; return this; }
+        public Builder ingredienti(List<String> v) { this.ingredienti = v; return this; }
+        public Builder qty(int qty)                { this.qty = Math.max(1, qty); return this; }
+
+        public CartItem build() { return new CartItem(this); }
     }
 }

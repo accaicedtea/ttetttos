@@ -3,58 +3,54 @@ package com.app.model;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
-import java.util.Optional;
+import java.util.List;
 
 /**
- * Singleton che gestisce il carrello globale.
- * Accessibile da qualsiasi controller con CartManager.get()
+ * CartManager — singleton per il carrello dell'ordine.
+ *
+ * Refactoring rispetto all'originale:
+ * - addItem(CartItem) invece del metodo con 6 parametri primitivi
+ * - Mantiene addItem(int, String, String, double, int, String, List<String>)
+ * per retrocompatibilità, ma ora delega a CartItem.builder()
+ * - OrderQueue.saveCurrentOrder() rimane invariato
  */
 public class CartManager {
 
     private static final CartManager INSTANCE = new CartManager();
-    private CartManager() {}
-    public static CartManager get() { return INSTANCE; }
+    private final ObservableList<CartItem> items = FXCollections.observableArrayList();
 
-    private final ObservableList<CartItem> items =
-            FXCollections.observableArrayList();
-
-    // Lingua selezionata nella welcome screen ("it" / "en" / "de" / "fr" / "ar")
-    private String language = "it";
-
-    // ── Carrello ──────────────────────────────────────────────────────
-
-    public ObservableList<CartItem> getItems() { return items; }
-
-    /** Aggiunge un prodotto. Se già presente incrementa la quantità. */
-    /** Compatibilita: senza productId/iva. */
-    public void addItem(String name, String priceFormatted, double priceVal) {
-        addItem(0, name, priceFormatted, priceVal, 10, null, null);
+    private CartManager() {
     }
 
-    /** Compatibilita: con solo allergeni. */
-    public void addItem(String name, String priceFormatted, double priceVal,
-                        java.util.List<String> allergens) {
-        addItem(0, name, priceFormatted, priceVal, 10, null, allergens);
+    public static CartManager get() {
+        return INSTANCE;
+    }
+
+    // ── API pubblica ──────────────────────────────────────────────────
+
+    /** Aggiunge un CartItem già costruito (via Builder o fromProduct). */
+    public void addItem(CartItem item) {
+        // Prova a raggruppare con elemento esistente con stesso nome
+        for (CartItem existing : items) {
+            if (existing.getName().equals(item.getName())) {
+                existing.setQty(existing.getQty() + item.getQty());
+                OrderQueue.saveCurrentOrder(this);
+                return;
+            }
+        }
+        items.add(item);
+        OrderQueue.saveCurrentOrder(this);
     }
 
     /**
-     * Versione completa: con productId, iva e sku dal menu.
-     * Usare questa versione per inviare ordini corretti al server.
+     * @deprecated Usa {@link #addItem(CartItem)} con CartItem.builder() o
+     *             CartItem.fromProduct().
      */
-    public void addItem(int productId, String name, String priceFormatted,
-                        double priceVal, int iva, String sku,
-                        java.util.List<String> allergens) {
-        Optional<CartItem> existing = items.stream()
-                .filter(i -> i.getName().equals(name))
-                .findFirst();
-        if (existing.isPresent()) {
-            existing.get().setQty(existing.get().getQty() + 1);
-        } else {
-            items.add(new CartItem(productId, name, priceFormatted,
-                                   priceVal, iva, sku, allergens));
-        }
-        // Salva ordine corrente su disco (crash recovery)
-        OrderQueue.saveCurrentOrder(this);
+    @Deprecated
+    public void addItem(int productId, String name, String price, double priceVal,
+            int iva, String sku, List<String> allergens) {
+        addItem(CartItem.builder(productId, name, price, priceVal)
+                .iva(iva).sku(sku).allergens(allergens).build());
     }
 
     public void removeItem(CartItem item) {
@@ -62,24 +58,56 @@ public class CartManager {
         OrderQueue.saveCurrentOrder(this);
     }
 
-    public void clear() { items.clear(); }
+    public ObservableList<CartItem> getItems() {
+        return items;
+    }
 
-    public boolean isEmpty() { return items.isEmpty(); }
+    public boolean isEmpty() {
+        return items.isEmpty();
+    }
 
     public int totalItems() {
         return items.stream().mapToInt(CartItem::getQty).sum();
     }
 
     public double totalPrice() {
-        return items.stream().mapToDouble(CartItem::total).sum();
+        return Math.round(items.stream().mapToDouble(CartItem::totalPrice).sum() * 100.0) / 100.0;
     }
 
     public String totalPriceFormatted() {
         return String.format("€ %.2f", totalPrice()).replace('.', ',');
     }
 
-    // ── Lingua ────────────────────────────────────────────────────────
+    public void clear() {
+        items.clear();
+        OrderQueue.clearCurrentOrder();
+    }
 
-    public String getLanguage() { return language; }
-    public void   setLanguage(String lang) { language = lang; }
+    // ── Funzionalità extra Suggerisci prodotti se non ci sono nel cattello
+    // ─────────────────────────────────
+    // Se nel carrello non ci sono prodotti della categoria "Bevande", suggerisce di
+    // aggiungere una bevanda.
+    // Se nel carrello non ci sono prodotti della categoria "kumpir", suggerisce di
+    // aggiungere un kumpir.
+    // Se nel carrello non ci sono prodotti della categoria "Dessert", suggerisce di
+    // aggiungere un dessert.
+    public String suggestProducts() {
+        if (items.stream()
+                .noneMatch(item -> item.getCategory() != null && item.getCategory().equalsIgnoreCase("Bevande"))) {
+            // Suggerisci bevande
+            System.out.println("Suggerimento: Aggiungi una bevanda al tuo ordine!");
+            return "Bevande";
+        } else if (items.stream()
+                .noneMatch(item -> item.getCategory() != null && item.getCategory().equalsIgnoreCase("kumpir"))) {
+            // Suggerisci kumpir
+            System.out.println("Suggerimento: Aggiungi un kumpir al tuo ordine!");
+            return "kumpir";
+        } else if (items.stream()
+                .noneMatch(item -> item.getCategory() != null && item.getCategory().equalsIgnoreCase("Dessert"))) {
+            // Suggerisci dessert
+            System.out.println("Suggerimento: Aggiungi un dessert al tuo ordine!");
+            return "Dessert";
+        }
+        return null;
+    }
 }

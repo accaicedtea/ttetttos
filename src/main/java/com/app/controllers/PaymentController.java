@@ -3,36 +3,45 @@ package com.app.controllers;
 import javafx.animation.*;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
 import com.app.model.CartManager;
-import com.app.model.I18n;
 import com.app.model.OrderQueue;
 import com.util.Animations;
 import com.util.Navigator;
 
-public class PaymentController {
+/**
+ * PaymentController — refactored.
+ *
+ * Rispetto all'originale:
+ *  - Estende BaseController (t(), setVisible())
+ *  - Nessun'altra modifica funzionale
+ */
+public class PaymentController extends BaseController {
 
-    @FXML private Label titleLabel;
-    @FXML private Label totalLabel;
-    @FXML private Label cashLabel, cashSubLabel;
-    @FXML private Label cardLabel, cardSubLabel;
-    @FXML private VBox  cashCard;
-    @FXML private VBox  cardCard;
+    @FXML private Label    titleLabel;
+    @FXML private Label    totalLabel;
+    @FXML private Label    cashLabel, cashSubLabel;
+    @FXML private Label    cardLabel, cardSubLabel;
+    @FXML private VBox     cashCard;
+    @FXML private VBox     cardCard;
+    @FXML private StackPane rootPane;
 
     @FXML
     private void initialize() {
-        titleLabel.setText(I18n.t("payment_title"));
-        totalLabel.setText(CartManager.get().totalPriceFormatted());
-        cashLabel.setText(I18n.t("cash"));
-        cashSubLabel.setText(I18n.t("cash_sub"));
-        cardLabel.setText(I18n.t("card"));
-        cardSubLabel.setText(I18n.t("card_sub"));
+        this.rootStack = rootPane;
 
-        if (cashCard != null) Animations.touchFeedback(cashCard);
-        if (cardCard != null) Animations.touchFeedback(cardCard);
+        t(titleLabel,  "payment_title");
+        if (totalLabel != null) totalLabel.setText(CartManager.get().totalPriceFormatted());
+        t(cashLabel,    "cash");
+        t(cashSubLabel, "cash_sub");
+        t(cardLabel,    "card");
+        t(cardSubLabel, "card_sub");
 
+        Animations.touchFeedback(cashCard);
+        Animations.touchFeedback(cardCard);
         animateCards();
     }
 
@@ -41,18 +50,13 @@ public class PaymentController {
     @FXML private void onBack() { Navigator.goTo(Navigator.Screen.CART); }
 
     private void proceedWith(String method) {
-        // Evidenzia la card scelta
-        VBox chosen = method.equals("cash") ? cashCard : cardCard;
+        VBox chosen = "cash".equals(method) ? cashCard : cardCard;
         if (chosen != null) chosen.getStyleClass().add("payment-card-selected");
+        setVisible(cashCard, true); cashCard.setDisable(true);
+        setVisible(cardCard, true); cardCard.setDisable(true);
 
-        // Disabilita entrambe le card per evitare doppio click
-        if (cashCard != null) cashCard.setDisable(true);
-        if (cardCard != null) cardCard.setDisable(true);
-
-        // Invia ordine al server (o coda offline) poi naviga a CONFIRM
-        OrderQueue.submitOrder(CartManager.get(), method, orderNumber -> {
-            Navigator.goTo(Navigator.Screen.CONFIRM, orderNumber); // String tipo "2026-000042"
-        });
+        OrderQueue.submitOrder(CartManager.get(), method,
+            orderNumber -> Navigator.goTo(Navigator.Screen.CONFIRM, orderNumber));
     }
 
     private void animateCards() {
@@ -62,14 +66,18 @@ public class PaymentController {
                 if (cards[i] == null) continue;
                 cards[i].setOpacity(0);
                 cards[i].setTranslateY(60);
-                TranslateTransition tt = new TranslateTransition(Duration.millis(420), cards[i]);
-                tt.setToY(0);
-                tt.setDelay(Duration.millis(i * 140));
-                tt.setInterpolator(Interpolator.EASE_OUT);
-                FadeTransition ft = new FadeTransition(Duration.millis(420), cards[i]);
-                ft.setToValue(1);
-                ft.setDelay(Duration.millis(i * 140));
-                new ParallelTransition(tt, ft).play();
+                int delay = i * 140;
+                TranslateTransition translate = new TranslateTransition(Duration.millis(420), cards[i]);
+                translate.setToY(0);
+                translate.setDelay(Duration.millis(delay));
+                translate.setInterpolator(Interpolator.EASE_OUT);
+
+                FadeTransition fade = new FadeTransition(Duration.millis(420), cards[i]);
+                fade.setToValue(1);
+                fade.setDelay(Duration.millis(delay));
+
+                ParallelTransition pt = new ParallelTransition(translate, fade);
+                pt.play();
             }
         });
     }

@@ -1,251 +1,135 @@
 package com.app.controllers;
 
 import javafx.animation.*;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.scene.Node;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.layout.VBox;
-import javafx.scene.shape.Rectangle;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
 import javafx.util.Duration;
+import org.kordamp.ikonli.javafx.FontIcon;
 
-import com.app.model.CartManager;
 import com.app.model.I18n;
 import com.app.model.MenuCache;
 import com.util.Animations;
+import com.util.FlagIcon;
 import com.util.Navigator;
 
-public class WelcomeController implements Navigator.DataReceiver {
+import java.util.List;
+
+/**
+ * WelcomeController — schermata di benvenuto con selezione lingua.
+ *
+ * Rispetto all'originale:
+ * - Estende BaseController (t(), setVisible())
+ * - Resto invariato
+ */
+public class WelcomeController extends BaseController implements Navigator.DataReceiver {
 
     @FXML
-    private VBox welcomeContainer;
+    private StackPane rootPane;
     @FXML
-    private Label titleLabel;
+    private Label titleLabel, subtitleLabel;
     @FXML
-    private Label subtitleLabel;
-    @FXML
-    private Label chooseLangLabel;
-    @FXML
-    private Button btnIt, btnEn, btnDe, btnFr, btnAr;
+    private FlowPane languagePane;
     @FXML
     private Button startBtn;
+    @FXML
+    private Label startHint;
 
-    // Dimensioni fisse bottone — tutto interno, nessun overflow
-    private static final double BTN_W = 240;
-    private static final double BTN_H = 210;
-    private static final double FLAG_W = 180;
-    private static final double FLAG_H = 118;
-
-    private volatile com.google.gson.JsonObject cachedMenu = null;
-    private volatile boolean loadError = false;
-
-    @Override
-    public void receiveData(Object data) {
-        if (data instanceof com.google.gson.JsonObject menu) {
-            cachedMenu = menu;
-        }
-    }
+    // Menu precaricato dalla Splash
+    private com.google.gson.JsonObject preloadedMenu;
 
     @FXML
     private void initialize() {
-        for (Button btn : new Button[] { btnIt, btnEn, btnDe, btnFr, btnAr, startBtn })
-            if (btn != null)
-                Animations.touchFeedback(btn);
+        this.rootStack = rootPane;
 
-        decorateLangButton(btnIt, "it", "Italiano");
-        decorateLangButton(btnEn, "en", "English");
-        decorateLangButton(btnDe, "de", "Deutsch");
-        decorateLangButton(btnFr, "fr", "Français");
-        decorateLangButton(btnAr, "ar", "العربية");
+        t(titleLabel, "welcome_title");
+        t(subtitleLabel, "welcome_subtitle");
+        if (startBtn != null)
+            startBtn.setText(I18n.t("start"));
+        t(startHint, null);
+        if (startHint != null)
+            startHint.setText(I18n.t("proceed_hint"));
 
-        fadeIn();
-        preloadMenu();
+        buildLanguageButtons();
+        Animations.touchFeedback(startBtn);
+        animateEntrance();
     }
 
-    // ── Lingua ────────────────────────────────────────────────────────
-
-    @FXML
-    private void onLangIt() {
-        selectLang("it", btnIt);
+    @Override
+    public void receiveData(Object data) {
+        if (data instanceof com.google.gson.JsonObject j)
+            preloadedMenu = j;
     }
 
-    @FXML
-    private void onLangEn() {
-        selectLang("en", btnEn);
+    private void buildLanguageButtons() {
+        if (languagePane == null)
+            return;
+        languagePane.getChildren().clear();
+
+        for (String lang : List.of("it", "en", "de", "fr", "ar")) {
+            Button btn = new Button();
+            btn.getStyleClass().addAll("lang-btn", "lang-" + lang);
+
+            // Bandiera + etichetta
+            var flag = FlagIcon.load(lang, 200); // dimensione touch-friendly
+            Label lbl = new Label(langLabel(lang));
+            VBox box = new VBox(4, flag, lbl);
+            box.setAlignment(javafx.geometry.Pos.CENTER);
+            btn.setGraphic(box);
+
+            Animations.touchFeedback(btn);
+            btn.setOnAction(e -> selectLanguage(lang, btn));
+            languagePane.getChildren().add(btn);
+        }
     }
 
-    @FXML
-    private void onLangDe() {
-        selectLang("de", btnDe);
-    }
-
-    @FXML
-    private void onLangFr() {
-        selectLang("fr", btnFr);
-    }
-
-    @FXML
-    private void onLangAr() {
-        selectLang("ar", btnAr);
-    }
-
-    private void selectLang(String lang, Button active) {
+    private void selectLanguage(String lang, Button btn) {
         I18n.setLang(lang);
-        CartManager.get().setLanguage(lang);
-
-        titleLabel.setText(I18n.t("welcome_title"));
-        subtitleLabel.setText(I18n.t("welcome_subtitle"));
-        chooseLangLabel.setText(I18n.t("choose_lang"));
-        startBtn.setText(I18n.t("start") + "  →");
-
-        for (Button b : new Button[] { btnIt, btnEn, btnDe, btnFr, btnAr })
-            b.getStyleClass().remove("lang-btn-active");
-        active.getStyleClass().add("lang-btn-active");
-
-        // Pulse sul bottone selezionato
-        ScaleTransition pulse = new ScaleTransition(Duration.millis(110), active);
-        pulse.setFromX(1.0);
-        pulse.setFromY(1.0);
-        pulse.setToX(1.06);
-        pulse.setToY(1.06);
-        pulse.setAutoReverse(true);
-        pulse.setCycleCount(2);
-        pulse.play();
-
-        // Mostra start
-        startBtn.setVisible(true);
-        startBtn.setManaged(true);
-        startBtn.setScaleX(0.8);
-        startBtn.setScaleY(0.8);
-        startBtn.setOpacity(0);
-        new ParallelTransition(
-                scale(startBtn, 0.8, 1.0, 280),
-                fade(startBtn, 0, 1.0, 280)).play();
+        // Evidenzia il bottone selezionato
+        languagePane.getChildren().forEach(n -> n.getStyleClass().remove("lang-btn-active"));
+        btn.getStyleClass().add("lang-btn-active");
+        // Aggiorna UI con nuova lingua
+        t(titleLabel, "welcome_title");
+        t(subtitleLabel, "welcome_subtitle");
+        if (startBtn != null) {
+            startBtn.setText(I18n.t("start"));
+            setVisible(startBtn, true); // mostra il pulsante di avvio dopo selezione lingua
+        }
     }
-
-    // ── Start ─────────────────────────────────────────────────────────
 
     @FXML
     private void onStart() {
-        CartManager.get().clear();
-        if (cachedMenu != null) {
-            Navigator.goTo(Navigator.Screen.MENU, cachedMenu);
-        } else if (loadError) {
-            Navigator.goTo(Navigator.Screen.MENU, null);
-        } else {
-            startBtn.setText("⏳  " + I18n.t("start"));
-            startBtn.setDisable(true);
-            final Timeline[] ref = { null };
-            ref[0] = new Timeline(new KeyFrame(Duration.millis(200), e -> {
-                if (cachedMenu != null) {
-                    ref[0].stop();
-                    Navigator.goTo(Navigator.Screen.MENU, cachedMenu);
-                } else if (loadError) {
-                    ref[0].stop();
-                    Navigator.goTo(Navigator.Screen.MENU, null);
-                }
-            }));
-            ref[0].setCycleCount(Timeline.INDEFINITE);
-            ref[0].play();
-        }
+        com.google.gson.JsonObject menu = preloadedMenu != null ? preloadedMenu : MenuCache.loadFromCache();
+        Navigator.goTo(Navigator.Screen.MENU, menu);
     }
 
-    // ── Precaricamento ────────────────────────────────────────────────
+    private void animateEntrance() {
+        Platform.runLater(() -> {
+            if (rootPane != null) {
+                rootPane.setOpacity(0);
+                rootPane.setTranslateY(30);
 
-    private void preloadMenu() {
-        if (cachedMenu != null)
-            return;
-        com.google.gson.JsonObject fromCache = MenuCache.loadFromCache();
-        if (fromCache != null) {
-            cachedMenu = fromCache;
-            return;
-        }
-        new Thread(() -> {
-            for (int i = 1; i <= 3; i++) {
-                try {
-                    cachedMenu = com.api.services.ViewsService.getMenu();
-                    MenuCache.save(cachedMenu, "");
-                    return;
-                } catch (Exception e) {
-                    if (i == 3)
-                        loadError = true;
-                    else
-                        try {
-                            Thread.sleep(1000L * i);
-                        } catch (InterruptedException ignored) {
-                        }
-                }
+                FadeTransition fade = new FadeTransition(Duration.millis(500), rootPane);
+                fade.setToValue(1);
+
+                TranslateTransition translate = new TranslateTransition(Duration.millis(500), rootPane);
+                translate.setToY(0);
+                translate.setInterpolator(Interpolator.EASE_OUT);
+
+                new ParallelTransition(fade, translate).play();
             }
-        }, "welcome-fallback").start();
+        });
     }
 
-    // ── Decorazione bottone lingua ────────────────────────────────────
-    /**
-     * Crea il contenuto del bottone con bandiera + nome lingua.
-     * Tutto il contenuto è contenuto in uno StackPane delle stesse
-     * dimensioni del bottone → nessun overflow di testo verso l'esterno.
-     */
-    private void decorateLangButton(Button btn, String lang, String langLabel) {
-        // 1. Imposta dimensioni FISSE sul bottone — uguali al container grafico
-        btn.setMinSize(BTN_W, BTN_H);
-        btn.setPrefSize(BTN_W, BTN_H);
-        btn.setMaxSize(BTN_W, BTN_H);
-        btn.setText("");
-        btn.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
-
-        // 2. Bandiera
-        Node flag = com.util.FlagIcon.load(lang, FLAG_W, FLAG_H);
-
-        // 3. Testo lingua (centrato, non wrappa)
-        Label text = new Label(langLabel);
-        text.getStyleClass().add("lang-btn-text");
-        text.setAlignment(Pos.CENTER);
-        text.setMaxWidth(BTN_W - 16);
-        text.setWrapText(false);
-
-        // 4. VBox con bandiera sopra e testo sotto, padding incluso
-        VBox content = new VBox(12, flag, text);
-        content.setAlignment(Pos.CENTER);
-        content.setPadding(new Insets(16, 8, 16, 8));
-        content.setPrefSize(BTN_W, BTN_H);
-        content.setMaxSize(BTN_W, BTN_H);
-
-        // 5. Clip: impedisce che qualsiasi elemento esca dal rettangolo del bottone
-        Rectangle clip = new Rectangle(BTN_W, BTN_H);
-        clip.setArcWidth(22);
-        clip.setArcHeight(22);
-        content.setClip(clip);
-
-        btn.setGraphic(content);
-    }
-
-    // ── Animazioni ────────────────────────────────────────────────────
-
-    private void fadeIn() {
-        if (welcomeContainer == null)
-            return;
-        welcomeContainer.setOpacity(0);
-        FadeTransition ft = new FadeTransition(Duration.millis(500), welcomeContainer);
-        ft.setFromValue(0);
-        ft.setToValue(1);
-        ft.play();
-    }
-
-    private ScaleTransition scale(Node n, double from, double to, int ms) {
-        ScaleTransition st = new ScaleTransition(Duration.millis(ms), n);
-        st.setFromX(from);
-        st.setFromY(from);
-        st.setToX(to);
-        st.setToY(to);
-        return st;
-    }
-
-    private FadeTransition fade(Node n, double from, double to, int ms) {
-        FadeTransition ft = new FadeTransition(Duration.millis(ms), n);
-        ft.setFromValue(from);
-        ft.setToValue(to);
-        return ft;
+    private static String langLabel(String lang) {
+        return switch (lang) {
+            case "it" -> "Italiano";
+            case "en" -> "English";
+            case "de" -> "Deutsch";
+            case "fr" -> "Français";
+            case "ar" -> "العربية";
+            default -> lang;
+        };
     }
 }

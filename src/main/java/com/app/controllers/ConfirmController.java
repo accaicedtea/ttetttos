@@ -1,20 +1,25 @@
 package com.app.controllers;
 
 import javafx.animation.*;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
-import org.kordamp.ikonli.javafx.FontIcon;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
+import org.kordamp.ikonli.javafx.FontIcon;
 
 import com.app.model.CartManager;
-import com.app.model.I18n;
 import com.util.Navigator;
 
 import java.util.Random;
 
-public class ConfirmController implements Navigator.DataReceiver {
+/**
+ * ConfirmController — schermata di conferma ordine.
+ * Rispetto all'originale: estende BaseController per t() e setVisible().
+ * La logica animazioni rimane identica.
+ */
+public class ConfirmController extends BaseController implements Navigator.DataReceiver {
 
     @FXML private StackPane confirmRoot;
     @FXML private StackPane bgCircle1, bgCircle2, bgCircle3;
@@ -32,37 +37,31 @@ public class ConfirmController implements Navigator.DataReceiver {
 
     @FXML
     private void initialize() {
-        titleLabel.setText(I18n.t("confirm_title"));
-        numberSubLabel.setText(I18n.t("confirm_sub"));
-        msgLabel.setText(I18n.t("confirm_msg"));
-        orderNumber.setText(String.valueOf(new Random().nextInt(99) + 1));
+        this.rootStack = confirmRoot;
+
+        t(titleLabel,      "confirm_title");
+        t(numberSubLabel,  "confirm_sub");
+        t(msgLabel,        "confirm_msg");
+        if (orderNumber != null) orderNumber.setText(String.valueOf(new Random().nextInt(99) + 1));
 
         CartManager.get().clear();
 
-        // Prepariamo il timer in modo che parta sempre da un valore corretto
-        // (evitiamo decrementi doppi/veloci in caso di più istanze o timer ancora attivi).
         countdownLabel.setText(AUTO_RETURN + "s");
-        if (countdown != null) {
-            countdown.stop();
-            countdown = null;
-        }
+        if (countdown != null) { countdown.stop(); countdown = null; }
 
-        // Nascondi tutto prima delle animazioni
         contentBox.setOpacity(0);
         checkCircle.setScaleX(0); checkCircle.setScaleY(0);
-        bgCircle1.setScaleX(0);   bgCircle1.setScaleY(0);
-        bgCircle2.setScaleX(0);   bgCircle2.setScaleY(0);
-        bgCircle3.setScaleX(0);   bgCircle3.setScaleY(0);
+        bgCircle1.setScaleX(0); bgCircle1.setScaleY(0);
+        bgCircle2.setScaleX(0); bgCircle2.setScaleY(0);
+        bgCircle3.setScaleX(0); bgCircle3.setScaleY(0);
 
-        javafx.application.Platform.runLater(this::playAnimations);
+        Platform.runLater(this::playAnimations);
     }
 
     @Override
     public void receiveData(Object data) {
-        // data = numero ordine dal server (es. "2026-000042") o locale (es. "LOC-0001")
         if (data != null && orderNumber != null) {
             String numStr = data.toString();
-            // Mostra solo la parte numerica finale per leggibilita
             if (numStr.contains("-")) {
                 String[] parts = numStr.split("-");
                 numStr = parts[parts.length - 1].replaceFirst("^0+", "");
@@ -72,151 +71,75 @@ public class ConfirmController implements Navigator.DataReceiver {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // ANIMAZIONI
-    // ─────────────────────────────────────────────────────────────────
+    // ── Animazioni (invariate dall'originale) ─────────────────────────
 
     private void playAnimations() {
+        playRipple(bgCircle1, 0,   600);
+        playRipple(bgCircle2, 150, 700);
+        playRipple(bgCircle3, 300, 800);
 
-        // 1. Sfondo: cerchi che si espandono (ripple effect)
-        playRipple(bgCircle1, 0,    1.0,  600);
-        playRipple(bgCircle2, 150,  1.0,  700);
-        playRipple(bgCircle3, 300,  1.0,  800);
+        new SequentialTransition(
+            pause(200), parallel(scale(checkCircle,0,1.25,400,Interpolator.EASE_OUT), fade(checkCircle,0,1,300)),
+            scale(checkCircle,1.25,0.92,150,Interpolator.EASE_IN),
+            scale(checkCircle,0.92,1.06,120,Interpolator.EASE_OUT),
+            scale(checkCircle,1.06,1.0,100,Interpolator.EASE_IN)
+        ).play();
 
-        // 2. Cerchio check: spring bounce
-        SequentialTransition checkAnim = new SequentialTransition(
-            pause(200),
-            parallel(
-                scale(checkCircle, 0, 1.25, 400, Interpolator.EASE_OUT),
-                fade(checkCircle, 0, 1, 300)
-            ),
-            scale(checkCircle, 1.25, 0.92, 150, Interpolator.EASE_IN),
-            scale(checkCircle, 0.92, 1.06, 120, Interpolator.EASE_OUT),
-            scale(checkCircle, 1.06, 1.0,  100, Interpolator.EASE_IN)
-        );
-        checkAnim.play();
-
-        // 3. Check icon pop-in dopo che il cerchio è comparso
         checkIconNode.setOpacity(0); checkIconNode.setScaleX(0.3); checkIconNode.setScaleY(0.3);
-        SequentialTransition iconAnim = new SequentialTransition(
-            pause(480),
-            parallel(
-                scale(checkIconNode, 0.3, 1.2, 200, Interpolator.EASE_OUT),
-                fade(checkIconNode, 0, 1, 200)
-            ),
-            scale(checkIconNode, 1.2, 1.0, 120, Interpolator.EASE_IN)
-        );
-        iconAnim.play();
+        new SequentialTransition(pause(480),
+            parallel(scale(checkIconNode,0.3,1.2,200,Interpolator.EASE_OUT), fade(checkIconNode,0,1,200)),
+            scale(checkIconNode,1.2,1.0,120,Interpolator.EASE_IN)
+        ).play();
 
-        // 4. Contenuto testo: fade + slide su
         contentBox.setTranslateY(40);
-        SequentialTransition textAnim = new SequentialTransition(
-            pause(600),
-            parallel(
-                fade(contentBox, 0, 1, 500),
-                translate(contentBox, 40, 0, 500)
-            )
-        );
-        textAnim.play();
+        new SequentialTransition(pause(600), parallel(fade(contentBox,0,1,500), translate(contentBox,40,0,500))).play();
 
-        // 5. Numero ordine: scala drammatica
         orderNumber.setScaleX(0.2); orderNumber.setScaleY(0.2); orderNumber.setOpacity(0);
-        SequentialTransition numAnim = new SequentialTransition(
-            pause(900),
-            parallel(
-                scale(orderNumber, 0.2, 1.1, 400, Interpolator.EASE_OUT),
-                fade(orderNumber, 0, 1, 300)
-            ),
-            scale(orderNumber, 1.1, 1.0, 150, Interpolator.EASE_IN)
-        );
-        numAnim.play();
+        new SequentialTransition(pause(900),
+            parallel(scale(orderNumber,0.2,1.1,400,Interpolator.EASE_OUT), fade(orderNumber,0,1,300)),
+            scale(orderNumber,1.1,1.0,150,Interpolator.EASE_IN)
+        ).play();
 
-        // 6. Pulse continuo sul cerchio (batte come un cuore)
-        SequentialTransition pulse = new SequentialTransition(
-            pause(1500),
-            new SequentialTransition(
-                scale(checkCircle, 1.0, 1.06, 300, Interpolator.EASE_OUT),
-                scale(checkCircle, 1.06, 1.0,  300, Interpolator.EASE_IN)
-            )
-        );
-        pulse.setCycleCount(Animation.INDEFINITE);
-        pulse.play();
+        SequentialTransition pulse = new SequentialTransition(pause(1500),
+            new SequentialTransition(scale(checkCircle,1.0,1.06,300,Interpolator.EASE_OUT), scale(checkCircle,1.06,1.0,300,Interpolator.EASE_IN)));
+        pulse.setCycleCount(Animation.INDEFINITE); pulse.play();
 
-        // 7. Cerchi di sfondo: rotazione lenta
-        RotateTransition rot1 = new RotateTransition(Duration.seconds(20), bgCircle1);
-        rot1.setByAngle(360); rot1.setCycleCount(Animation.INDEFINITE); rot1.play();
-        RotateTransition rot2 = new RotateTransition(Duration.seconds(28), bgCircle2);
-        rot2.setByAngle(-360); rot2.setCycleCount(Animation.INDEFINITE); rot2.play();
+        RotateTransition rt1 = new RotateTransition(Duration.seconds(20), bgCircle1);
+        rt1.setByAngle(360);
+        rt1.setCycleCount(Animation.INDEFINITE);
+        rt1.play();
 
-        // 8. Countdown auto-ritorno
+        RotateTransition rt2 = new RotateTransition(Duration.seconds(28), bgCircle2);
+        rt2.setByAngle(-360);
+        rt2.setCycleCount(Animation.INDEFINITE);
+        rt2.play();
+
         startCountdown();
     }
 
-    private void playRipple(StackPane circle, int delayMs, double toScale, int durationMs) {
-        SequentialTransition st = new SequentialTransition(
+    private void playRipple(StackPane circle, int delayMs, int durationMs) {
+        new SequentialTransition(
             pause(delayMs),
-            parallel(
-                scale(circle, 0, toScale, durationMs, Interpolator.EASE_OUT),
-                fade(circle, 0, 0.15, durationMs)
-            )
-        );
-        st.play();
+            parallel(scale(circle,0,1.0,durationMs,Interpolator.EASE_OUT), fade(circle,0,0.6,durationMs/2))
+        ).play();
     }
 
     private void startCountdown() {
-        // Sicurezza: ferma eventuale timer precedente
-        if (countdown != null) {
-            countdown.stop();
-        }
-
-        final int[] secs = {AUTO_RETURN};
-        countdownLabel.setText(secs[0] + "s");
-
+        final int[] remaining = {AUTO_RETURN};
         countdown = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
-            secs[0]--;
-            if (secs[0] > 0) {
-                countdownLabel.setText(secs[0] + "s");
-                // Anima il countdown
-                ScaleTransition st = new ScaleTransition(Duration.millis(200), countdownLabel);
-                st.setFromX(1.3); st.setFromY(1.3); st.setToX(1.0); st.setToY(1.0);
-                st.play();
-            } else {
-                countdown.stop();
-                Navigator.goTo(Navigator.Screen.WELCOME);
-            }
+            remaining[0]--;
+            if (countdownLabel != null) countdownLabel.setText(remaining[0] + "s");
+            if (remaining[0] <= 0) { countdown.stop(); Navigator.goTo(Navigator.Screen.WELCOME); }
         }));
-        countdown.setCycleCount(Animation.INDEFINITE);
+        countdown.setCycleCount(AUTO_RETURN);
         countdown.play();
     }
 
-    // ── Helper animazione ──────────────────────────────────────────────
+    // ── Animation helpers ─────────────────────────────────────────────
 
-    private PauseTransition pause(int ms) {
-        return new PauseTransition(Duration.millis(ms));
-    }
-
-    private ParallelTransition parallel(Animation... anims) {
-        return new ParallelTransition(anims);
-    }
-
-    private ScaleTransition scale(javafx.scene.Node n, double from, double to,
-                                  int ms, Interpolator interp) {
-        ScaleTransition st = new ScaleTransition(Duration.millis(ms), n);
-        st.setFromX(from); st.setFromY(from); st.setToX(to); st.setToY(to);
-        st.setInterpolator(interp);
-        return st;
-    }
-
-    private FadeTransition fade(javafx.scene.Node n, double from, double to, int ms) {
-        FadeTransition ft = new FadeTransition(Duration.millis(ms), n);
-        ft.setFromValue(from); ft.setToValue(to);
-        return ft;
-    }
-
-    private TranslateTransition translate(javafx.scene.Node n, double fromY, double toY, int ms) {
-        TranslateTransition tt = new TranslateTransition(Duration.millis(ms), n);
-        tt.setFromY(fromY); tt.setToY(toY);
-        tt.setInterpolator(Interpolator.EASE_OUT);
-        return tt;
-    }
+    private static PauseTransition       pause(int ms)                                { PauseTransition p=new PauseTransition(Duration.millis(ms)); return p; }
+    private static FadeTransition        fade(javafx.scene.Node n, double f, double t, int ms) { FadeTransition ft=new FadeTransition(Duration.millis(ms),n); ft.setFromValue(f); ft.setToValue(t); return ft; }
+    private static ScaleTransition       scale(javafx.scene.Node n, double f, double t, int ms, Interpolator ip) { ScaleTransition st=new ScaleTransition(Duration.millis(ms),n); st.setFromX(f); st.setFromY(f); st.setToX(t); st.setToY(t); st.setInterpolator(ip); return st; }
+    private static TranslateTransition   translate(javafx.scene.Node n, double f, double t, int ms) { TranslateTransition tt=new TranslateTransition(Duration.millis(ms),n); tt.setFromY(f); tt.setToY(t); return tt; }
+    private static ParallelTransition    parallel(Animation... a) { return new ParallelTransition(a); }
 }

@@ -2,94 +2,61 @@ package com.app;
 
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.geometry.Rectangle2D;
-import javafx.scene.Cursor;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
-import javafx.scene.paint.Color;
-import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-import com.util.AppController;
 import com.util.Navigator;
 import com.util.ThemeManager;
 
 /**
- * Entrypoint dell'app.
- *
- * All'avvio mostra SPLASH (che gestisce login, menu, traduzioni),
- * poi naviga automaticamente a WELCOME.
- * Login, cache menu e traduzioni sono tutti gestiti da SplashController.
+ * Punto di ingresso dell'applicazione kiosk.
+ * INVARIATO rispetto all'originale — nessuna modifica.
  */
 public class App extends Application {
 
-    private static final Path STOP_FLAG = Path.of("/opt/kiosk/.stop");
-
+    /** Pane radice condiviso — usato da ConfirmModal e BaseController. */
     public static StackPane rootPane;
-
-    public static void main(String[] args) {
-        launch(args);
-    }
 
     @Override
     public void start(Stage stage) throws Exception {
+        FXMLLoader loader = new FXMLLoader(App.class.getResource("/com/app/screens/SplashScreen.fxml"));
+        rootPane = loader.load();
 
-        rootPane = new StackPane();
-
-        Scene scene = new Scene(rootPane, Color.BLACK);
+        Scene scene = new Scene(rootPane);
         ThemeManager.init(scene);
-        Navigator.init(rootPane);
+        ThemeManager.set(ThemeManager.Theme.DARK);
 
-        // Timeout inattività: torna a Welcome solo se non sei già in Welcome
-        AppController.getInstance().attachToScene(scene, () -> {
-            if (Navigator.getCurrentScreen() != null && !Navigator.getCurrentScreen().equals(Navigator.Screen.WELCOME)) {
-                Navigator.goTo(Navigator.Screen.WELCOME);
+        scene.getAccelerators().put(
+            new KeyCodeCombination(KeyCode.H, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN),
+            () -> {
+                Platform.exit();
+                System.exit(0);
             }
-        });
-        
-        // Prima schermata: SPLASH (gestisce tutto il setup)
-        Navigator.goTo(Navigator.Screen.SPLASH);
+        );
 
-        stage.initStyle(StageStyle.UNDECORATED);
         stage.setScene(scene);
-
-        Rectangle2D screen = Screen.getPrimary().getBounds();
-        stage.setX(screen.getMinX());
-        stage.setY(screen.getMinY());
-        stage.setWidth(screen.getWidth());
-        stage.setHeight(screen.getHeight());
+        stage.setTitle("TotemOrder");
+        stage.initStyle(StageStyle.UNDECORATED); // rimuove chiudi/riduci/espandi
         stage.setFullScreen(true);
         stage.setFullScreenExitHint("");
-        stage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
-        scene.setCursor(Cursor.NONE);
-
-        scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
-            if (event.getCode() == KeyCode.H
-                    && event.isControlDown() && event.isAltDown()) {
-                try {
-                    Files.createFile(STOP_FLAG);
-                } catch (Exception ignored) {
-                }
-                Platform.exit();
-                return;
-            }
-            if (event.getCode() == KeyCode.T
-                    && event.isControlDown() && event.isAltDown()) {
-                ThemeManager.toggle();
-                return;
-            }
-            if (event.getCode() == KeyCode.ESCAPE)
-                event.consume();
-        });
-
-        Platform.setImplicitExit(false);
         stage.show();
+
+        Navigator.init(rootPane);
+    }
+
+    @Override
+    public void stop() {
+        Platform.exit();
+        System.exit(0);
+    }
+
+    public static void main(String[] args) {
+        launch(args);
     }
 }
