@@ -1,7 +1,6 @@
 package com.app.components;
 
 import javafx.scene.control.Button;
-import java.util.function.Supplier;
 
 /**
  * Descriptor immutabile per un bottone del modal.

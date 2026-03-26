@@ -6,7 +6,6 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
 import com.app.components.ChipFactory;
-import com.app.components.ModalDialog;
 import com.app.model.CartItem;
 import com.app.model.CartManager;
 import com.util.Animations;

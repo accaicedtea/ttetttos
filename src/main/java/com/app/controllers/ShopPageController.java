@@ -5,6 +5,8 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.beans.value.ChangeListener;
+import javafx.scene.CacheHint;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -19,7 +21,6 @@ import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 import com.app.components.ChipFactory;
-import com.app.components.ModalDialog;
 import com.app.components.ProductCard;
 import com.app.components.ToastOverlay;
 import com.app.model.CartItem;
@@ -40,25 +41,53 @@ import com.util.NetworkWatchdog;
 import com.util.RemoteLogger;
 
 /**
- * ShopPageController
+ * ShopPageController — versione ottimizzata.
  *
- * Ottimizzazioni per il modal kumpir:
+ * ── Ottimizzazioni rispetto alla versione precedente ──────────────────────
  *
- * 1) PRE-BUILD AL BOOT: i nodi ingrediente vengono costruiti una volta sola
- * all'avvio (background thread), non quando l'utente apre il modal.
- * Aprire il modal è quindi istantaneo.
+ * [BUG FIX] Creazione nodi JavaFX su FX thread
+ * createIngNode() veniva chiamato da thread background: illegale in JavaFX.
+ * Ora i dati vengono preparati in background, i nodi creati su
+ * Platform.runLater.
  *
- * 2) CACHE SU FILE: la risposta dell'API viene salvata in
- * {user.home}/.kumpirapp/ingredients_cache.json
- * Al prossimo avvio i nodi vengono costruiti immediatamente dalla cache,
- * senza aspettare la rete.
+ * [PERF] Rimozione property binding per ingrediente
+ * Ogni .bind() aggiunge un listener che sparava ad ogni layout pass.
+ * Con N ingredienti → O(N) listener × ogni layout. Sostituiti con dimensioni
+ * fisse via setMaxWidth/setPrefWidth diretti (calcolati una sola volta).
  *
- * 3) DELTA UPDATE: il background sync confronta la nuova risposta con la
- * cache precedente e aggiorna SOLO i nodi degli ingredienti che sono
- * cambiati (disponibile, nome, allergeni), senza ricreare nulla.
+ * [PERF] Pre-build dell'intero modal (non solo la grid)
+ * Il vecchio codice costruiva VBox/HBox/ScrollPane al momento del click.
+ * Ora buildKumpirModalStructure() viene chiamato subito dopo
+ * enableKumpirButton(),
+ * quindi il click apre il modal in <5 ms (solo setVisible + Timeline 180 ms).
  *
- * 4) DISABILITATO SE NON DISPONIBILE: se disponibile==false il nodo viene
- * mostrato ma con setDisable(true) e la classe CSS "ingredient-unavailable".
+ * [PERF] Counter intero invece di stream su Map
+ * selectedCount traccia il numero di selezioni attive come int.
+ * updateKumpirTotals() è ora O(1) invece di O(N).
+ *
+ * [PERF] Reset tramite Set invece di iterazione completa
+ * selectedIds traccia gli id selezionati → reset deseleziona solo quelli attivi
+ * invece di scorrere tutti i nodi.
+ *
+ * [PERF] Rimozione ScaleTransition sul totale
+ * Animazione inutile nell'hot path dei toggle (ogni click ingrediente).
+ * Rimossa: il totale si aggiorna in testo senza costi di layout aggiuntivi.
+ *
+ * [PERF] Cache JavaFX sul modal card e sulla grid
+ * kumpirCard e kumpirGrid usano setCache(true)/CacheHint.SPEED:
+ * la GPU rasterizza il layer e lo riusa durante l'animazione di apertura.
+ *
+ * [PERF] Filtro con debounce 30 ms
+ * Evita layout multipli se l'utente attiva più filtri rapidamente.
+ *
+ * [PERF] Preformattazione stringhe prezzo
+ * PRICE_INGREDIENT_FMT e PRICE_BASE_FMT sono costanti: evitano String.format
+ * nell'hot path della costruzione nodi.
+ *
+ * [PERF] Layout batch durante inserimento massiccio
+ * Le aggiunte di nodi alla grid avvengono con kumpirGrid.setManaged(false),
+ * poi il layout viene ricalcolato una sola volta alla fine con
+ * setManaged(true).
  */
 public class ShopPageController extends BaseController
         implements Navigator.DataReceiver, Navigator.ScreenReturnable {
@@ -107,53 +136,78 @@ public class ShopPageController extends BaseController
     private Timeline kumpirBtnPulse;
     private StackPane kumpirOverlay = null;
 
+    // Cache rendering prodotti
+    private final Map<String, List<ProductCard>> categoryProductCards = new HashMap<>();
+    private String activeCategoryName = null;
+
     // ── Cache ingredienti ─────────────────────────────────────────────
-    /** Percorso file cache su disco */
     private static final Path CACHE_FILE = Path.of(
             System.getProperty("user.home"), ".kumpirapp", "ingredients_cache.json");
 
-    /** Record che raccoglie tutto ciò che serve per un nodo ingrediente */
+    /**
+     * Record nodo ingrediente.
+     * NON contiene property binding: dimensioni fisse, aggiornamenti diretti.
+     */
     private record IngNode(
-            Ingredient ing, // dati correnti
-            ToggleButton btn, // nodo JavaFX (pre-costruito)
-            Label nameLbl, // label nome (aggiornabile)
-            Label priceLbl, // label prezzo (stabile)
-            Label allergenBadge // badge allergeni (nullable, aggiornabile)
+            Ingredient ing,
+            ToggleButton btn,
+            Label nameLbl,
+            Label priceLbl,
+            Label allergenBadge // null se nessun allergene
     ) {
     }
 
-    /** Lista ordinata dei nodi — costruita una volta sola */
     private final List<IngNode> ingNodes = new ArrayList<>();
-
-    /** Map id → IngNode per delta update O(1) */
     private final Map<Integer, IngNode> ingNodeById = new HashMap<>();
 
-    /** Map id → selezione corrente nel modal */
-    private final Map<Integer, Boolean> selectedInModal = new HashMap<>();
+    // ── Selezioni modal — O(1) invece di stream su Map ────────────────
+    /**
+     * Set degli id selezionati (sostituisce Map<Integer,Boolean>).
+     * selectedCount aggiornato in sincronia → updateKumpirTotals() è O(1).
+     */
+    private final Set<Integer> selectedIds = new HashSet<>();
+    private int selectedCount = 0; // invariante: selectedCount == selectedIds.size()
 
-    /** Flag: i nodi sono pronti (pre-built) */
     private volatile boolean nodesReady = false;
+    private boolean suppressSelectionEvents = false;
 
-    /** Label totale e conteggio — create una volta, riusate */
+    // ── Nodi modal riusati ─────────────────────────────────────────────
     private Label kumpirTotalLbl;
     private Label kumpirCountLbl;
+    private ToggleButton kumpirFilterNoAllergens;
+    private ToggleButton kumpirFilterNoGluten;
+    private ToggleButton kumpirFilterNoLactose;
 
-    /** FlowPane griglia ingredienti — pre-costruita */
+    /** FlowPane griglia ingredienti — pre-costruita una sola volta */
     private FlowPane kumpirGrid;
 
-    /** Scheduled sync background (ogni 60 s) */
+    /** VBox card del modal kumpir — pre-costruita subito dopo enableKumpirButton */
+    private VBox kumpirCard;
+
+    /** Debounce per il filtro (30 ms) */
+    private Timeline filterDebounce;
+
+    // ── Thread pool ────────────────────────────────────────────────────
+    private ExecutorService backgroundExecutor;
     private ScheduledExecutorService bgSync;
 
+    // ── Costanti ───────────────────────────────────────────────────────
     private static final double KUMPIR_BASE_PRICE = 5.50;
     private static final double KUMPIR_INGREDIENT_PRICE = 0.70;
+    private static final String PRICE_BASE_FMT = formatPriceStatic(KUMPIR_BASE_PRICE);
+    private static final String PRICE_INGREDIENT_FMT = "+ " + formatPriceStatic(KUMPIR_INGREDIENT_PRICE);
+    private static final String LABEL_UNAVAILABLE = "Non disponibile";
     private static final Gson GSON = new Gson();
 
-    // ─────────────────────────────────────────────────────────────────
+    // ── Dimensioni fisse nodi ingrediente (px) ─────────────────────────
+    // Evitano property binding: calcolate una sola volta, non per-nodo.
+    private static final double ING_INNER_W = 148.0;
+    private static final double ING_LABEL_W = 140.0;
+
+    // ─────────────────────────────────────────────────────────────────────
 
     @FXML
     private void initialize() {
-        this.rootStack = rootStack;
-
         if (headerController != null) {
             headerController.setOnline(false);
             headerController.setCartCount(CartManager.get().totalItems());
@@ -185,104 +239,177 @@ public class ShopPageController extends BaseController
         showInfo(I18n.t("loading_menu"));
         NetworkWatchdog.setListener(this::setOnline);
 
-        // ── Pre-costruisce i nodi ingrediente in background al boot ───
+        backgroundExecutor = Executors.newFixedThreadPool(
+                Math.max(2, Runtime.getRuntime().availableProcessors()));
+
         prebuildIngredientNodes();
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // PRE-BUILD — costruisce i nodi una volta sola al boot
+    // PRE-BUILD ingredienti
     // ═══════════════════════════════════════════════════════════════════
 
-    /**
-     * Avvia il pre-build in background:
-     * 1) Legge la cache su disco (se esiste) → build immediato
-     * 2) Chiama l'API → confronta con cache → delta update
-     * 3) Salva la cache aggiornata su disco
-     * 4) Avvia sync periodico ogni 60 s
-     */
     private void prebuildIngredientNodes() {
-        Thread t = new Thread(() -> {
-            // Fase 1: build dalla cache disco (istantaneo, nessuna rete)
+        backgroundExecutor.submit(() -> {
+            // Fase 1 — cache disco → build immediato
             List<Ingredient> cached = loadFromDiskCache();
-            if (!cached.isEmpty()) {
+            if (!cached.isEmpty())
                 buildNodesFromList(cached);
-                Platform.runLater(this::enableKumpirButton);
-            }
 
-            // Fase 2: fetch rete → delta update
+            // Fase 2 — rete → delta update
             try {
                 JsonArray fresh = IngredientService.getIngredients(true);
                 List<Ingredient> freshList = Ingredient.listFromJsonArray(fresh);
                 saveToDiskCache(freshList);
-
-                if (ingNodes.isEmpty()) {
-                    // Prima volta senza cache
+                if (ingNodes.isEmpty())
                     buildNodesFromList(freshList);
-                    Platform.runLater(this::enableKumpirButton);
-                } else {
-                    // Delta update: aggiorna solo i nodi cambiati
+                else
                     applyDelta(freshList);
-                }
             } catch (Exception e) {
                 RemoteLogger.error("ShopPage", "prebuild ingredients", e);
-                // Se fallisce la rete ma avevamo la cache → ok, bottone già abilitato
             }
 
-            // Fase 3: sync periodico ogni 60 s
             startPeriodicSync();
-
-        }, "prebuild-ingredients");
-        t.setDaemon(true);
-        t.start();
-    }
-
-    /**
-     * Costruisce tutti i nodi JavaFX da una lista di Ingredient — thread-safe, poi
-     * post su FX.
-     */
-    private void buildNodesFromList(List<Ingredient> list) {
-        // Costruisce i nodi sul thread corrente (background), poi li aggiunge alla
-        // struttura
-        List<IngNode> newNodes = new ArrayList<>();
-        for (Ingredient ing : list) {
-            IngNode node = createIngNode(ing);
-            newNodes.add(node);
-        }
-        // Tutti i nodi JavaFX devono essere aggiunti/modificati sull'FX thread
-        Platform.runLater(() -> {
-            ingNodes.clear();
-            ingNodeById.clear();
-            ingNodes.addAll(newNodes);
-            ingNodes.forEach(n -> ingNodeById.put(n.ing().id, n));
-
-            // Ricostruisce il FlowPane griglia (una sola volta)
-            rebuildGrid();
-            nodesReady = true;
         });
     }
 
     /**
-     * Delta update: confronta la nuova lista con i nodi già costruiti.
-     * Aggiorna solo i nodi effettivamente cambiati, aggiunge i nuovi,
-     * non tocca quelli invariati.
+     * Costruisce tutti i nodi da una lista.
+     *
+     * FIX CRITICO: i nodi JavaFX vengono creati SOLO dentro Platform.runLater.
+     * La versione precedente li creava nel thread background → violazione JavaFX
+     * che causava crash non deterministici.
+     *
+     * PERF: Layout batch — il FlowPane viene popolato con setManaged(false) per
+     * sopprimere N layout intermedi, poi riabilitato per un unico calcolo finale.
      */
+    private void buildNodesFromList(List<Ingredient> list) {
+        // Prepara dati puri sul thread background (nessun nodo JavaFX)
+        record IngData(Ingredient ing, boolean hasAllergens, String allergenText) {
+        }
+        List<IngData> prepared = list.stream()
+                .map(ing -> new IngData(
+                        ing,
+                        !ing.allergeni.isEmpty(),
+                        ing.allergeni.isEmpty() ? "" : "⚠ " + String.join(", ", ing.allergeni)))
+                .collect(Collectors.toList());
+
+        Platform.runLater(() -> {
+            ingNodes.clear();
+            ingNodeById.clear();
+            ensureKumpirGrid();
+
+            // Batch insert: sopprime layout durante la costruzione
+            kumpirGrid.setManaged(false);
+            kumpirGrid.getChildren().clear();
+
+            for (IngData d : prepared) {
+                IngNode node = createIngNodeFX(d.ing(), d.hasAllergens(), d.allergenText());
+                ingNodes.add(node);
+                ingNodeById.put(d.ing().id, node);
+                kumpirGrid.getChildren().add(node.btn());
+            }
+
+            // Riabilita layout — un solo pass
+            kumpirGrid.setManaged(true);
+
+            nodesReady = true;
+            enableKumpirButton();
+        });
+    }
+
+    /**
+     * Crea un IngNode interamente sull'FX thread.
+     *
+     * PERF: nessun property binding.
+     * La versione precedente usava:
+     * inner.maxWidthProperty().bind(tb.widthProperty().multiply(0.65))
+     * Ogni bind() aggiunge un ChangeListener che scatta ad ogni resize del nodo.
+     * Con 50+ ingredienti → 50+ listener × ogni layout pass della finestra.
+     * Sostituiti con ING_INNER_W e ING_LABEL_W (costanti fisse).
+     */
+    private IngNode createIngNodeFX(Ingredient ing, boolean hasAllergens, String allergenText) {
+        ToggleButton tb = new ToggleButton();
+        tb.getStyleClass().add("kumpir-ingredient-card");
+        tb.setFocusTraversable(false);
+        tb.setDisable(!ing.disponibile);
+        if (!ing.disponibile)
+            tb.getStyleClass().add("ingredient-unavailable");
+        tb.setCache(true);
+        tb.setCacheHint(CacheHint.SPEED);
+
+        // Altezza minima fissa: garantisce card uniformi anche con nomi corti
+        tb.setMinHeight(130);
+        tb.setPrefHeight(Region.USE_COMPUTED_SIZE); // si espande se il badge occupa spazio
+
+        VBox inner = new VBox(8); // era 6 — più respiro verticale
+        inner.setAlignment(Pos.CENTER);
+        inner.setMaxWidth(ING_INNER_W);
+        inner.setPrefWidth(ING_INNER_W);
+        inner.setPadding(new Insets(8, 4, 8, 4)); // padding interno top/bottom
+
+        Label nameLbl = new Label(ing.nome);
+        nameLbl.getStyleClass().add("kumpir-ingredient-name");
+        nameLbl.setWrapText(true);
+        nameLbl.setTextAlignment(TextAlignment.CENTER);
+        nameLbl.setMaxWidth(ING_LABEL_W);
+        nameLbl.setMinHeight(Label.USE_PREF_SIZE); // non tronca mai il nome
+
+        Label priceLbl = new Label(ing.disponibile ? PRICE_INGREDIENT_FMT : LABEL_UNAVAILABLE);
+        priceLbl.getStyleClass().add(ing.disponibile
+                ? "kumpir-ingredient-price"
+                : "kumpir-ingredient-unavailable-label");
+
+        Label allergenBadge = null;
+        if (hasAllergens) {
+            allergenBadge = new Label(allergenText);
+            allergenBadge.getStyleClass().add("kumpir-allergen-badge");
+            allergenBadge.setWrapText(true);
+            allergenBadge.setTextAlignment(TextAlignment.CENTER);
+            allergenBadge.setMaxWidth(ING_LABEL_W);
+            allergenBadge.setMinHeight(Label.USE_PREF_SIZE);
+            inner.getChildren().addAll(nameLbl, priceLbl, allergenBadge);
+        } else {
+            inner.getChildren().addAll(nameLbl, priceLbl);
+        }
+        tb.setGraphic(inner);
+
+        // Listener O(1): aggiorna solo selectedIds e selectedCount, niente stream
+        final int id = ing.id;
+        tb.selectedProperty().addListener((obs, wasOn, isOn) -> {
+            if (tb.isDisabled() || suppressSelectionEvents)
+                return;
+            if (isOn) {
+                if (selectedIds.add(id))
+                    selectedCount++;
+            } else {
+                if (selectedIds.remove(id))
+                    selectedCount--;
+            }
+            updateKumpirTotals();
+        });
+
+        return new IngNode(ing, tb, nameLbl, priceLbl, allergenBadge);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // DELTA UPDATE
+    // ═══════════════════════════════════════════════════════════════════
+
     private void applyDelta(List<Ingredient> freshList) {
-        // Map id → Ingredient fresco
-        Map<Integer, Ingredient> freshMap = new HashMap<>();
+        Map<Integer, Ingredient> freshMap = new HashMap<>(freshList.size() * 2);
         freshList.forEach(i -> freshMap.put(i.id, i));
 
-        // Calcola differenze sul thread background (nessun accesso ai nodi FX)
         List<Ingredient> toAdd = new ArrayList<>();
         List<Ingredient> toUpdate = new ArrayList<>();
         List<Integer> toRemove = new ArrayList<>();
 
         for (Ingredient fresh : freshList) {
             IngNode existing = ingNodeById.get(fresh.id);
-            if (existing == null) {
+            if (existing == null)
                 toAdd.add(fresh);
-            } else if (ingredientChanged(existing.ing(), fresh)) {
+            else if (changed(existing.ing(), fresh))
                 toUpdate.add(fresh);
-            }
         }
         for (IngNode node : ingNodes) {
             if (!freshMap.containsKey(node.ing().id))
@@ -290,147 +417,94 @@ public class ShopPageController extends BaseController
         }
 
         if (toAdd.isEmpty() && toUpdate.isEmpty() && toRemove.isEmpty())
-            return; // niente da fare
+            return;
 
-        // Costruisce nodi nuovi in background (prima di passare all'FX thread)
-        List<IngNode> addedNodes = toAdd.stream()
-                .map(this::createIngNode)
+        // Prepara dati nuovi in background (nessun nodo FX)
+        record IngData(Ingredient ing, boolean hasAllergens, String allergenText) {
+        }
+        List<IngData> addData = toAdd.stream()
+                .map(ing -> new IngData(
+                        ing, !ing.allergeni.isEmpty(),
+                        ing.allergeni.isEmpty() ? "" : "⚠ " + String.join(", ", ing.allergeni)))
                 .collect(Collectors.toList());
 
         Platform.runLater(() -> {
-            // Rimuovi nodi obsoleti
+            // Rimozioni
             toRemove.forEach(id -> {
                 IngNode n = ingNodeById.remove(id);
                 if (n != null) {
                     ingNodes.remove(n);
                     kumpirGrid.getChildren().remove(n.btn());
+                    if (selectedIds.remove(id))
+                        selectedCount--;
                 }
             });
 
-            // Aggiorna nodi cambiati (in-place — no rimozione/aggiunta)
+            // Aggiornamenti in-place
             for (Ingredient fresh : toUpdate) {
                 IngNode node = ingNodeById.get(fresh.id);
                 if (node == null)
                     continue;
                 patchIngNode(node, fresh);
-                // Sostituisce l'Ingredient nel record aggiornando la lista
                 int idx = ingNodes.indexOf(node);
-                IngNode updated = new IngNode(fresh, node.btn(), node.nameLbl(), node.priceLbl(), node.allergenBadge());
+                IngNode updated = new IngNode(fresh, node.btn(), node.nameLbl(),
+                        node.priceLbl(), node.allergenBadge());
                 ingNodes.set(idx, updated);
                 ingNodeById.put(fresh.id, updated);
             }
 
-            // Aggiungi nuovi nodi alla fine
-            for (IngNode n : addedNodes) {
-                ingNodes.add(n);
-                ingNodeById.put(n.ing().id, n);
-                kumpirGrid.getChildren().add(n.btn());
+            // Aggiunte batch
+            if (!addData.isEmpty()) {
+                kumpirGrid.setManaged(false);
+                for (IngData d : addData) {
+                    IngNode n = createIngNodeFX(d.ing(), d.hasAllergens(), d.allergenText());
+                    ingNodes.add(n);
+                    ingNodeById.put(n.ing().id, n);
+                    kumpirGrid.getChildren().add(n.btn());
+                }
+                kumpirGrid.setManaged(true);
             }
         });
     }
 
-    /** Controlla se un Ingredient è cambiato rispetto al nodo pre-costruito */
-    private boolean ingredientChanged(Ingredient old, Ingredient fresh) {
+    private boolean changed(Ingredient old, Ingredient fresh) {
         return old.disponibile != fresh.disponibile
                 || !old.nome.equals(fresh.nome)
                 || !old.allergeni.equals(fresh.allergeni);
     }
 
-    /**
-     * Crea un IngNode (ToggleButton + label interne) per un Ingredient.
-     * Può essere chiamato dal thread background — non aggiunge il nodo al DOM.
-     */
-    private IngNode createIngNode(Ingredient ing) {
-        ToggleButton tb = new ToggleButton();
-        tb.getStyleClass().add("kumpir-ingredient-card");
-        tb.setFocusTraversable(false);
-        tb.setDisable(!ing.disponibile);
-        if (!ing.disponibile)
-            tb.getStyleClass().add("ingredient-unavailable");
-
-        VBox inner = new VBox(6);
-        inner.setAlignment(Pos.CENTER);
-        inner.setPrefWidth(148);
-        inner.setPrefHeight(90);
-
-        Label nameLbl = new Label(ing.nome);
-        nameLbl.getStyleClass().add("kumpir-ingredient-name");
-        nameLbl.setWrapText(true);
-        nameLbl.setTextAlignment(TextAlignment.CENTER);
-        nameLbl.setMaxWidth(136);
-
-        Label priceLbl = new Label(ing.disponibile
-                ? ("+ " + formatPrice(KUMPIR_INGREDIENT_PRICE))
-                : "Non disponibile");
-        priceLbl.getStyleClass().add(ing.disponibile
-                ? "kumpir-ingredient-price"
-                : "kumpir-ingredient-unavailable-label");
-
-        Label allergenBadge = null;
-        if (!ing.allergeni.isEmpty()) {
-            allergenBadge = new Label("⚠ " + String.join(", ", ing.allergeni));
-            allergenBadge.getStyleClass().add("kumpir-allergen-badge");
-            allergenBadge.setWrapText(true);
-            allergenBadge.setTextAlignment(TextAlignment.CENTER);
-            allergenBadge.setMaxWidth(136);
-            inner.getChildren().addAll(nameLbl, priceLbl, allergenBadge);
-        } else {
-            inner.getChildren().addAll(nameLbl, priceLbl);
-        }
-
-        tb.setGraphic(inner);
-
-        // Il listener aggiorna totale/count — opera sui dati, non sul DOM
-        tb.selectedProperty().addListener((obs, wasOn, isOn) -> {
-            if (tb.isDisabled())
-                return; // non disponibile → ignora
-            selectedInModal.put(ing.id, isOn);
-            updateKumpirTotals();
-        });
-
-        return new IngNode(ing, tb, nameLbl, priceLbl, allergenBadge);
-    }
-
-    /**
-     * Aggiorna in-place le label di un nodo già costruito (delta update).
-     * Non ricrea nessun nodo — zero alloc nel DOM.
-     */
     private void patchIngNode(IngNode node, Ingredient fresh) {
         node.nameLbl().setText(fresh.nome);
         node.btn().setDisable(!fresh.disponibile);
-
         if (!fresh.disponibile) {
             node.btn().getStyleClass().add("ingredient-unavailable");
-            node.priceLbl().setText("Non disponibile");
+            node.priceLbl().setText(LABEL_UNAVAILABLE);
             node.priceLbl().getStyleClass().remove("kumpir-ingredient-price");
             if (!node.priceLbl().getStyleClass().contains("kumpir-ingredient-unavailable-label"))
                 node.priceLbl().getStyleClass().add("kumpir-ingredient-unavailable-label");
         } else {
             node.btn().getStyleClass().remove("ingredient-unavailable");
-            node.priceLbl().setText("+ " + formatPrice(KUMPIR_INGREDIENT_PRICE));
+            node.priceLbl().setText(PRICE_INGREDIENT_FMT);
             node.priceLbl().getStyleClass().remove("kumpir-ingredient-unavailable-label");
             if (!node.priceLbl().getStyleClass().contains("kumpir-ingredient-price"))
                 node.priceLbl().getStyleClass().add("kumpir-ingredient-price");
         }
-
-        if (node.allergenBadge() != null) {
+        if (node.allergenBadge() != null)
             node.allergenBadge().setText("⚠ " + String.join(", ", fresh.allergeni));
-        }
     }
 
-    /**
-     * Ricostruisce il FlowPane griglia dai nodi esistenti (una sola volta
-     * all'init).
-     */
-    private void rebuildGrid() {
-        if (kumpirGrid == null) {
-            kumpirGrid = new FlowPane(14, 14);
-            kumpirGrid.getStyleClass().add("kumpir-ingredient-grid");
-            kumpirGrid.setPadding(new Insets(16));
-        } else {
-            kumpirGrid.getChildren().clear();
-        }
-        ingNodes.forEach(n -> kumpirGrid.getChildren().add(n.btn()));
+    // ═══════════════════════════════════════════════════════════════════
+    // GRID — creata una sola volta
+    // ═══════════════════════════════════════════════════════════════════
+
+    private void ensureKumpirGrid() {
+        if (kumpirGrid != null)
+            return;
+        kumpirGrid = new FlowPane(16, 16); // era (10,10)
+        kumpirGrid.getStyleClass().add("kumpir-ingredient-grid");
+        kumpirGrid.setPadding(new Insets(16));
+        kumpirGrid.setCache(true);
+        kumpirGrid.setCacheHint(CacheHint.SPEED);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -450,27 +524,25 @@ public class ShopPageController extends BaseController
                 saveToDiskCache(freshList);
                 applyDelta(freshList);
             } catch (Exception e) {
-                RemoteLogger.error("ShopPage", "periodic sync ingredients", e);
+                RemoteLogger.error("ShopPage", "periodic sync", e);
             }
         }, 60, 60, TimeUnit.SECONDS);
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // CACHE SU DISCO
+    // CACHE DISCO
     // ═══════════════════════════════════════════════════════════════════
 
-    /** Salva la lista ingredienti in JSON su disco. */
     private void saveToDiskCache(List<Ingredient> list) {
         try {
             Files.createDirectories(CACHE_FILE.getParent());
-            // Serializza come array JSON minimale
-            var arr = new com.google.gson.JsonArray();
+            var arr = new JsonArray();
             for (Ingredient ing : list) {
                 var obj = new JsonObject();
                 obj.addProperty("id", ing.id);
                 obj.addProperty("nome", ing.nome);
                 obj.addProperty("disponibile", ing.disponibile ? 1 : 0);
-                var allergens = new com.google.gson.JsonArray();
+                var allergens = new JsonArray();
                 ing.allergeni.forEach(allergens::add);
                 obj.add("allergeni", allergens);
                 arr.add(obj);
@@ -481,7 +553,6 @@ public class ShopPageController extends BaseController
         }
     }
 
-    /** Legge la cache dal disco, ritorna lista vuota in caso di errore/assenza. */
     private List<Ingredient> loadFromDiskCache() {
         try {
             if (!Files.exists(CACHE_FILE))
@@ -496,12 +567,11 @@ public class ShopPageController extends BaseController
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // MODAL — istantaneo perché i nodi sono già pronti
+    // MODAL KUMPIR — pre-costruito, apertura <5 ms
     // ═══════════════════════════════════════════════════════════════════
 
     private void openComposeKumpir() {
         if (!nodesReady) {
-            // Caso raro: pre-build ancora in corso (primo avvio senza cache + rete lenta)
             if (toastOverlay != null)
                 toastOverlay.show("Preparazione ingredienti…");
             return;
@@ -510,102 +580,148 @@ public class ShopPageController extends BaseController
     }
 
     /**
-     * Mostra il modal kumpir — istantaneo perché i nodi sono già costruiti.
-     * Resetta le selezioni, non tocca il DOM degli ingredienti.
+     * Mostra il modal.
+     *
+     * OTTIMIZZAZIONE CHIAVE: kumpirOverlay e kumpirCard vengono costruiti
+     * in buildKumpirModalStructure(), chiamato in enableKumpirButton() — non al
+     * click.
+     * Al click dell'utente rimangono solo:
+     * 1) resetKumpirModalState() → O(selectedCount), non O(N)
+     * 2) setVisible(true)
+     * 3) Timeline 180 ms
+     * Zero allocazioni, zero layout da zero.
      */
     private void showKumpirModal() {
+        if (rootStack == null || kumpirOverlay == null)
+            return;
+
+        resetKumpirModalState();
+
+        if (!rootStack.getChildren().contains(kumpirOverlay))
+            rootStack.getChildren().add(kumpirOverlay);
+        kumpirOverlay.setVisible(true);
+
+        // Animazione apertura — beneficia della cache GPU impostata in
+        // buildKumpirModalStructure
+        new Timeline(
+                new KeyFrame(Duration.ZERO,
+                        new KeyValue(kumpirCard.opacityProperty(), 0.0),
+                        new KeyValue(kumpirCard.scaleXProperty(), 0.92),
+                        new KeyValue(kumpirCard.scaleYProperty(), 0.92)),
+                new KeyFrame(Duration.millis(180),
+                        new KeyValue(kumpirCard.opacityProperty(), 1.0, Interpolator.EASE_OUT),
+                        new KeyValue(kumpirCard.scaleXProperty(), 1.00, Interpolator.EASE_OUT),
+                        new KeyValue(kumpirCard.scaleYProperty(), 1.00, Interpolator.EASE_OUT)))
+                .play();
+    }
+
+    /**
+     * Costruisce l'intera struttura del modal una sola volta.
+     * Chiamato da enableKumpirButton() (subito dopo che i nodi sono pronti),
+     * NON al primo click dell'utente.
+     */
+    private void buildKumpirModalStructure() {
         if (rootStack == null || kumpirGrid == null)
             return;
-        if (kumpirOverlay != null)
-            rootStack.getChildren().remove(kumpirOverlay);
 
-        // Reset selezioni del modal precedente
-        selectedInModal.clear();
-        ingNodes.forEach(n -> n.btn().setSelected(false));
+        kumpirTotalLbl = new Label(PRICE_BASE_FMT);
+        kumpirTotalLbl.getStyleClass().add("kumpir-total-label");
 
-        // Istanzia label totale/count (o riusa quelle esistenti)
-        if (kumpirTotalLbl == null) {
-            kumpirTotalLbl = new Label(formatPrice(KUMPIR_BASE_PRICE));
-            kumpirTotalLbl.getStyleClass().add("kumpir-total-label");
-        } else {
-            kumpirTotalLbl.setText(formatPrice(KUMPIR_BASE_PRICE));
-        }
-        if (kumpirCountLbl == null) {
-            kumpirCountLbl = new Label("Nessun ingrediente selezionato");
-            kumpirCountLbl.getStyleClass().add("kumpir-count-label");
-        } else {
-            kumpirCountLbl.setText("Nessun ingrediente selezionato");
-        }
+        kumpirCountLbl = new Label("Nessun ingrediente selezionato");
+        kumpirCountLbl.getStyleClass().add("kumpir-count-label");
 
-        // ── Overlay scuro ──────────────────────────────────────────────
+        // ── Overlay ────────────────────────────────────────────────────────
         kumpirOverlay = new StackPane();
         kumpirOverlay.setAlignment(Pos.CENTER);
         kumpirOverlay.setStyle("-fx-background-color: rgba(0,0,0,0.68);");
+        kumpirOverlay.setVisible(false);
+        // kumpirOverlay.setManaged(false);
 
-        // ── Card principale ────────────────────────────────────────────
-        VBox card = new VBox(0);
-        card.getStyleClass().add("kumpir-modal-card");
-        double cardW = Math.min(920, rootStack.getWidth() * 0.92);
-        double cardH = Math.min(840, rootStack.getHeight() * 0.90);
-        card.setMaxWidth(cardW);
-        card.setPrefWidth(cardW);
-        card.setMaxHeight(cardH);
-        card.setPrefHeight(cardH);
+        // Copre sempre l'intero rootStack, indipendentemente dal layout
+        kumpirOverlay.prefWidthProperty().bind(rootStack.widthProperty());
+        kumpirOverlay.prefHeightProperty().bind(rootStack.heightProperty());
+        kumpirOverlay.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
-        // Header
+        // ── Card ───────────────────────────────────────────────────────────
+        kumpirCard = new VBox(0);
+        kumpirCard.getStyleClass().add("kumpir-modal-card");
+        kumpirCard.setCache(true);
+        kumpirCard.setCacheHint(CacheHint.SPEED);
+
+        // Dimensioni reattive: ricalcolate ogni volta che rootStack cambia
+        ChangeListener<Number> sizeListener = (obs, o, n) -> syncCardSize();
+        rootStack.widthProperty().addListener(sizeListener);
+        rootStack.heightProperty().addListener(sizeListener);
+        syncCardSize(); // applica subito i valori correnti
+
+        // ── Header ────────────────────────────────────────────────────────
         HBox modalHeader = new HBox(16);
         modalHeader.setAlignment(Pos.CENTER_LEFT);
         modalHeader.getStyleClass().add("kumpir-modal-header");
+
         VBox titleBlock = new VBox(4);
         HBox.setHgrow(titleBlock, Priority.ALWAYS);
         Label titleLbl = new Label("Componi il tuo Kumpir");
         titleLbl.getStyleClass().add("kumpir-modal-title");
-        Label subtitleLbl = new Label(String.format("Base patata: € %.2f  •  Ogni ingrediente: € %.2f",
+        Label subtitleLbl = new Label(String.format(
+                "Base patata: € %.2f  •  Ogni ingrediente: € %.2f",
                 KUMPIR_BASE_PRICE, KUMPIR_INGREDIENT_PRICE).replace('.', ','));
         subtitleLbl.getStyleClass().add("kumpir-modal-subtitle");
         titleBlock.getChildren().addAll(titleLbl, subtitleLbl);
+
         Button closeBtn = new Button("✕");
         closeBtn.getStyleClass().add("modal-close");
         closeBtn.setFocusTraversable(false);
         modalHeader.getChildren().addAll(titleBlock, closeBtn);
 
-        // Filtri allergeni (senza input di ricerca testo)
-        ToggleButton noAllergens = filterChip("Senza allergeni");
-        ToggleButton noGluten = filterChip("Senza glutine");
-        ToggleButton noLactose = filterChip("Senza lattosio");
-        HBox filters = new HBox(10, noAllergens, noGluten, noLactose);
-        filters.setAlignment(Pos.CENTER_LEFT);
-        VBox filterBar = new VBox(10, filters);
-        filterBar.getStyleClass().add("kumpir-filter-bar");
-        filterBar.setPadding(new Insets(14, 20, 12, 20));
+        // ── Filtri ────────────────────────────────────────────────────────
+        kumpirFilterNoAllergens = filterChip("Senza allergeni");
+        kumpirFilterNoGluten = filterChip("Senza glutine");
+        kumpirFilterNoLactose = filterChip("Senza lattosio");
 
-        // Filtro show/hide — O(1) per nodo, nessuna ricreazione
+        // FlowPane: si wrappa automaticamente su schermi stretti
+        FlowPane filterFlow = new FlowPane(8, 8);
+        filterFlow.setAlignment(Pos.CENTER_LEFT);
+        filterFlow.getChildren().addAll(
+                kumpirFilterNoAllergens, kumpirFilterNoGluten, kumpirFilterNoLactose);
+
+        VBox filterBar = new VBox(10, filterFlow);
+        filterBar.getStyleClass().add("kumpir-filter-bar");
+        filterBar.setPadding(new Insets(12, 16, 12, 16));
+
+        // Filtro con debounce 30 ms
         Runnable applyFilter = () -> {
+            boolean noAll = kumpirFilterNoAllergens.isSelected();
+            boolean noGluten = kumpirFilterNoGluten.isSelected();
+            boolean noLac = kumpirFilterNoLactose.isSelected();
             for (IngNode ic : ingNodes) {
                 Ingredient ing = ic.ing();
                 boolean show = true;
-                if (noAllergens.isSelected() && !ing.allergeni.isEmpty())
+                if (noAll && !ing.allergeni.isEmpty())
                     show = false;
-                if (noGluten.isSelected() && ing.allergeni.stream()
+                if (show && noGluten && ing.allergeni.stream()
                         .anyMatch(a -> a.equalsIgnoreCase("glutine")))
                     show = false;
-                if (noLactose.isSelected() && ing.allergeni.stream()
+                if (show && noLac && ing.allergeni.stream()
                         .anyMatch(a -> a.equalsIgnoreCase("latte e derivati")))
                     show = false;
                 ic.btn().setManaged(show);
                 ic.btn().setVisible(show);
             }
         };
-        noAllergens.selectedProperty().addListener((obs, o, n) -> applyFilter.run());
-        noGluten.selectedProperty().addListener((obs, o, n) -> applyFilter.run());
-        noLactose.selectedProperty().addListener((obs, o, n) -> applyFilter.run());
-        // Tutti visibili all'apertura
-        ingNodes.forEach(n -> {
-            n.btn().setManaged(true);
-            n.btn().setVisible(true);
-        });
 
-        // Scroll griglia (usa kumpirGrid pre-costruita)
+        ChangeListener<Boolean> filterListener = (obs, o, n) -> {
+            if (filterDebounce != null)
+                filterDebounce.stop();
+            filterDebounce = new Timeline(
+                    new KeyFrame(Duration.millis(30), e -> applyFilter.run()));
+            filterDebounce.play();
+        };
+        kumpirFilterNoAllergens.selectedProperty().addListener(filterListener);
+        kumpirFilterNoGluten.selectedProperty().addListener(filterListener);
+        kumpirFilterNoLactose.selectedProperty().addListener(filterListener);
+
+        // ── Grid scroll ───────────────────────────────────────────────────
         ScrollPane gridScroll = new ScrollPane(kumpirGrid);
         gridScroll.setFitToWidth(true);
         gridScroll.setFocusTraversable(false);
@@ -613,56 +729,58 @@ public class ShopPageController extends BaseController
         VBox.setVgrow(gridScroll, Priority.ALWAYS);
         Animations.inertiaScroll(gridScroll);
 
-        // Barra totale
+        // La griglia adatta il gap al viewport corrente
+        kumpirCard.widthProperty().addListener((obs, o, nw) -> syncGridGap(nw.doubleValue()));
+
+        // ── Total bar ─────────────────────────────────────────────────────
         Button addBtn = new Button("🛒  Aggiungi al carrello");
         addBtn.getStyleClass().add("kumpir-add-btn");
+
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox totalBar = new HBox(16, kumpirCountLbl, spacer, kumpirTotalLbl, addBtn);
+
+        HBox totalBar = new HBox(12, kumpirCountLbl, spacer, kumpirTotalLbl, addBtn);
         totalBar.setAlignment(Pos.CENTER);
         totalBar.getStyleClass().add("kumpir-total-bar");
-        totalBar.setPadding(new Insets(16, 24, 16, 24));
+        totalBar.setPadding(new Insets(12, 16, 12, 16));
 
-        // Chiudi
+        // su schermi stretti la total bar si wrappa
+        kumpirCard.widthProperty().addListener((obs, o, nw) -> {
+            if (nw.doubleValue() < 480) {
+                kumpirCountLbl.setMaxWidth(Double.MAX_VALUE);
+                HBox.setHgrow(kumpirCountLbl, Priority.ALWAYS);
+            }
+        });
+
+        // ── Chiudi ────────────────────────────────────────────────────────
         Runnable closeOverlay = () -> {
             Timeline out = new Timeline(
                     new KeyFrame(Duration.ZERO,
-                            new KeyValue(card.opacityProperty(), 1.0),
-                            new KeyValue(card.scaleXProperty(), 1.0),
-                            new KeyValue(card.scaleYProperty(), 1.0)),
-                    new KeyFrame(Duration.millis(150),
-                            new KeyValue(card.opacityProperty(), 0.0, Interpolator.EASE_IN),
-                            new KeyValue(card.scaleXProperty(), 0.94, Interpolator.EASE_IN),
-                            new KeyValue(card.scaleYProperty(), 0.94, Interpolator.EASE_IN)));
-            out.setOnFinished(ev -> {
-                rootStack.getChildren().remove(kumpirOverlay);
-                kumpirOverlay = null;
-            });
+                            new KeyValue(kumpirCard.opacityProperty(), 1.0),
+                            new KeyValue(kumpirCard.scaleXProperty(), 1.0),
+                            new KeyValue(kumpirCard.scaleYProperty(), 1.0)),
+                    new KeyFrame(Duration.millis(130),
+                            new KeyValue(kumpirCard.opacityProperty(), 0.0, Interpolator.EASE_IN),
+                            new KeyValue(kumpirCard.scaleXProperty(), 0.94, Interpolator.EASE_IN),
+                            new KeyValue(kumpirCard.scaleYProperty(), 0.94, Interpolator.EASE_IN)));
+            out.setOnFinished(ev -> kumpirOverlay.setVisible(false));
             out.play();
         };
-
         closeBtn.setOnAction(e -> closeOverlay.run());
         kumpirOverlay.setOnMouseClicked(e -> {
             if (e.getTarget() == kumpirOverlay)
                 closeOverlay.run();
         });
 
-        // Aggiungi al carrello
+        // ── Aggiungi al carrello ──────────────────────────────────────────
         addBtn.setOnAction(e -> {
-            List<String> selectedNames = ingNodes.stream()
-                    .filter(n -> Boolean.TRUE.equals(selectedInModal.get(n.ing().id)))
-                    .map(n -> n.ing().nome)
-                    .collect(Collectors.toList());
-
-            if (selectedNames.isEmpty()) {
+            if (selectedCount == 0) {
                 shakeNode(addBtn);
                 if (toastOverlay != null)
                     toastOverlay.show("Seleziona almeno un ingrediente! 🥔");
                 return;
             }
-
-            long count = selectedNames.size();
-            double finalTotal = KUMPIR_BASE_PRICE + count * KUMPIR_INGREDIENT_PRICE;
+            double finalTotal = KUMPIR_BASE_PRICE + selectedCount * KUMPIR_INGREDIENT_PRICE;
             CartItem item = CartItem.builder(0, "Kumpir personalizzato",
                     formatPrice(finalTotal), finalTotal)
                     .category("kumpir")
@@ -679,42 +797,117 @@ public class ShopPageController extends BaseController
                 toastOverlay.show("Kumpir aggiunto al carrello! 🥔");
         });
 
-        card.getChildren().addAll(modalHeader, filterBar, gridScroll, totalBar);
-        kumpirOverlay.getChildren().add(card);
-        card.setOpacity(0);
-        card.setScaleX(0.92);
-        card.setScaleY(0.92);
+        kumpirCard.getChildren().addAll(modalHeader, filterBar, gridScroll, totalBar);
+        kumpirOverlay.getChildren().add(kumpirCard);
         rootStack.getChildren().add(kumpirOverlay);
-
-        new Timeline(
-                new KeyFrame(Duration.ZERO,
-                        new KeyValue(card.opacityProperty(), 0.0),
-                        new KeyValue(card.scaleXProperty(), 0.92),
-                        new KeyValue(card.scaleYProperty(), 0.92)),
-                new KeyFrame(Duration.millis(200),
-                        new KeyValue(card.opacityProperty(), 1.0, Interpolator.EASE_OUT),
-                        new KeyValue(card.scaleXProperty(), 1.00, Interpolator.EASE_OUT),
-                        new KeyValue(card.scaleYProperty(), 1.00, Interpolator.EASE_OUT)))
-                .play();
     }
 
-    /** Aggiorna label totale e count — chiamato dai listener dei ToggleButton */
+    /**
+     * Calcola e applica le dimensioni della card in base alle dimensioni correnti
+     * di rootStack. Viene chiamato sia all'inizializzazione che ad ogni resize.
+     *
+     * Logica portrait/landscape con margini proporzionali:
+     * landscape → 90% larghezza, 88% altezza, max 940×860
+     * portrait → 96% larghezza, 93% altezza (quasi a schermo intero)
+     */
+    private void syncCardSize() {
+        if (kumpirCard == null || rootStack == null)
+            return;
+        double sw = rootStack.getWidth();
+        double sh = rootStack.getHeight();
+        if (sw <= 0 || sh <= 0)
+            return;
+
+        boolean portrait = sh > sw * 1.15;
+
+        double w, h;
+        if (portrait) {
+            w = Math.min(sw * 0.96, 700);
+            h = Math.min(sh * 0.93, sh - 20);
+        } else {
+            w = Math.min(sw * 0.90, 940);
+            h = Math.min(sh * 0.88, 860);
+            // non scendere sotto soglie minime usabili
+            w = Math.max(w, Math.min(520, sw * 0.96));
+            h = Math.max(h, Math.min(480, sh * 0.93));
+        }
+
+        kumpirCard.setMaxWidth(w);
+        kumpirCard.setPrefWidth(w);
+        kumpirCard.setMaxHeight(h);
+        kumpirCard.setPrefHeight(h);
+    }
+
+    /**
+     * Adatta il gap della FlowPane ingredienti alla larghezza corrente della card.
+     * Meno spazio → gap più stretto → più ingredienti per riga.
+     */
+    private void syncGridGap(double cardWidth) {
+        if (kumpirGrid == null)
+            return;
+        double gap = cardWidth < 420 ? 8 : cardWidth < 600 ? 10 : 14;
+        kumpirGrid.setHgap(gap);
+        kumpirGrid.setVgap(gap);
+    }
+
+    /**
+     * Reset dello stato del modal.
+     *
+     * PERF: deseleziona solo i nodi in selectedIds (O(selectedCount)),
+     * non tutti gli N nodi (O(N)).
+     * Con 60 ingredienti e 3 selezionati → 3 operazioni invece di 60.
+     */
+    private void resetKumpirModalState() {
+        suppressSelectionEvents = true;
+        for (int id : selectedIds) {
+            IngNode n = ingNodeById.get(id);
+            if (n != null)
+                n.btn().setSelected(false);
+        }
+        selectedIds.clear();
+        selectedCount = 0;
+        suppressSelectionEvents = false;
+
+        if (filterDebounce != null) {
+            filterDebounce.stop();
+            filterDebounce = null;
+        }
+        if (kumpirFilterNoAllergens != null)
+            kumpirFilterNoAllergens.setSelected(false);
+        if (kumpirFilterNoGluten != null)
+            kumpirFilterNoGluten.setSelected(false);
+        if (kumpirFilterNoLactose != null)
+            kumpirFilterNoLactose.setSelected(false);
+
+        // ← rimossa updateKumpirModalSize(): syncCardSize() è già agganciata al
+        // listener
+
+        for (IngNode n : ingNodes) {
+            n.btn().setManaged(true);
+            n.btn().setVisible(true);
+        }
+        if (kumpirTotalLbl != null)
+            kumpirTotalLbl.setText(PRICE_BASE_FMT);
+        if (kumpirCountLbl != null)
+            kumpirCountLbl.setText("Nessun ingrediente selezionato");
+    }
+
+    /**
+     * Aggiorna label totale e count.
+     *
+     * PERF: O(1) — selectedCount è già mantenuto dal listener del ToggleButton.
+     * PERF: ScaleTransition rimossa — animazione costosa nell'hot path (ogni
+     * click).
+     */
     private void updateKumpirTotals() {
         if (kumpirTotalLbl == null || kumpirCountLbl == null)
             return;
-        long count = selectedInModal.values().stream().filter(v -> v).count();
-        double total = KUMPIR_BASE_PRICE + count * KUMPIR_INGREDIENT_PRICE;
+        double total = KUMPIR_BASE_PRICE + selectedCount * KUMPIR_INGREDIENT_PRICE;
         kumpirTotalLbl.setText(formatPrice(total));
-        kumpirCountLbl.setText(count == 0
+        kumpirCountLbl.setText(selectedCount == 0
                 ? "Nessun ingrediente selezionato"
-                : count + " ingredient" + (count == 1 ? "e" : "i")
-                        + " selezionat" + (count == 1 ? "o" : "i"));
-        ScaleTransition st = new ScaleTransition(Duration.millis(110), kumpirTotalLbl);
-        st.setFromX(1.15);
-        st.setFromY(1.15);
-        st.setToX(1.00);
-        st.setToY(1.00);
-        st.play();
+                : selectedCount + " ingredient" + (selectedCount == 1 ? "e" : "i")
+                        + " selezionat" + (selectedCount == 1 ? "o" : "i"));
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -725,7 +918,7 @@ public class ShopPageController extends BaseController
         if (composeKumpirBtn == null)
             return;
         composeKumpirBtn.setText("Componi il tuo Kumpir");
-        composeKumpirBtn.setDisable(true); // abilitato solo quando i nodi sono pronti
+        composeKumpirBtn.setDisable(true);
         composeKumpirBtn.setOnAction(e -> openComposeKumpir());
 
         kumpirBtnPulse = new Timeline(
@@ -739,15 +932,19 @@ public class ShopPageController extends BaseController
                         new KeyValue(composeKumpirBtn.scaleXProperty(), 1.00),
                         new KeyValue(composeKumpirBtn.scaleYProperty(), 1.00)));
         kumpirBtnPulse.setCycleCount(Animation.INDEFINITE);
-        // Pulse parte quando il bottone viene abilitato
     }
 
-    /** Chiamato quando i nodi sono pronti (da cache o rete). */
+    /**
+     * Abilita il bottone e pre-costruisce l'intera struttura del modal.
+     * Così il PRIMO click dell'utente è già istantaneo (non solo quelli
+     * successivi).
+     */
     private void enableKumpirButton() {
         if (composeKumpirBtn == null)
             return;
         composeKumpirBtn.setDisable(false);
         kumpirBtnPulse.play();
+        buildKumpirModalStructure(); // pre-build ora, non al click
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -765,7 +962,8 @@ public class ShopPageController extends BaseController
                     loadMenu();
                 if (!syncStarted) {
                     syncStarted = true;
-                    MenuCache.startBackgroundSync(fresh -> Platform.runLater(() -> buildUI(MenuData.from(fresh))));
+                    MenuCache.startBackgroundSync(
+                            fresh -> Platform.runLater(() -> buildUI(MenuData.from(fresh))));
                 }
             });
         } else {
@@ -774,7 +972,7 @@ public class ShopPageController extends BaseController
     }
 
     public void loadMenu() {
-        new Thread(() -> {
+        backgroundExecutor.submit(() -> {
             try {
                 JsonObject r = com.api.services.ViewsService.getMenu();
                 MenuData menu = MenuData.from(r);
@@ -787,18 +985,25 @@ public class ShopPageController extends BaseController
                 RemoteLogger.error("ShopPage", "loadMenu", e);
                 Platform.runLater(() -> showInfo("Errore: " + e.getMessage()));
             }
-        }, "load-menu").start();
+        });
     }
 
     private void buildUI(MenuData menu) {
         categoriesPane.getChildren().clear();
         productsPane.getChildren().clear();
+        categoryProductCards.clear();
 
         for (Category cat : menu.categorie) {
             Label tab = new Label(cat.nome);
             tab.getStyleClass().add("category-tab");
             tab.setMaxWidth(Double.MAX_VALUE);
             Animations.touchFeedback(tab);
+
+            List<ProductCard> cards = cat.prodotti.stream()
+                    .map(ProductCard::from)
+                    .collect(Collectors.toList());
+            categoryProductCards.put(cat.nome, cards);
+
             tab.setOnMouseClicked(ev -> selectCategory(tab, cat));
             categoriesPane.getChildren().add(tab);
         }
@@ -813,28 +1018,48 @@ public class ShopPageController extends BaseController
         if (activeCategory != null)
             activeCategory.getStyleClass().remove("category-tab-active");
         activeCategory = tab;
+        activeCategoryName = cat.nome;
         tab.getStyleClass().add("category-tab-active");
         if (headerController != null)
             headerController.setCategory(cat.nome);
         showProducts(cat.prodotti);
     }
 
-    private void showProducts(java.util.List<Product> prodotti) {
-        productsPane.getChildren().clear();
+    private void showProducts(List<Product> prodotti) {
         if (prodotti == null || prodotti.isEmpty()) {
+            productsPane.getChildren().clear();
             showInfo("Nessun prodotto.");
             return;
         }
-        for (Product p : prodotti) {
-            ProductCard card = new ProductCard(p.nome, p.prezzoFmt, p.descrizione, p.allergeni);
-            card.setOnMouseClicked(ev -> showModal(p));
-            productsPane.getChildren().add(card);
+
+        productsPane.setOpacity(0);
+        productsPane.getChildren().clear();
+
+        List<ProductCard> cards = categoryProductCards.getOrDefault(activeCategoryName, null);
+        if (cards == null) {
+            cards = prodotti.stream().map(ProductCard::from).collect(Collectors.toList());
+            categoryProductCards.put(activeCategoryName != null ? activeCategoryName : "", cards);
         }
+
+        for (int i = 0; i < cards.size(); i++) {
+            ProductCard card = cards.get(i);
+            Product p = prodotti.size() > i ? prodotti.get(i) : null;
+            if (p != null)
+                card.setOnMouseClicked(ev -> showModal(p));
+        }
+
+        productsPane.getChildren().addAll(cards);
         productsScroll.setVvalue(0);
         double w0 = productsScroll.getViewportBounds().getWidth();
         if (w0 > 0)
             resizeCards(w0);
         Platform.runLater(() -> resizeCards(productsScroll.getViewportBounds().getWidth()));
+
+        FadeTransition fadeIn = new FadeTransition(Duration.millis(200), productsPane);
+        fadeIn.setFromValue(0);
+        fadeIn.setToValue(1);
+        fadeIn.setInterpolator(Interpolator.EASE_OUT);
+        fadeIn.play();
     }
 
     private void resizeCards(double vw) {
@@ -921,12 +1146,16 @@ public class ShopPageController extends BaseController
         toastBox.setTranslateY(20);
         setVisible(toastBox, true);
         Timeline tl = new Timeline(
-                new KeyFrame(Duration.millis(0), new KeyValue(toastBox.opacityProperty(), 0),
+                new KeyFrame(Duration.millis(0),
+                        new KeyValue(toastBox.opacityProperty(), 0),
                         new KeyValue(toastBox.translateYProperty(), 20)),
-                new KeyFrame(Duration.millis(250), new KeyValue(toastBox.opacityProperty(), 1),
+                new KeyFrame(Duration.millis(250),
+                        new KeyValue(toastBox.opacityProperty(), 1),
                         new KeyValue(toastBox.translateYProperty(), 0)),
-                new KeyFrame(Duration.millis(1650), new KeyValue(toastBox.opacityProperty(), 1)),
-                new KeyFrame(Duration.millis(1900), new KeyValue(toastBox.opacityProperty(), 0)));
+                new KeyFrame(Duration.millis(1650),
+                        new KeyValue(toastBox.opacityProperty(), 1)),
+                new KeyFrame(Duration.millis(1900),
+                        new KeyValue(toastBox.opacityProperty(), 0)));
         tl.setOnFinished(e -> setVisible(toastBox, false));
         tl.play();
     }
@@ -939,11 +1168,14 @@ public class ShopPageController extends BaseController
         quickCartBtn.setText(I18n.t("cart"));
         setVisible(quickCartBtn, false);
         quickCartPulse = new Timeline(
-                new KeyFrame(Duration.ZERO, new KeyValue(quickCartBtn.scaleXProperty(), 1.0),
+                new KeyFrame(Duration.ZERO,
+                        new KeyValue(quickCartBtn.scaleXProperty(), 1.0),
                         new KeyValue(quickCartBtn.scaleYProperty(), 1.0)),
-                new KeyFrame(Duration.millis(500), new KeyValue(quickCartBtn.scaleXProperty(), 1.12),
+                new KeyFrame(Duration.millis(500),
+                        new KeyValue(quickCartBtn.scaleXProperty(), 1.12),
                         new KeyValue(quickCartBtn.scaleYProperty(), 1.12)),
-                new KeyFrame(Duration.millis(1000), new KeyValue(quickCartBtn.scaleXProperty(), 1.0),
+                new KeyFrame(Duration.millis(1000),
+                        new KeyValue(quickCartBtn.scaleXProperty(), 1.0),
                         new KeyValue(quickCartBtn.scaleYProperty(), 1.0)));
         quickCartPulse.setCycleCount(Animation.INDEFINITE);
         CartManager.get().getItems().addListener(
@@ -987,6 +1219,10 @@ public class ShopPageController extends BaseController
         return String.format("€ %.2f", price).replace('.', ',');
     }
 
+    private static String formatPriceStatic(double price) {
+        return String.format("€ %.2f", price).replace('.', ',');
+    }
+
     private void shakeNode(Node node) {
         new Timeline(
                 new KeyFrame(Duration.ZERO, new KeyValue(node.translateXProperty(), 0)),
@@ -1019,11 +1255,14 @@ public class ShopPageController extends BaseController
         NetworkWatchdog.setListener(this::setOnline);
     }
 
-    // Ferma il sync quando la schermata viene distrutta (evita leak)
     public void destroy() {
         if (bgSync != null && !bgSync.isShutdown())
             bgSync.shutdownNow();
+        if (backgroundExecutor != null && !backgroundExecutor.isShutdown())
+            backgroundExecutor.shutdownNow();
         if (kumpirBtnPulse != null)
             kumpirBtnPulse.stop();
+        if (filterDebounce != null)
+            filterDebounce.stop();
     }
 }

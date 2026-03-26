@@ -6,7 +6,6 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.util.Duration;
-import org.kordamp.ikonli.javafx.FontIcon;
 
 import com.app.model.I18n;
 import com.app.model.MenuCache;

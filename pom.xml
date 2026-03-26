@@ -1,7 +1,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                             http://maven.apache.org/maven-v4_0_0.xsd">
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.app</groupId>
@@ -29,11 +28,13 @@
       <artifactId>javafx-controls</artifactId>
       <version>${javafx.version}</version>
     </dependency>
+
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-fxml</artifactId>
       <version>${javafx.version}</version>
     </dependency>
+
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-graphics</artifactId>
@@ -53,11 +54,13 @@
       <artifactId>ikonli-core</artifactId>
       <version>${ikonli.version}</version>
     </dependency>
+
     <dependency>
       <groupId>org.kordamp.ikonli</groupId>
       <artifactId>ikonli-javafx</artifactId>
       <version>${ikonli.version}</version>
     </dependency>
+    
     <dependency>
       <groupId>org.kordamp.ikonli</groupId>
       <artifactId>ikonli-materialdesign2-pack</artifactId>
@@ -85,12 +88,21 @@
         <groupId>org.openjfx</groupId>
         <artifactId>javafx-maven-plugin</artifactId>
         <version>0.0.8</version>
+        <configuration>
+          <mainClass>com.app.App</mainClass>
+          <jvmArgs>
+            <jvmArg>-Xms1g</jvmArg>
+            <jvmArg>-Xmx1g</jvmArg>
+            <jvmArg>-XX:ParallelGCThreads=4</jvmArg>
+            <jvmArg>${jvm.args}</jvmArg>
+          </jvmArgs>
+        </configuration>
         <executions>
           <execution>
             <id>default-cli</id>
-            <configuration>
-              <mainClass>com.app.App</mainClass>
-            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>
@@ -104,7 +116,9 @@
           <execution>
             <id>copy-deps</id>
             <phase>package</phase>
-            <goals><goal>copy-dependencies</goal></goals>
+            <goals>
+              <goal>copy-dependencies</goal>
+            </goals>
             <configuration>
               <outputDirectory>${project.build.directory}/lib</outputDirectory>
               <includeScope>runtime</includeScope>
@@ -143,12 +157,14 @@
           <execution>
             <id>create-lib-archive</id>
             <phase>package</phase>
-            <goals><goal>run</goal></goals>
+            <goals>
+              <goal>run</goal>
+            </goals>
             <configuration>
               <target>
                 <tar destfile="${project.build.directory}/lib.tar.gz"
-                     basedir="${project.build.directory}/lib"
-                     compression="gzip" longfile="gnu"/>
+                  basedir="${project.build.directory}/lib"
+                  compression="gzip" longfile="gnu" />
                 <echo message="JAR:  target/demo-1.jar" />
                 <echo message="Libs: target/lib.tar.gz" />
               </target>

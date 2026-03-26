@@ -1566,9 +1566,9 @@
 }
 
 /* Card-toggle per ogni ingrediente */
+/* ── Card-toggle per ogni ingrediente ───────────────────────────── */
 .kumpir-ingredient-card {
     -fx-background-color: #252545;
-    -fx-text-fill: #ccccee;
     -fx-background-radius: 14;
     -fx-border-color: rgba(255, 255, 255, 0.08);
     -fx-border-radius: 14;
@@ -1576,100 +1576,80 @@
     -fx-cursor: hand;
     -fx-alignment: center;
     -fx-padding: 0;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 6, 0.1, 0, 2);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 6, 0.1, 0, 2);
+    -fx-pref-width: 160;
+    -fx-min-width: 150;
+    -fx-max-width: 200;
+    -fx-min-height: 130;
+    -fx-pref-height: USE_COMPUTED_SIZE;
 }
 
 .kumpir-ingredient-card:hover {
     -fx-background-color: #2e2e58;
     -fx-border-color: rgba(247, 151, 30, 0.4);
-    -fx-effect: dropshadow(gaussian, rgba(247, 151, 30, 0.2), 10, 0.2, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(247,151,30,0.2), 10, 0.2, 0, 0);
 }
 
 .kumpir-ingredient-card:selected {
     -fx-background-color: linear-gradient(to bottom right, #2a1f00, #3d2e00);
     -fx-border-color: #ffd200;
     -fx-border-width: 2;
-    -fx-effect: dropshadow(gaussian, rgba(255, 210, 0, 0.4), 12, 0.3, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(255,210,0,0.4), 12, 0.3, 0, 0);
 }
 
 .kumpir-ingredient-card:pressed {
     -fx-translate-y: 1;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 4, 0.1, 0, 1);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 4, 0.1, 0, 1);
 }
 
-/* Testi dentro la card ingrediente */
+/* ── Testo nome — UN solo blocco, no duplicati ──────────────────── */
 .kumpir-ingredient-name {
     -fx-font-size: 14px;
     -fx-font-weight: bold;
     -fx-text-fill: #e0e0f8;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+    -fx-wrap-text: true;
 }
 
 .kumpir-ingredient-card:selected .kumpir-ingredient-name {
     -fx-text-fill: #ffd200;
 }
 
+/* ── Prezzo ─────────────────────────────────────────────────────── */
 .kumpir-ingredient-price {
     -fx-font-size: 13px;
-    -fx-text-fill: #7cba5a;
     -fx-font-weight: bold;
+    -fx-text-fill: #7cba5a;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
 }
 
 .kumpir-ingredient-card:selected .kumpir-ingredient-price {
     -fx-text-fill: #aadd77;
 }
 
+/* ── Badge allergeni ────────────────────────────────────────────── */
 .kumpir-allergen-badge {
-    -fx-font-size: 10px;
-    -fx-text-fill: #e8a040;
-    -fx-padding: 2 6 2 6;
-    -fx-background-color: rgba(232, 160, 64, 0.12);
+    -fx-font-size: 11px;
+    -fx-text-fill: #e0a75b;
+    -fx-padding: 3 6 3 6;
+    -fx-background-color: rgba(232, 160, 64, 0.15);
     -fx-background-radius: 6;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
 }
 
-/* ── Barra totale ────────────────────────────────────────────────── */
-
-.kumpir-total-bar {
-    -fx-background-color: linear-gradient(to right, #1e1e38, #252540);
-    -fx-background-radius: 0 0 20 20;
-    -fx-border-color: rgba(247, 151, 30, 0.18) transparent transparent transparent;
-    -fx-border-width: 1 0 0 0;
+/* ── Etichetta non disponibile ──────────────────────────────────── */
+.kumpir-ingredient-unavailable-label {
+    -fx-font-size: 11px;
+    -fx-text-fill: #666688;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
 }
 
-.kumpir-count-label {
-    -fx-font-size: 13px;
-    -fx-text-fill: #7777aa;
-}
-
-.kumpir-total-label {
-    -fx-font-size: 26px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #ffd200;
-    -fx-effect: dropshadow(gaussian, rgba(255, 210, 0, 0.3), 8, 0.2, 0, 0);
-}
-
-/* Bottone aggiungi al carrello kumpir */
-.kumpir-add-btn {
-    -fx-background-color: linear-gradient(to bottom right, #28a745, #1e7e34);
-    -fx-text-fill: white;
-    -fx-font-size: 16px;
-    -fx-font-weight: bold;
-    -fx-padding: 16 28;
-    -fx-background-radius: 12;
-    -fx-border-radius: 12;
-    -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(40, 167, 69, 0.4), 12, 0.3, 0, 4);
-    -fx-min-height: 56px;
-}
-
-.kumpir-add-btn:hover {
-    -fx-background-color: linear-gradient(to bottom right, #34c45a, #28a745);
-    -fx-effect: dropshadow(gaussian, rgba(40, 200, 80, 0.5), 16, 0.4, 0, 6);
-}
-
-.kumpir-add-btn:pressed {
-    -fx-background-color: linear-gradient(to bottom right, #1e7e34, #155724);
-    -fx-effect: dropshadow(gaussian, rgba(40, 120, 69, 0.3), 6, 0.2, 0, 2);
-    -fx-translate-y: 1;
+.ingredient-unavailable {
+    -fx-opacity: 0.45;
 }
 
 /* ═══════════════════════════════════════════════════════

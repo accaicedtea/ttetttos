@@ -4,6 +4,7 @@ import com.api.services.OrdersService;
 import com.google.gson.*;
 
 import java.nio.file.*;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
@@ -27,6 +28,9 @@ public final class OrderQueue {
     private static final Path CURRENT_ORDER_FILE = resolvePath("current-order.json");
     private static final Path QUEUE_FILE         = resolvePath("order-queue.json");
     private static final DateTimeFormatter ISO   = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    private static final Duration MAX_QUEUE_AGE  = Duration.ofMinutes(30);
+
+
 
     private static final ScheduledExecutorService EXECUTOR =
         Executors.newSingleThreadScheduledExecutor(r -> {
@@ -198,8 +202,43 @@ public final class OrderQueue {
 
     private static JsonArray loadQueue() {
         if (!Files.exists(QUEUE_FILE)) return new JsonArray();
-        try { return JsonParser.parseString(Files.readString(QUEUE_FILE)).getAsJsonArray(); }
-        catch (Exception e) { return new JsonArray(); }
+        try {
+            JsonArray queue = JsonParser.parseString(Files.readString(QUEUE_FILE)).getAsJsonArray();
+            JsonArray pruned = pruneStaleOrders(queue);
+            if (pruned.size() != queue.size()) {
+                Files.writeString(QUEUE_FILE, new GsonBuilder().create().toJson(pruned));
+                System.err.println("[OrderQueue] coda scaduta, rimosse " + (queue.size() - pruned.size()) + " ordinI");
+            }
+            return pruned;
+        } catch (Exception e) {
+            System.err.println("[OrderQueue] loadQueue fallito: " + e.getMessage());
+            return new JsonArray();
+        }
+    }
+
+    private static JsonArray pruneStaleOrders(JsonArray queue) {
+        JsonArray valid = new JsonArray();
+        LocalDateTime now = LocalDateTime.now();
+        for (JsonElement el : queue) {
+            if (!el.isJsonObject()) continue;
+            JsonObject order = el.getAsJsonObject();
+            if (!order.has("_salvato_il")) {
+                valid.add(order);
+                continue;
+            }
+            String saved = order.get("_salvato_il").getAsString();
+            try {
+                LocalDateTime date = LocalDateTime.parse(saved, ISO);
+                if (date.plus(MAX_QUEUE_AGE).isAfter(now)) {
+                    valid.add(order);
+                } else {
+                    System.err.println("[OrderQueue] scarto ordine scaduto: " + order.toString());
+                }
+            } catch (Exception e) {
+                valid.add(order);
+            }
+        }
+        return valid;
     }
 
     private static String extractNumeroOrdine(JsonObject resp) {

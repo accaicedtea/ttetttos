@@ -14,8 +14,6 @@ import com.app.model.OrderQueue;
 import com.app.model.TranslationManager;
 import com.util.Navigator;
 import com.util.NetworkWatchdog;
-import com.util.RemoteLogger;
-
 /**
  * SplashController — schermata di avvio con sequenza di loading.
  *
@@ -124,6 +122,10 @@ public class SplashController extends BaseController {
             setStep("mdi2c-check-circle", "Pronto!", "", 1.0);
             sleep(400);
 
+            // ── Step 5: BUILD Menù compose ─────────────────────────────────────
+            build();
+            sleep(300);
+
             // Naviga al WelcomeScreen passando il menu precaricato
             final com.google.gson.JsonObject finalMenu = menuData;
             Platform.runLater(() ->
@@ -159,6 +161,9 @@ public class SplashController extends BaseController {
         }
     }
 
+    private void build(){
+
+    }
     // ── Animation helpers ─────────────────────────────────────────────
 
     private static PauseTransition     pause(int ms)                                              { return new PauseTransition(Duration.millis(ms)); }

@@ -3,7 +3,6 @@ package com.app.components;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 import com.app.model.I18n;

@@ -1,7 +1,5 @@
 package com.app.components;
 
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
 
 /**
  * Raccolta di tutti i pattern d'uso di ModalDialog.
