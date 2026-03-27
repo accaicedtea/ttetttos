@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.util.JsonHelper;
+import com.util.RemoteLogger;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,7 +26,7 @@ public class Ingredient {
     }
 
     public static Ingredient fromJson(JsonObject j) {
-        System.out.println("Parsing ingredient from JSON: " + j);
+        System.out.println("[Ingredient] fromJson: loading ingredient from JSON: ");
         if (j == null)
             return null;
         int id = JsonHelper.intVal(j, "id", 0);

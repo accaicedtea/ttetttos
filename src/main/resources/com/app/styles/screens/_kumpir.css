@@ -2,6 +2,11 @@
  *  screens/_kumpir.css
  *  Modal Kumpir (personalizzazione) + Sidebar ingredienti selezionati.
  *  Usa esclusivamente i token definiti in _variables-*.css.
+ *
+ *  FIX: -fx-border-width unificato a 2 su tutti gli stati di
+ *  .kumpir-ingredient-card. Il cambio 1.5→2 su :selected causava un
+ *  layout-shift di 0.5 px che JavaFX ritraduceva in un ricalcolo del
+ *  layout della TilePane, producendo l'effetto "resize on hover".
  * ══════════════════════════════════════════════════════════════════════════════ */
 
 .sidebar-pane {
@@ -99,45 +104,59 @@
 .kumpir-grid-scroll {
     -fx-background-color: transparent;
     -fx-background: transparent;
+    -fx-padding: 0;
+    -fx-fit-to-width: true;
 }
 
-.kumpir-grid-scroll>.viewport {
+.kumpir-grid-scroll > .viewport {
     -fx-background-color: transparent;
+    -fx-padding: 0;
 }
 
 .kumpir-ingredient-grid {
     -fx-background-color: transparent;
+    /* gap gestito via Java (TilePane.setHgap/Vgap) per essere responsive */
+    -fx-hgap: 16;
+    -fx-vgap: 16;
+    -fx-padding: 16;
+    -fx-alignment: top-center;
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+ * .kumpir-ingredient-card
+ *
+ * REGOLA CRITICA: -fx-border-width è SEMPRE 2 in ogni stato.
+ * Un cambio di border-width (es. 1.5 → 2 su :selected) forza JavaFX a
+ * rieseguire il layout del parent (TilePane/FlowPane), producendo un
+ * salto visibile che sembra un "resize on hover".
+ * Tenendo il valore costante, solo colore ed effetto cambiano → nessun
+ * re-layout, nessun jitter.
+ * ────────────────────────────────────────────────────────────────────────── */
 .kumpir-ingredient-card {
     -fx-background-color: -color-surface2;
     -fx-text-fill: -color-text;
     -fx-background-radius: 14;
     -fx-border-color: -color-border;
     -fx-border-radius: 14;
-    -fx-border-width: 1.5;
+    -fx-border-width: 2;          /* FIX: era 1.5 — ora uniforme */
     -fx-cursor: hand;
     -fx-alignment: center;
     -fx-padding: 0;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.08), 6, 0.1, 0, 2);
-    -fx-min-width: 220px;
-    -fx-pref-width: 220px;
-    -fx-max-width: 240px;
-    -fx-min-height: 180px;
-    -fx-pref-height: 180px;
-    -fx-max-height: 220px;
+    /* dimensioni rimosse: le gestisce TilePane via setPrefTileWidth/Height */
 }
 
 .kumpir-ingredient-card:hover {
     -fx-background-color: #1f242b;
-    -fx-border-color: rgba(227,179,65, 0.4); /* #e3b341 */
+    -fx-border-color: rgba(227,179,65, 0.4);
     -fx-effect: dropshadow(gaussian, rgba(227,179,65, 0.2), 10, 0.2, 0, 0);
+    /* nessuna variazione di dimensione → nessun re-layout */
 }
 
 .kumpir-ingredient-card:selected {
     -fx-background-color: linear-gradient(to bottom right, #252831, #2a3037);
     -fx-border-color: #ffd200;
-    -fx-border-width: 2;
+    -fx-border-width: 2;          /* FIX: stesso valore del base state */
     -fx-effect: dropshadow(gaussian, rgba(255,210,0, 0.4), 12, 0.3, 0, 0);
 }
 
