@@ -1,0 +1,81 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+ *  screens/_confirm.css
+ *  ConfirmScreen.fxml — schermata ordine confermato + numero ritiro.
+ *  Ora utilizza le variabili dei temi.
+ * ══════════════════════════════════════════════════════════════════════════════ */
+
+.confirm-root {
+    -fx-background-color: linear-gradient(to bottom right, -color-green, derive(-color-green, -20%));
+}
+
+.confirm-container {
+    -fx-padding:   60 40;
+    -fx-max-width: 800;
+}
+
+.confirm-bg-circle-1 {
+    -fx-background-color:  rgba(255, 255, 255, 0.06);
+    -fx-background-radius: 50%;
+    -fx-min-width:  700; -fx-min-height: 700;
+    -fx-max-width:  700; -fx-max-height: 700;
+}
+.confirm-bg-circle-2 {
+    -fx-background-color:  rgba(255, 255, 255, 0.04);
+    -fx-background-radius: 50%;
+    -fx-min-width:  500; -fx-min-height: 500;
+    -fx-max-width:  500; -fx-max-height: 500;
+}
+.confirm-bg-circle-3 {
+    -fx-background-color:  rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 50%;
+    -fx-min-width:  300; -fx-min-height: 300;
+    -fx-max-width:  300; -fx-max-height: 300;
+}
+
+.check-circle {
+    -fx-background-color:  rgba(255, 255, 255, 0.20);
+    -fx-background-radius: 50%;
+    -fx-border-color:      rgba(255, 255, 255, 0.60);
+    -fx-border-radius:     50%;
+    -fx-border-width:      4;
+    -fx-min-width:  200; -fx-min-height: 200;
+    -fx-max-width:  200; -fx-max-height: 200;
+    -fx-effect:     dropshadow(gaussian, rgba(255,255,255,0.25), 30, 0, 0, 0);
+}
+.check-icon {
+    -fx-font-size:   100px;
+    -fx-font-weight: bold;
+    -fx-text-fill:   -color-gold;
+}
+
+.confirm-title {
+    -fx-font-size:      52px;
+    -fx-font-weight:    bold;
+    -fx-text-fill:      white;
+    -fx-text-alignment: center;
+    -fx-alignment:      center;
+}
+
+.confirm-number-sub {
+    -fx-font-size: 24px;
+    -fx-text-fill: rgba(255, 255, 255, 0.75);
+}
+.confirm-number {
+    -fx-font-size:   140px;
+    -fx-font-weight: bold;
+    -fx-text-fill:   white;
+}
+
+.confirm-msg {
+    -fx-font-size:      26px;
+    -fx-text-fill:      rgba(255, 255, 255, 0.85);
+    -fx-text-alignment: center;
+    -fx-alignment:      center;
+    -fx-line-spacing:   8;
+}
+
+.confirm-countdown {
+    -fx-font-size:   22px;
+    -fx-font-weight: bold;
+    -fx-text-fill:   rgba(255, 255, 255, 0.55);
+}

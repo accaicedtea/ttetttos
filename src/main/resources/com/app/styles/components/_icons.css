@@ -1,0 +1,45 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+ *  components/_icons.css
+ *  Tutte le classi Ikonli che impostano -fx-icon-color.
+ *  Dipende dai token in _variables-*.css.
+ * ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Status bar ────────────────────────────────────────────────── */
+.status-icon         { -fx-icon-color: -color-muted; }
+.status-icon-online  { -fx-icon-color: -color-green; }
+.status-icon-offline { -fx-icon-color: -color-red;   }
+
+/* ── Header / navigazione ──────────────────────────────────────── */
+.theme-icon          { -fx-icon-color: -color-muted;  }
+.shop-header-icon    { -fx-icon-color: -color-accent; }
+.screen-header-icon  { -fx-icon-color: -color-accent; }
+.back-icon           { -fx-icon-color: -color-text;   }
+
+/* ── Carrello ───────────────────────────────────────────────────── */
+.cart-btn-icon       { -fx-icon-color: -color-text;   }
+.add-to-cart-icon    { -fx-icon-color: white;          }
+.cart-allergen-icon  { -fx-icon-color: -color-orange;  }
+.quick-cart-icon     { -fx-icon-color: white;          }
+
+/* ── Modal prodotto ─────────────────────────────────────────────── */
+.modal-close-icon    { -fx-icon-color: -color-text;    }
+.allergen-icon       { -fx-icon-color: -color-orange;  }
+.ingredient-icon     { -fx-icon-color: -color-muted;   }
+
+/* ── Pagamento ──────────────────────────────────────────────────── */
+.payment-header-icon  { -fx-icon-color: -color-accent; }
+.payment-cash-icon    { -fx-icon-color: -color-green;  }
+.payment-card-icon-style { -fx-icon-color: -color-accent; }
+
+/* ── Conferma / CTA ─────────────────────────────────────────────── */
+.cta-icon            { -fx-icon-color: white; }
+.check-icon          { -fx-icon-color: white; }
+
+/* ── Toast ──────────────────────────────────────────────────────── */
+.toast-icon          { -fx-icon-color: white; }
+
+/* ── Welcome / Splash ───────────────────────────────────────────── */
+.welcome-logo-icon      { -fx-icon-color: -color-accent; }
+.start-btn-icon         { -fx-icon-color: white;          }
+.splash-logo-icon       { -fx-icon-color: -color-accent;  }
+.splash-step-icon-node  { -fx-icon-color: -color-accent;  }

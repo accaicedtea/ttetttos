@@ -1,0 +1,128 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+ *  screens/_cart.css
+ *  CartScreen.fxml — lista articoli, controlli quantità, footer totale.
+ *  Dipende dai token in _variables-*.css.
+ * ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Lista ───────────────────────────────────────────────────────── */
+.cart-scroll {
+    -fx-background:       -color-bg;
+    -fx-background-color: -color-bg;
+}
+.cart-scroll > .viewport {
+    -fx-background-color: -color-bg;
+}
+
+.cart-list {
+    -fx-background-color: -color-bg;
+    -fx-padding:          20 24;
+}
+
+/* ── Riga articolo ───────────────────────────────────────────────── */
+.cart-row {
+    -fx-background-color:  -color-surface;
+    -fx-background-radius: 16;
+    -fx-border-color:      -color-border;
+    -fx-border-radius:     16;
+    -fx-border-width:      1;
+    -fx-padding:           20 22;
+    -fx-effect:            dropshadow(gaussian, rgba(0,0,0,0.08), 4, 0, 0, 1);
+}
+
+.cart-item-name {
+    -fx-font-size:   20px;
+    -fx-font-weight: bold;
+    -fx-text-fill:   -color-text;
+}
+.cart-item-price {
+    -fx-font-size: 16px;
+    -fx-text-fill: -color-muted;
+}
+.cart-item-total {
+    -fx-font-size:   22px;
+    -fx-font-weight: bold;
+    -fx-text-fill:   -color-accent;
+}
+.cart-item-ingredients {
+    -fx-font-size:  12px;
+    -fx-text-fill:  #7a9e7a;
+    -fx-wrap-text:  true;
+    -fx-padding:    0 0 2 0;
+}
+
+/* ── Controllo quantità ──────────────────────────────────────────── */
+.qty-btn {
+    -fx-background-color:  -color-surface2;
+    -fx-text-fill:         -color-text;
+    -fx-font-size:         22px;
+    -fx-font-weight:       bold;
+    -fx-background-radius: 10;
+    -fx-border-color:      -color-border;
+    -fx-border-radius:     10;
+    -fx-min-width:  52;
+    -fx-min-height: 52;
+    -fx-cursor:     hand;
+}
+.qty-btn:pressed {
+    -fx-background-color: -color-border;
+}
+
+.qty-label {
+    -fx-font-size:   22px;
+    -fx-font-weight: bold;
+    -fx-min-width:   44;
+    -fx-alignment:   center;
+}
+
+/* ── Warning allergeni ───────────────────────────────────────────── */
+.cart-allergen-warning {
+    -fx-background-color: rgba(176, 101, 32, 0.08);
+    -fx-border-color:     rgba(176, 101, 32, 0.30);
+    -fx-border-width:     1 0 0 0;
+    -fx-padding:          16 24;
+}
+.cart-allergen-icon {
+    -fx-font-size: 28px;
+}
+.cart-allergen-title {
+    -fx-font-size:   16px;
+    -fx-font-weight: bold;
+    -fx-text-fill:   -color-orange;
+}
+
+/* ── Footer totale ───────────────────────────────────────────────── */
+.cart-footer {
+    -fx-background-color: -color-surface;
+    -fx-border-color:     -color-border transparent transparent transparent;
+    -fx-border-width:     1 0 0 0;
+    -fx-padding:          0;
+}
+.cart-total-row {
+    -fx-padding: 20 28;
+}
+.cart-total-label {
+    -fx-font-size:   22px;
+    -fx-font-weight: bold;
+    -fx-text-fill:   -color-muted;
+}
+.cart-total-amount {
+    -fx-font-size:   34px;
+    -fx-font-weight: bold;
+    -fx-text-fill:   -color-accent;
+}
+.cart-total-badge {
+    -fx-background-color:  -color-accent;
+    -fx-text-fill:         white;
+    -fx-font-size:         18px;
+    -fx-font-weight:       bold;
+    -fx-background-radius: 14;
+    -fx-padding:           8 18;
+}
+
+/* ── Carrello vuoto ──────────────────────────────────────────────── */
+.cart-empty-label {
+    -fx-font-size: 24px;
+    -fx-text-fill: -color-dim;
+    -fx-padding:   80 40;
+    -fx-alignment: center;
+}

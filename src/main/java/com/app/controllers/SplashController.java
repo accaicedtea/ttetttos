@@ -14,33 +14,40 @@ import com.app.model.OrderQueue;
 import com.app.model.TranslationManager;
 import com.util.Navigator;
 import com.util.NetworkWatchdog;
+
 /**
  * SplashController — schermata di avvio con sequenza di loading.
  *
  * Rispetto all'originale:
- *  - Estende BaseController
- *  - sleep() estratto come metodo privato statico
- *  - setStep() estratto per eliminare ripetizione
- *  - Usa RemoteLogger dal package corretto (non duplicato)
+ * - Estende BaseController
+ * - sleep() estratto come metodo privato statico
+ * - setStep() estratto per eliminare ripetizione
+ * - Usa RemoteLogger dal package corretto (non duplicato)
  */
 public class SplashController extends BaseController {
 
-    @FXML private StackPane   splashCircle1, splashCircle2;
-    @FXML private FontIcon    logoLabel;
-    @FXML private FontIcon    stepIconNode;
-    @FXML private Label       stepLabel, detailLabel;
-    @FXML private ProgressBar progressBar;
+    @FXML
+    private StackPane splashCircle1, splashCircle2;
+    @FXML
+    private FontIcon logoLabel;
+    @FXML
+    private FontIcon stepIconNode;
+    @FXML
+    private Label stepLabel, detailLabel;
+    @FXML
+    private ProgressBar progressBar;
 
-    private static final String API_KEY =
-        System.getProperty("totem.api.key",
+    private static final String API_KEY = System.getProperty("totem.api.key",
             System.getenv().getOrDefault("TOTEM_API_KEY", "api_key_totem_1"));
 
     @FXML
     private void initialize() {
         logoLabel.setOpacity(0);
-        logoLabel.setScaleX(0.3); logoLabel.setScaleY(0.3);
+        logoLabel.setScaleX(0.3);
+        logoLabel.setScaleY(0.3);
         progressBar.setProgress(0);
-        stepLabel.setText(""); detailLabel.setText("");
+        stepLabel.setText("");
+        detailLabel.setText("");
         Platform.runLater(this::startSequence);
     }
 
@@ -50,11 +57,10 @@ public class SplashController extends BaseController {
         animateBackground();
 
         SequentialTransition logoAnim = new SequentialTransition(
-            new PauseTransition(Duration.millis(200)),
-            parallel(scale(logoLabel, 0.3, 1.15, 500, Interpolator.EASE_OUT),
-                     fade(logoLabel, 0, 1, 400)),
-            scale(logoLabel, 1.15, 1.0, 150, Interpolator.EASE_IN)
-        );
+                new PauseTransition(Duration.millis(200)),
+                parallel(scale(logoLabel, 0.3, 1.15, 500, Interpolator.EASE_OUT),
+                        fade(logoLabel, 0, 1, 400)),
+                scale(logoLabel, 1.15, 1.0, 150, Interpolator.EASE_IN));
         logoAnim.setOnFinished(e -> runSetupSequence());
         logoAnim.play();
     }
@@ -68,8 +74,7 @@ public class SplashController extends BaseController {
             try {
                 AuthService.loginTotem(API_KEY);
                 setStep("mdi2l-lock", "Connesso", "Login completato", 0.35);
-                NetworkWatchdog.start(online ->
-                    System.out.println("[Net] " + (online ? "Online" : "Offline")));
+                NetworkWatchdog.start(online -> System.out.println("[Net] " + (online ? "Online" : "Offline")));
                 OrderQueue.startQueueSync();
                 sleep(300);
             } catch (Exception e) {
@@ -82,7 +87,10 @@ public class SplashController extends BaseController {
             // ── Step 2: Menu ──────────────────────────────────────────
             setStep("mdi2c-clipboard-list", "Caricamento menu...", "", 0.40);
             com.google.gson.JsonObject menuData = MenuCache.loadFromCache();
-            if (menuData != null) { setStep("mdi2c-clipboard-list", "Menu caricato", "Da cache locale", 0.55); sleep(200); }
+            if (menuData != null) {
+                setStep("mdi2c-clipboard-list", "Menu caricato", "Da cache locale", 0.55);
+                sleep(200);
+            }
 
             if (com.api.SessionManager.isLoggedIn()) {
                 setStep("mdi2c-clipboard-list", "Aggiornamento menu...", "Sincronizzazione server", 0.55);
@@ -128,8 +136,7 @@ public class SplashController extends BaseController {
 
             // Naviga al WelcomeScreen passando il menu precaricato
             final com.google.gson.JsonObject finalMenu = menuData;
-            Platform.runLater(() ->
-                Navigator.goTo(Navigator.Screen.WELCOME, finalMenu));
+            Platform.runLater(() -> Navigator.goTo(Navigator.Screen.WELCOME, finalMenu));
 
         }, "splash-setup").start();
     }
@@ -142,32 +149,63 @@ public class SplashController extends BaseController {
      */
     private void setStep(String icon, String step, String detail, double progress) {
         Platform.runLater(() -> {
-            if (stepIconNode != null)  stepIconNode.setIconLiteral(icon);
-            if (stepLabel    != null)  stepLabel.setText(step);
-            if (detailLabel  != null)  detailLabel.setText(detail);
-            if (progressBar  != null)  progressBar.setProgress(progress);
+            if (stepIconNode != null)
+                stepIconNode.setIconLiteral(icon);
+            if (stepLabel != null)
+                stepLabel.setText(step);
+            if (detailLabel != null)
+                detailLabel.setText(detail);
+            if (progressBar != null)
+                progressBar.setProgress(progress);
         });
     }
 
     private static void sleep(int ms) {
-        try { Thread.sleep(ms); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-    }
-
-    private void animateBackground() {
-        for (StackPane circle : new StackPane[]{splashCircle1, splashCircle2}) {
-            if (circle == null) continue;
-            RotateTransition rt = new RotateTransition(Duration.seconds(20 + Math.random() * 10), circle);
-            rt.setByAngle(360); rt.setCycleCount(Animation.INDEFINITE); rt.play();
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
-    private void build(){
+    private void animateBackground() {
+        for (StackPane circle : new StackPane[] { splashCircle1, splashCircle2 }) {
+            if (circle == null)
+                continue;
+            RotateTransition rt = new RotateTransition(Duration.seconds(20 + Math.random() * 10), circle);
+            rt.setByAngle(360);
+            rt.setCycleCount(Animation.INDEFINITE);
+            rt.play();
+        }
+    }
+
+    private void build() {
 
     }
     // ── Animation helpers ─────────────────────────────────────────────
 
-    private static PauseTransition     pause(int ms)                                              { return new PauseTransition(Duration.millis(ms)); }
-    private static FadeTransition      fade(javafx.scene.Node n, double f, double t, int ms)      { FadeTransition ft=new FadeTransition(Duration.millis(ms),n); ft.setFromValue(f); ft.setToValue(t); return ft; }
-    private static ScaleTransition     scale(javafx.scene.Node n, double f, double t, int ms, Interpolator ip) { ScaleTransition st=new ScaleTransition(Duration.millis(ms),n); st.setFromX(f); st.setFromY(f); st.setToX(t); st.setToY(t); st.setInterpolator(ip); return st; }
-    private static ParallelTransition  parallel(Animation... a)                                    { return new ParallelTransition(a); }
+    private static PauseTransition pause(int ms) {
+        return new PauseTransition(Duration.millis(ms));
+    }
+
+    private static FadeTransition fade(javafx.scene.Node n, double f, double t, int ms) {
+        FadeTransition ft = new FadeTransition(Duration.millis(ms), n);
+        ft.setFromValue(f);
+        ft.setToValue(t);
+        return ft;
+    }
+
+    private static ScaleTransition scale(javafx.scene.Node n, double f, double t, int ms, Interpolator ip) {
+        ScaleTransition st = new ScaleTransition(Duration.millis(ms), n);
+        st.setFromX(f);
+        st.setFromY(f);
+        st.setToX(t);
+        st.setToY(t);
+        st.setInterpolator(ip);
+        return st;
+    }
+
+    private static ParallelTransition parallel(Animation... a) {
+        return new ParallelTransition(a);
+    }
 }

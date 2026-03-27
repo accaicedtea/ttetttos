@@ -193,16 +193,17 @@ public class ShopPageController extends BaseController
 
     // ── Costanti ───────────────────────────────────────────────────────
     private static final double KUMPIR_BASE_PRICE = 5.50;
-    private static final double KUMPIR_INGREDIENT_PRICE = 0.70;
     private static final String PRICE_BASE_FMT = formatPriceStatic(KUMPIR_BASE_PRICE);
-    private static final String PRICE_INGREDIENT_FMT = "+ " + formatPriceStatic(KUMPIR_INGREDIENT_PRICE);
     private static final String LABEL_UNAVAILABLE = "Non disponibile";
     private static final Gson GSON = new Gson();
 
+    // Totale ingredienti selezionati (calcolo O(1) dal listener)
+    private double selectedIngredientsTotal = 0.0;
+
     // ── Dimensioni fisse nodi ingrediente (px) ─────────────────────────
     // Evitano property binding: calcolate una sola volta, non per-nodo.
-    private static final double ING_INNER_W = 148.0;
-    private static final double ING_LABEL_W = 140.0;
+    private static final double ING_INNER_W = 188.0;
+    private static final double ING_LABEL_W = 170.0;
 
     // ─────────────────────────────────────────────────────────────────────
 
@@ -338,9 +339,13 @@ public class ShopPageController extends BaseController
         tb.setCache(true);
         tb.setCacheHint(CacheHint.SPEED);
 
-        // Altezza minima fissa: garantisce card uniformi anche con nomi corti
-        tb.setMinHeight(130);
-        tb.setPrefHeight(Region.USE_COMPUTED_SIZE); // si espande se il badge occupa spazio
+        // Dimensioni iniziali per card ingredienti. Poi verranno adattate da syncGridGap.
+        tb.setMinWidth(220);
+        tb.setPrefWidth(220);
+        tb.setMaxWidth(260);
+        tb.setMinHeight(180);
+        tb.setPrefHeight(200);
+        tb.setMaxHeight(240);
 
         VBox inner = new VBox(8); // era 6 — più respiro verticale
         inner.setAlignment(Pos.CENTER);
@@ -355,7 +360,8 @@ public class ShopPageController extends BaseController
         nameLbl.setMaxWidth(ING_LABEL_W);
         nameLbl.setMinHeight(Label.USE_PREF_SIZE); // non tronca mai il nome
 
-        Label priceLbl = new Label(ing.disponibile ? PRICE_INGREDIENT_FMT : LABEL_UNAVAILABLE);
+        String priceText = ing.disponibile ? "+ " + formatPriceStatic(ing.prezzo) : LABEL_UNAVAILABLE;
+        Label priceLbl = new Label(priceText);
         priceLbl.getStyleClass().add(ing.disponibile
                 ? "kumpir-ingredient-price"
                 : "kumpir-ingredient-unavailable-label");
@@ -374,17 +380,21 @@ public class ShopPageController extends BaseController
         }
         tb.setGraphic(inner);
 
-        // Listener O(1): aggiorna solo selectedIds e selectedCount, niente stream
+        // Listener O(1): aggiorna selectedIds, selectedCount, selectedIngredientsTotal
         final int id = ing.id;
         tb.selectedProperty().addListener((obs, wasOn, isOn) -> {
             if (tb.isDisabled() || suppressSelectionEvents)
                 return;
             if (isOn) {
-                if (selectedIds.add(id))
+                if (selectedIds.add(id)) {
                     selectedCount++;
+                    selectedIngredientsTotal += ing.prezzo;
+                }
             } else {
-                if (selectedIds.remove(id))
+                if (selectedIds.remove(id)) {
                     selectedCount--;
+                    selectedIngredientsTotal -= ing.prezzo;
+                }
             }
             updateKumpirTotals();
         });
@@ -484,7 +494,7 @@ public class ShopPageController extends BaseController
                 node.priceLbl().getStyleClass().add("kumpir-ingredient-unavailable-label");
         } else {
             node.btn().getStyleClass().remove("ingredient-unavailable");
-            node.priceLbl().setText(PRICE_INGREDIENT_FMT);
+            node.priceLbl().setText("+ " + formatPriceStatic(fresh.prezzo));
             node.priceLbl().getStyleClass().remove("kumpir-ingredient-unavailable-label");
             if (!node.priceLbl().getStyleClass().contains("kumpir-ingredient-price"))
                 node.priceLbl().getStyleClass().add("kumpir-ingredient-price");
@@ -633,7 +643,7 @@ public class ShopPageController extends BaseController
         // ── Overlay ────────────────────────────────────────────────────────
         kumpirOverlay = new StackPane();
         kumpirOverlay.setAlignment(Pos.CENTER);
-        kumpirOverlay.setStyle("-fx-background-color: rgba(0,0,0,0.68);");
+        // kumpirOverlay.setStyle("-fx-background-color: rgba(0,0,0,0.68);");
         kumpirOverlay.setVisible(false);
         // kumpirOverlay.setManaged(false);
 
@@ -663,9 +673,8 @@ public class ShopPageController extends BaseController
         HBox.setHgrow(titleBlock, Priority.ALWAYS);
         Label titleLbl = new Label("Componi il tuo Kumpir");
         titleLbl.getStyleClass().add("kumpir-modal-title");
-        Label subtitleLbl = new Label(String.format(
-                "Base patata: € %.2f  •  Ogni ingrediente: € %.2f",
-                KUMPIR_BASE_PRICE, KUMPIR_INGREDIENT_PRICE).replace('.', ','));
+        Label subtitleLbl = new Label("Base patata: € " + String.format("%.2f", KUMPIR_BASE_PRICE).replace('.', ',')
+                + "  •  Ingredienti con prezzo variabile");
         subtitleLbl.getStyleClass().add("kumpir-modal-subtitle");
         titleBlock.getChildren().addAll(titleLbl, subtitleLbl);
 
@@ -780,7 +789,7 @@ public class ShopPageController extends BaseController
                     toastOverlay.show("Seleziona almeno un ingrediente! 🥔");
                 return;
             }
-            double finalTotal = KUMPIR_BASE_PRICE + selectedCount * KUMPIR_INGREDIENT_PRICE;
+            double finalTotal = KUMPIR_BASE_PRICE + selectedIngredientsTotal;
             CartItem item = CartItem.builder(0, "Kumpir personalizzato",
                     formatPrice(finalTotal), finalTotal)
                     .category("kumpir")
@@ -845,9 +854,29 @@ public class ShopPageController extends BaseController
     private void syncGridGap(double cardWidth) {
         if (kumpirGrid == null)
             return;
-        double gap = cardWidth < 420 ? 8 : cardWidth < 600 ? 10 : 14;
+        double gap = cardWidth < 640 ? 10 : cardWidth < 840 ? 12 : 16;
         kumpirGrid.setHgap(gap);
         kumpirGrid.setVgap(gap);
+
+        double safeWidth = Math.max(0, cardWidth - 40); // margini del card interno
+        // Ogni card dovrebbe occupare ~1/3 con margini, ma non meno di 220 e non più di 260.
+        double targetCard = Math.floor((safeWidth - 2 * gap) / 3);
+        double cardW = Math.min(260, Math.max(220, targetCard));
+
+        kumpirGrid.getChildren().forEach(child -> {
+            if (child instanceof Region r) {
+                r.setMinWidth(cardW);
+                r.setPrefWidth(cardW);
+                r.setMaxWidth(cardW);
+                r.setMinHeight(190);
+                r.setPrefHeight(210);
+                r.setMaxHeight(240);
+            }
+        });
+
+        // Forza almeno 3 card per riga riducendo wrapLength a misura corretta.
+        double wrapLen = Math.max(0, cardW * 3 + gap * 2);
+        kumpirGrid.setPrefWrapLength(wrapLen);
     }
 
     /**
@@ -866,6 +895,7 @@ public class ShopPageController extends BaseController
         }
         selectedIds.clear();
         selectedCount = 0;
+        selectedIngredientsTotal = 0.0;
         suppressSelectionEvents = false;
 
         if (filterDebounce != null) {
@@ -902,7 +932,7 @@ public class ShopPageController extends BaseController
     private void updateKumpirTotals() {
         if (kumpirTotalLbl == null || kumpirCountLbl == null)
             return;
-        double total = KUMPIR_BASE_PRICE + selectedCount * KUMPIR_INGREDIENT_PRICE;
+        double total = KUMPIR_BASE_PRICE + selectedIngredientsTotal;
         kumpirTotalLbl.setText(formatPrice(total));
         kumpirCountLbl.setText(selectedCount == 0
                 ? "Nessun ingrediente selezionato"

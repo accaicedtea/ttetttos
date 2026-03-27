@@ -1,0 +1,81 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+ *  screens/_splash.css
+ *  SplashScreen.fxml — schermata di avvio con progress bar.
+ *  Ora usa le variabili dei temi.
+ * ══════════════════════════════════════════════════════════════════════════════ */
+
+.splash-root {
+    -fx-background-color: linear-gradient(to bottom right, #0d1117, #0a0e14);
+}
+
+.splash-circle-1 {
+    -fx-background-color:  rgba(88,166,255, 0.06); /* #58a6ff */
+    -fx-background-radius: 50%;
+    -fx-border-color:      rgba(88,166,255, 0.12);
+    -fx-border-radius:     50%;
+    -fx-border-width:      1;
+    -fx-min-width:  600;
+    -fx-min-height: 600;
+    -fx-max-width:  600;
+    -fx-max-height: 600;
+}
+.splash-circle-2 {
+    -fx-background-color:  rgba(88,166,255, 0.04); /* #58a6ff */
+    -fx-background-radius: 50%;
+    -fx-border-color:      rgba(88,166,255, 0.08);
+    -fx-border-radius:     50%;
+    -fx-border-width:      1;
+    -fx-min-width:  380;
+    -fx-min-height: 380;
+    -fx-max-width:  380;
+    -fx-max-height: 380;
+}
+
+.splash-container {
+    -fx-padding: 80 60;
+}
+
+.splash-app-name {
+    -fx-font-size:   38px;
+    -fx-font-weight: bold;
+    -fx-text-fill:   -color-text;
+    -fx-padding:     16 0 6 0;
+}
+
+.splash-app-sub {
+    -fx-font-size: 18px;
+    -fx-text-fill: -color-muted;
+}
+
+.splash-step-label {
+    -fx-font-size:   22px;
+    -fx-font-weight: bold;
+    -fx-text-fill:   -color-text;
+    -fx-padding:     0 0 6 0;
+}
+
+.splash-detail {
+    -fx-font-size: 15px;
+    -fx-text-fill: -color-dim;
+}
+
+.splash-progress {
+    -fx-accent:           -color-accent;
+    -fx-background-color: -color-surface2;
+    -fx-background-radius: 5;
+}
+.splash-progress > .track {
+    -fx-background-color:  -color-surface2;
+    -fx-background-radius: 5;
+}
+.splash-progress > .bar {
+    -fx-background-color:  linear-gradient(to right, derive(-color-accent, -20%), -color-accent);
+    -fx-background-radius: 5;
+    -fx-background-insets: 0;
+}
+
+.splash-version {
+    -fx-font-size: 13px;
+    -fx-text-fill: -color-dim;
+    -fx-padding:   0 0 20 0;
+}

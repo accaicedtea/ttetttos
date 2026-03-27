@@ -1,0 +1,67 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+ *  components/_chips.css
+ *  Chip allergeni e ingredienti usati in modal prodotto e nel carrello.
+ *  Dipende dai token in _variables-*.css.
+ * ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Chip allergeni — modal prodotto ───────────────────────────── */
+.allergen-chips-pane {
+    -fx-background-color: transparent;
+}
+
+.allergen-chip {
+    -fx-background-color:  rgba(227,179,65, 0.12); /* #e3b341 */
+    -fx-background-radius: 22;
+    -fx-border-color:      #e3b341;
+    -fx-border-radius:     22;
+    -fx-border-width:      1.5;
+    -fx-text-fill:         -color-orange-dark;
+    -fx-font-size:         15px;
+    -fx-font-weight:       bold;
+    -fx-padding:           8 18;
+}
+
+/* ── Chip ingredienti — modal prodotto ─────────────────────────── */
+.ingredients-pane {
+    -fx-background-color: transparent;
+}
+
+.ingredient-chip {
+    -fx-background-color:  -color-surface2;
+    -fx-background-radius: 10;
+    -fx-border-color:      -color-border;
+    -fx-border-radius:     10;
+    -fx-border-width:      1;
+    -fx-text-fill:         -color-text;
+    -fx-font-size:         15px;
+    -fx-padding:           8 16;
+}
+
+/* ── Chip allergeni piccoli — product card ─────────────────────── */
+.prod-allergen-chips {
+    -fx-background-color: transparent;
+}
+
+.prod-allergen-chip {
+    -fx-background-color:  rgba(227,179,65, 0.14); /* #e3b341 */
+    -fx-background-radius: 6;
+    -fx-border-color:      rgba(227,179,65, 0.45);
+    -fx-border-radius:     6;
+    -fx-border-width:      1;
+    -fx-text-fill:         -color-orange-dark;
+    -fx-font-size:         12px;
+    -fx-font-weight:       bold;
+    -fx-padding:           3 9;
+}
+
+/* ── Chip allergeni nel carrello ───────────────────────────────── */
+.cart-item-allergen-chip {
+    -fx-background-color:  rgba(227,179,65, 0.10); /* #e3b341 */
+    -fx-background-radius: 5;
+    -fx-border-color:      rgba(227,179,65, 0.25);
+    -fx-border-radius:     5;
+    -fx-border-width:      1;
+    -fx-text-fill:         -color-orange-dark;
+    -fx-font-size:         11px;
+    -fx-padding:           2 7;
+}

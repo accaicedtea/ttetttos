@@ -1,0 +1,104 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+ *  _base.css
+ *  Reset e stili strutturali SENZA colori hardcoded.
+ *  Usa esclusivamente token definiti in _variables-*.css.
+ *  Valido per entrambi i temi — NON modificare i valori colore qui.
+ * ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Label globale ─────────────────────────────────────────────────────────── */
+.label {
+    -fx-text-fill: -color-text;
+}
+
+/* ── Button reset ──────────────────────────────────────────────────────────── */
+.button {
+    -fx-background-color:  -color-surface2;
+    -fx-text-fill:         -color-text;
+    -fx-background-radius: 10;
+    -fx-border-radius:     10;
+    -fx-border-color:      -color-border;
+    -fx-border-width:      1;
+    -fx-cursor:            hand;
+    -fx-padding:           10 20;
+    -fx-font-size:         16px;
+}
+.button:pressed {
+    -fx-background-color: -color-border;
+    -fx-effect:           none;
+}
+
+/* ── ScrollPane reset ──────────────────────────────────────────────────────── */
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-padding:          0;
+}
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+.scroll-pane > .corner {
+    -fx-background-color: transparent;
+}
+
+/* ── ScrollBar slim ────────────────────────────────────────────────────────── */
+.scroll-bar {
+    -fx-background-color: transparent;
+    -fx-padding:          1;
+}
+.scroll-bar:vertical {
+    -fx-pref-width:  6;
+    -fx-min-width:   6;
+    -fx-max-width:   6;
+}
+.scroll-bar:horizontal {
+    -fx-pref-height: 6;
+    -fx-min-height:  6;
+    -fx-max-height:  6;
+}
+.scroll-bar .track {
+    -fx-background-color: transparent;
+}
+.scroll-bar .thumb {
+    -fx-background-color: rgba(80, 80, 120, 0.22);
+    -fx-background-radius: 3;
+}
+.scroll-bar .thumb:pressed {
+    -fx-background-color: rgba(80, 80, 120, 0.50);
+}
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding:    0;
+    -fx-pref-width:  0;
+    -fx-pref-height: 0;
+    -fx-min-width:   0;
+    -fx-min-height:  0;
+    -fx-max-width:   0;
+    -fx-max-height:  0;
+}
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-shape:   "";
+}
+
+/* ── Pane radice schermata ─────────────────────────────────────────────────── */
+.main-pane {
+    -fx-background-color: -color-bg;
+}
+.screen-root {
+    -fx-background-color: -color-bg;
+}
+.top-container {
+    -fx-background-color: transparent;
+}
+
+/* ── Info label generica ───────────────────────────────────────────────────── */
+.info-label {
+    -fx-font-size:      20px;
+    -fx-text-fill:      -color-muted;
+    -fx-text-alignment: center;
+    -fx-alignment:      center;
+    -fx-padding:        60 40;
+    -fx-wrap-text:      true;
+}

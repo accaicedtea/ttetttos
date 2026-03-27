@@ -1,0 +1,38 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+ *  _variables-light.css
+ *  Token di colore e font per il tema CHIARO.
+ * ══════════════════════════════════════════════════════════════════════════════ */
+
+.root {
+    /* ── Palette di base ───────────────────────────────────────────── */
+    -color-bg:        #f2f2f7;
+    -color-surface:   #ffffff;
+    -color-surface2:  #e8e8f0;
+    -color-border:    #d0d0df;
+    -color-sidebar:   #e4e4ec;
+
+    /* ── Accent & semantici ────────────────────────────────────────── */
+    -color-accent:    #2b6ed4;
+    -color-green:     #1d8a4f;
+    -color-orange:    #b06520;
+    -color-red:       #c03030;
+
+    /* Nuove variabili per gold e arancione scuro (usate in kumpir e chips) */
+    -color-gold:        #ffd200;
+    -color-orange-dark: #b06520;
+
+    /* ── Testo ─────────────────────────────────────────────────────── */
+    -color-text:      #1a1a2e;
+    -color-muted:     #5a5a7a;
+    -color-dim:       #9090a8;
+
+    /* ── Override JavaFX defaults ──────────────────────────────────── */
+    -fx-base:                    -color-surface;
+    -fx-background:              -color-bg;
+    -fx-control-inner-background: -color-surface;
+    -fx-text-fill:               -color-text;
+    -fx-font-family:             "Segoe UI", "Ubuntu", "Noto Sans", sans-serif;
+    -fx-font-size:               18px;
+    -fx-focus-color:             transparent;
+    -fx-faint-focus-color:       transparent;
+}

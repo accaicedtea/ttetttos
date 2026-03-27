@@ -1,0 +1,22 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+ *  components/_toast.css
+ *  ToastOverlay — notifica temporanea a scomparsa.
+ *  Dipende dai token in _variables-*.css.
+ * ══════════════════════════════════════════════════════════════════════════════ */
+
+.toast-label {
+    -fx-background-color:  rgba(30, 138, 72, 0.92);
+    -fx-background-radius: 30;
+    -fx-text-fill:         white;
+    -fx-font-size:         20px;
+    -fx-font-weight:       bold;
+    -fx-padding:           16 36;
+    -fx-translate-y:       -40;
+    -fx-effect:            dropshadow(gaussian, rgba(0,0,0,0.20), 8, 0, 0, 3);
+}
+
+.toast-text {
+    -fx-text-fill:   white;
+    -fx-font-size:   20px;
+    -fx-font-weight: bold;
+}
