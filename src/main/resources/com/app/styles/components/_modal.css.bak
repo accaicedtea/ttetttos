@@ -192,6 +192,19 @@
     -fx-border-width:     0;
 }
 
+.modal-dialog-title {
+    -fx-font-size:   16px;
+    -fx-font-weight: 600;
+    -fx-text-fill:   -color-text;
+}
+
+.modal-dialog-subtitle {
+    -fx-font-size:   12px;
+    -fx-font-weight: 400;
+    -fx-text-fill:   -color-muted;
+    -fx-padding:     2 0 0 0;
+}
+
 .modal-icon {
     -fx-font-size:   22px;
     -fx-font-weight: 600;
