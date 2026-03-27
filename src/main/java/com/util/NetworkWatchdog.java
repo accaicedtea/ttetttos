@@ -49,14 +49,21 @@ public class NetworkWatchdog {
 
     public static synchronized void start(Consumer<Boolean> onStatusChange) {
         if (running) return;
-        running  = true;
+        running = true;
         listener = onStatusChange;
 
+        // Esegui un primo ping subito, così lo stato è aggiornato all'avvio.
+        online = sendPing();
+        System.out.println("[Watchdog] Avviato. Stato iniziale: " + (online ? "ONLINE" : "OFFLINE"));
+        if (listener != null) {
+            final boolean onlineFinal = online;
+            Platform.runLater(() -> listener.accept(onlineFinal));
+        }
+
         thread = new Thread(() -> {
-            System.out.println("[Watchdog] Avviato.");
             while (running) {
                 boolean wasOnline = online;
-                boolean isOnline  = sendPing();
+                boolean isOnline = sendPing();
                 online = isOnline;
 
                 if (isOnline != wasOnline) {
@@ -100,12 +107,30 @@ public class NetworkWatchdog {
      * Ritorna true se il server risponde, false altrimenti.
      */
     private static boolean sendPing() {
+        // Prova un ping HTTP semplice prima di tentare il codice business (buildHeartbeat).
+        // Serve a distinguere offline di sistema da server non raggiungibile.
+        if (!rawPing()) {
+            // se ping HTTP fallisce, lungo tentativo socket:
+            if (!isNetworkReachable())
+                return false;
+        }
+
         try {
             buildHeartbeat();
             return true;
         } catch (Exception e) {
-            // Se il token non ? disponibile, prova un ping HTTP grezzo
-            return rawPing();
+            // Se il server non risponde (o token non disponibile), mantieni status online
+            // se la connettività base è ancora presente
+            return isNetworkReachable();
+        }
+    }
+
+    private static boolean isNetworkReachable() {
+        try (java.net.Socket socket = new java.net.Socket()) {
+            socket.connect(new java.net.InetSocketAddress("8.8.8.8", 53), PING_TIMEOUT_MS);
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 

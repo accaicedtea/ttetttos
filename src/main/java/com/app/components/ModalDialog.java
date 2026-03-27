@@ -19,44 +19,45 @@ import java.util.function.Consumer;
  *
  * ┌─────────────────────────────────────────────────────┐
  * │ ░░░░░░░░ BACKDROP SEMITRASPARENTE ░░░░░░░░░░░░░░░░░ │
- * │ ░░░  ┌──────────────────────────────────┐  ░░░░░░░ │
- * │ ░░░  │ 🔴  TITOLO                   [✕] │  ░░░░░░░ │
- * │ ░░░  │─────────────────────────────────│  ░░░░░░░ │
- * │ ░░░  │ Sottotitolo (opzionale)         │  ░░░░░░░ │
- * │ ░░░  │                                  │  ░░░░░░░ │
- * │ ░░░  │  [contenuto custom / messaggio]  │  ░░░░░░░ │
- * │ ░░░  │                                  │  ░░░░░░░ │
- * │ ░░░  │─────────────────────────────────│  ░░░░░░░ │
- * │ ░░░  │     [Annulla]    [Conferma]      │  ░░░░░░░ │
- * │ ░░░  └──────────────────────────────────┘  ░░░░░░░ │
+ * │ ░░░ ┌──────────────────────────────────┐ ░░░░░░░ │
+ * │ ░░░ │ 🔴 TITOLO [✕] │ ░░░░░░░ │
+ * │ ░░░ │─────────────────────────────────│ ░░░░░░░ │
+ * │ ░░░ │ Sottotitolo (opzionale) │ ░░░░░░░ │
+ * │ ░░░ │ │ ░░░░░░░ │
+ * │ ░░░ │ [contenuto custom / messaggio] │ ░░░░░░░ │
+ * │ ░░░ │ │ ░░░░░░░ │
+ * │ ░░░ │─────────────────────────────────│ ░░░░░░░ │
+ * │ ░░░ │ [Annulla] [Conferma] │ ░░░░░░░ │
+ * │ ░░░ └──────────────────────────────────┘ ░░░░░░░ │
  * └─────────────────────────────────────────────────────┘
  *
  * <b>Tipi predefiniti (factory method statici):</b>
  * <ul>
- *   <li>{@link #info(StackPane, String, String)}</li>
- *   <li>{@link #warning(StackPane, String, String, ModalButton...)}</li>
- *   <li>{@link #error(StackPane, String, String)}</li>
- *   <li>{@link #confirm(StackPane, String, String, Runnable)}</li>
- *   <li>{@link #input(StackPane, String, String, String, Consumer)}</li>
- *   <li>{@link #loading(StackPane, String)}</li>
- *   <li>{@link #custom(StackPane, String, Node, ModalButton...)}</li>
+ * <li>{@link #info(StackPane, String, String)}</li>
+ * <li>{@link #warning(StackPane, String, String, ModalButton...)}</li>
+ * <li>{@link #error(StackPane, String, String)}</li>
+ * <li>{@link #confirm(StackPane, String, String, Runnable)}</li>
+ * <li>{@link #input(StackPane, String, String, String, Consumer)}</li>
+ * <li>{@link #loading(StackPane, String)}</li>
+ * <li>{@link #custom(StackPane, String, Node, ModalButton...)}</li>
  * </ul>
  *
  * <b>Uso con Builder (massima flessibilità):</b>
+ * 
  * <pre>
- *   ModalDialog dialog = ModalDialog.builder(rootPane)
- *       .type(ModalDialog.Type.WARNING)
- *       .title("Attenzione")
- *       .subtitle("Operazione irreversibile")
- *       .message("Sei sicuro di voler eliminare questo prodotto?")
- *       .icon("⚠")
- *       .closeOnBackdrop(false)
- *       .closeOnEscape(true)
- *       .width(480)
- *       .button(ModalButton.cancel("Annulla"))
- *       .button(ModalButton.danger("Elimina", this::deleteProduct))
- *       .onClose(() -> System.out.println("modal chiuso"))
- *       .show();
+ * ModalDialog dialog = ModalDialog.builder(rootPane)
+ *         .type(ModalDialog.Type.WARNING)
+ *         .title("Attenzione")
+ *         .subtitle("Operazione irreversibile")
+ *         .message("Sei sicuro di voler eliminare questo prodotto?")
+ *         .icon("⚠")
+ *         .closeOnBackdrop(false)
+ *         .closeOnEscape(true)
+ *         .width(480)
+ *         .button(ModalButton.cancel("Annulla"))
+ *         .button(ModalButton.danger("Elimina", this::deleteProduct))
+ *         .onClose(() -> System.out.println("modal chiuso"))
+ *         .show();
  * </pre>
  */
 public final class ModalDialog {
@@ -67,73 +68,77 @@ public final class ModalDialog {
 
     /** Tipo semantico del modal — determina icona e colori di default. */
     public enum Type {
-        INFO,      // ℹ  blu
-        SUCCESS,   // ✓  verde
-        WARNING,   // ⚠  giallo
-        ERROR,     // ✕  rosso
-        CONFIRM,   // ?  neutro
-        INPUT,     // ✏  neutro
-        LOADING,   // ↻  neutro (no bottoni, no chiusura manuale)
-        CUSTOM     // definito dal chiamante
+        INFO, // ℹ blu
+        SUCCESS, // ✓ verde
+        WARNING, // ⚠ giallo
+        ERROR, // ✕ rosso
+        CONFIRM, // ? neutro
+        INPUT, // ✏ neutro
+        LOADING, // ↻ neutro (no bottoni, no chiusura manuale)
+        CUSTOM // definito dal chiamante
     }
 
     /** Posizione del modal sullo schermo. */
-    public enum Position { CENTER, TOP, BOTTOM }
+    public enum Position {
+        CENTER, TOP, BOTTOM
+    }
 
     /** Direzione dell'animazione di entrata. */
-    public enum Animation { SLIDE_UP, SLIDE_DOWN, FADE, SCALE, NONE }
+    public enum Animation {
+        SLIDE_UP, SLIDE_DOWN, FADE, SCALE, NONE
+    }
 
     // ─────────────────────────────────────────────────────────────────
     // Stato interno
     // ─────────────────────────────────────────────────────────────────
 
-    private final StackPane      parent;
-    private final Type           type;
-    private final String         title;
-    private final String         subtitle;
-    private final String         message;
-    private final String         icon;
-    private final Node           customContent;
+    private final StackPane parent;
+    private final Type type;
+    private final String title;
+    private final String subtitle;
+    private final String message;
+    private final String icon;
+    private final Node customContent;
     private final List<ModalButton> buttons;
-    private final double         maxWidth;
-    private final double         maxHeight;
-    private final boolean        closeable;       // mostra il pulsante [X]
-    private final boolean        closeOnBackdrop; // click sul backdrop chiude
-    private final boolean        closeOnEscape;   // ESC chiude
-    private final boolean        showDivider;     // linea tra header e body
-    private final Position       position;
-    private final Animation      animation;
-    private final Runnable       onClose;
-    private final int            autoDismissMs;   // 0 = no auto-dismiss
+    private final double maxWidth;
+    private final double maxHeight;
+    private final boolean closeable; // mostra il pulsante [X]
+    private final boolean closeOnBackdrop; // click sul backdrop chiude
+    private final boolean closeOnEscape; // ESC chiude
+    private final boolean showDivider; // linea tra header e body
+    private final Position position;
+    private final Animation animation;
+    private final Runnable onClose;
+    private final int autoDismissMs; // 0 = no auto-dismiss
 
     // Nodi costruiti al momento dello show()
     private StackPane backdropNode;
-    private VBox      dialogNode;
-    private boolean   dismissed = false;
+    private VBox dialogNode;
+    private boolean dismissed = false;
 
     // ─────────────────────────────────────────────────────────────────
     // Costruttore privato (via Builder)
     // ─────────────────────────────────────────────────────────────────
 
     private ModalDialog(Builder b) {
-        this.parent          = b.parent;
-        this.type            = b.type;
-        this.title           = b.title;
-        this.subtitle        = b.subtitle;
-        this.message         = b.message;
-        this.icon            = resolveIcon(b.icon, b.type);
-        this.customContent   = b.customContent;
-        this.buttons         = Collections.unmodifiableList(b.buttons);
-        this.maxWidth        = b.maxWidth;
-        this.maxHeight       = b.maxHeight;
-        this.closeable       = b.closeable;
+        this.parent = b.parent;
+        this.type = b.type;
+        this.title = b.title;
+        this.subtitle = b.subtitle;
+        this.message = b.message;
+        this.icon = resolveIcon(b.icon, b.type);
+        this.customContent = b.customContent;
+        this.buttons = Collections.unmodifiableList(b.buttons);
+        this.maxWidth = b.maxWidth;
+        this.maxHeight = b.maxHeight;
+        this.closeable = b.closeable;
         this.closeOnBackdrop = b.closeOnBackdrop;
-        this.closeOnEscape   = b.closeOnEscape;
-        this.showDivider     = b.showDivider;
-        this.position        = b.position;
-        this.animation       = b.animation;
-        this.onClose         = b.onClose;
-        this.autoDismissMs   = b.autoDismissMs;
+        this.closeOnEscape = b.closeOnEscape;
+        this.showDivider = b.showDivider;
+        this.position = b.position;
+        this.animation = b.animation;
+        this.onClose = b.onClose;
+        this.autoDismissMs = b.autoDismissMs;
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -142,28 +147,40 @@ public final class ModalDialog {
 
     /**
      * Modal informativo con un solo pulsante "OK".
-     * <pre>ModalDialog.info(rootPane, "Titolo", "Messaggio");</pre>
+     * 
+     * <pre>
+     * ModalDialog.info(rootPane, "Titolo", "Messaggio");
+     * </pre>
      */
     public static ModalDialog info(StackPane parent, String title, String message) {
         return builder(parent).type(Type.INFO).title(title).message(message)
-                .button(ModalButton.primary(I18n.t("ok") .isEmpty() ? "OK" : I18n.t("ok"), null))
+                .button(ModalButton.primary(I18n.t("ok").isEmpty() ? "OK" : I18n.t("ok"), null))
                 .show();
     }
 
     /**
      * Modal di avviso con pulsanti personalizzabili.
-     * <pre>ModalDialog.warning(rootPane, "Attenzione", "Testo", ModalButton.cancel("OK"));</pre>
+     * 
+     * <pre>
+     * ModalDialog.warning(rootPane, "Attenzione", "Testo", ModalButton.cancel("OK"));
+     * </pre>
      */
     public static ModalDialog warning(StackPane parent, String title, String message, ModalButton... btns) {
         Builder b = builder(parent).type(Type.WARNING).title(title).message(message);
-        if (btns.length == 0) b.button(ModalButton.primary("OK", null));
-        else for (ModalButton mb : btns) b.button(mb);
+        if (btns.length == 0)
+            b.button(ModalButton.primary("OK", null));
+        else
+            for (ModalButton mb : btns)
+                b.button(mb);
         return b.show();
     }
 
     /**
      * Modal di errore con dettaglio opzionale.
-     * <pre>ModalDialog.error(rootPane, "Errore", e.getMessage());</pre>
+     * 
+     * <pre>
+     * ModalDialog.error(rootPane, "Errore", e.getMessage());
+     * </pre>
      */
     public static ModalDialog error(StackPane parent, String title, String message) {
         return builder(parent).type(Type.ERROR).title(title).message(message)
@@ -173,7 +190,10 @@ public final class ModalDialog {
 
     /**
      * Modal di conferma con pulsanti Annulla / Conferma.
-     * <pre>ModalDialog.confirm(rootPane, "Elimina?", "Operazione irreversibile.", () -> delete());</pre>
+     * 
+     * <pre>
+     * ModalDialog.confirm(rootPane, "Elimina?", "Operazione irreversibile.", () -> delete());
+     * </pre>
      */
     public static ModalDialog confirm(StackPane parent, String title, String message, Runnable onConfirm) {
         return builder(parent).type(Type.CONFIRM).title(title).message(message)
@@ -187,7 +207,7 @@ public final class ModalDialog {
      * Variante confirm con testo bottone di conferma personalizzato e stile danger.
      */
     public static ModalDialog confirmDanger(StackPane parent, String title, String message,
-                                            String confirmLabel, Runnable onConfirm) {
+            String confirmLabel, Runnable onConfirm) {
         return builder(parent).type(Type.WARNING).title(title).message(message)
                 .closeOnBackdrop(false)
                 .button(ModalButton.cancel("Annulla"))
@@ -197,12 +217,15 @@ public final class ModalDialog {
 
     /**
      * Modal con campo di input testuale.
-     * <pre>ModalDialog.input(rootPane, "Inserisci nome", "Nome prodotto:", "default", val -> use(val));</pre>
+     * 
+     * <pre>
+     * ModalDialog.input(rootPane, "Inserisci nome", "Nome prodotto:", "default", val -> use(val));
+     * </pre>
      *
      * @param onConfirm riceve il testo inserito dall'utente (già trimmed)
      */
     public static ModalDialog input(StackPane parent, String title, String placeholder,
-                                    String defaultValue, Consumer<String> onConfirm) {
+            String defaultValue, Consumer<String> onConfirm) {
         TextField tf = new TextField(defaultValue == null ? "" : defaultValue);
         tf.setPromptText(placeholder);
         tf.getStyleClass().add("modal-input-field");
@@ -214,7 +237,8 @@ public final class ModalDialog {
                 .customContent(tf)
                 .button(ModalButton.cancel("Annulla"))
                 .button(ModalButton.primary("Conferma", () -> {
-                    if (onConfirm != null) onConfirm.accept(tf.getText().trim());
+                    if (onConfirm != null)
+                        onConfirm.accept(tf.getText().trim());
                 }));
 
         ref[0] = b.show();
@@ -223,7 +247,8 @@ public final class ModalDialog {
         // Enter nel campo di testo = click Conferma
         tf.setOnAction(e -> {
             if (ref[0] != null) {
-                if (onConfirm != null) onConfirm.accept(tf.getText().trim());
+                if (onConfirm != null)
+                    onConfirm.accept(tf.getText().trim());
                 ref[0].dismiss();
             }
         });
@@ -233,10 +258,11 @@ public final class ModalDialog {
     /**
      * Modal di loading (non chiudibile manualmente).
      * Usare {@link #dismiss()} programmaticamente quando l'operazione finisce.
+     * 
      * <pre>
-     *   ModalDialog loading = ModalDialog.loading(rootPane, "Caricamento...");
-     *   // ... operazione asincrona ...
-     *   Platform.runLater(loading::dismiss);
+     * ModalDialog loading = ModalDialog.loading(rootPane, "Caricamento...");
+     * // ... operazione asincrona ...
+     * Platform.runLater(loading::dismiss);
      * </pre>
      */
     public static ModalDialog loading(StackPane parent, String message) {
@@ -266,7 +292,10 @@ public final class ModalDialog {
 
     /**
      * Modal con successo e auto-dismiss configurabile.
-     * <pre>ModalDialog.success(rootPane, "Salvato!", "I dati sono stati aggiornati.", 2000);</pre>
+     * 
+     * <pre>
+     * ModalDialog.success(rootPane, "Salvato!", "I dati sono stati aggiornati.", 2000);
+     * </pre>
      *
      * @param autoDismissMs millisecondi dopo cui chiudersi automaticamente (0 = no)
      */
@@ -279,15 +308,17 @@ public final class ModalDialog {
 
     /**
      * Modal completamente custom — il chiamante fornisce qualsiasi Node come corpo.
+     * 
      * <pre>
-     *   ModalDialog.custom(rootPane, "Dettaglio Prodotto", myProductNode,
-     *       ModalButton.ghost("Chiudi", null),
-     *       ModalButton.primary("Aggiungi al carrello", () -> addToCart()));
+     * ModalDialog.custom(rootPane, "Dettaglio Prodotto", myProductNode,
+     *         ModalButton.ghost("Chiudi", null),
+     *         ModalButton.primary("Aggiungi al carrello", () -> addToCart()));
      * </pre>
      */
     public static ModalDialog custom(StackPane parent, String title, Node content, ModalButton... btns) {
         Builder b = builder(parent).type(Type.CUSTOM).title(title).customContent(content);
-        for (ModalButton mb : btns) b.button(mb);
+        for (ModalButton mb : btns)
+            b.button(mb);
         return b.show();
     }
 
@@ -295,56 +326,125 @@ public final class ModalDialog {
     // Builder
     // ─────────────────────────────────────────────────────────────────
 
-    public static Builder builder(StackPane parent) { return new Builder(parent); }
+    public static Builder builder(StackPane parent) {
+        return new Builder(parent);
+    }
 
     public static final class Builder {
-        private final StackPane    parent;
-        private Type               type            = Type.INFO;
-        private String             title           = "";
-        private String             subtitle        = null;
-        private String             message         = null;
-        private String             icon            = null; // null = usa default del tipo
-        private Node               customContent   = null;
-        private final List<ModalButton> buttons    = new ArrayList<>();
-        private double             maxWidth        = 520;
-        private double             maxHeight       = 0;  // 0 = auto
-        private boolean            closeable       = true;
-        private boolean            closeOnBackdrop = true;
-        private boolean            closeOnEscape   = true;
-        private boolean            showDivider     = true;
-        private Position           position        = Position.CENTER;
-        private Animation          animation       = Animation.SLIDE_UP;
-        private Runnable           onClose         = null;
-        private int                autoDismissMs   = 0;
+        private final StackPane parent;
+        private Type type = Type.INFO;
+        private String title = "";
+        private String subtitle = null;
+        private String message = null;
+        private String icon = null; // null = usa default del tipo
+        private Node customContent = null;
+        private final List<ModalButton> buttons = new ArrayList<>();
+        private double maxWidth = 520;
+        private double maxHeight = 0; // 0 = auto
+        private boolean closeable = true;
+        private boolean closeOnBackdrop = true;
+        private boolean closeOnEscape = true;
+        private boolean showDivider = true;
+        private Position position = Position.CENTER;
+        private Animation animation = Animation.SLIDE_UP;
+        private Runnable onClose = null;
+        private int autoDismissMs = 0;
 
         private Builder(StackPane parent) {
-            if (parent == null) throw new IllegalArgumentException("parent StackPane non può essere null");
+            if (parent == null)
+                throw new IllegalArgumentException("parent StackPane non può essere null");
             this.parent = parent;
         }
 
-        public Builder type(Type t)                  { this.type            = t;    return this; }
-        public Builder title(String t)               { this.title           = t;    return this; }
-        public Builder subtitle(String s)            { this.subtitle        = s;    return this; }
-        public Builder message(String m)             { this.message         = m;    return this; }
-        public Builder icon(String i)                { this.icon            = i;    return this; }
-        public Builder customContent(Node n)         { this.customContent   = n;    return this; }
-        public Builder width(double w)               { this.maxWidth        = w;    return this; }
-        public Builder height(double h)              { this.maxHeight       = h;    return this; }
-        public Builder closeable(boolean c)          { this.closeable       = c;    return this; }
-        public Builder closeOnBackdrop(boolean c)    { this.closeOnBackdrop = c;    return this; }
-        public Builder closeOnEscape(boolean c)      { this.closeOnEscape   = c;    return this; }
-        public Builder showDivider(boolean d)        { this.showDivider     = d;    return this; }
-        public Builder position(Position p)          { this.position        = p;    return this; }
-        public Builder animation(Animation a)        { this.animation       = a;    return this; }
-        public Builder onClose(Runnable r)           { this.onClose         = r;    return this; }
-        public Builder autoDismiss(int ms)           { this.autoDismissMs   = ms;   return this; }
-
-        public Builder button(ModalButton btn) {
-            if (btn != null) this.buttons.add(btn);
+        public Builder type(Type t) {
+            this.type = t;
             return this;
         }
 
-        /** Costruisce e mostra il modal. Ritorna l'istanza per dismiss() programmatico. */
+        public Builder title(String t) {
+            this.title = t;
+            return this;
+        }
+
+        public Builder subtitle(String s) {
+            this.subtitle = s;
+            return this;
+        }
+
+        public Builder message(String m) {
+            this.message = m;
+            return this;
+        }
+
+        public Builder icon(String i) {
+            this.icon = i;
+            return this;
+        }
+
+        public Builder customContent(Node n) {
+            this.customContent = n;
+            return this;
+        }
+
+        public Builder width(double w) {
+            this.maxWidth = w;
+            return this;
+        }
+
+        public Builder height(double h) {
+            this.maxHeight = h;
+            return this;
+        }
+
+        public Builder closeable(boolean c) {
+            this.closeable = c;
+            return this;
+        }
+
+        public Builder closeOnBackdrop(boolean c) {
+            this.closeOnBackdrop = c;
+            return this;
+        }
+
+        public Builder closeOnEscape(boolean c) {
+            this.closeOnEscape = c;
+            return this;
+        }
+
+        public Builder showDivider(boolean d) {
+            this.showDivider = d;
+            return this;
+        }
+
+        public Builder position(Position p) {
+            this.position = p;
+            return this;
+        }
+
+        public Builder animation(Animation a) {
+            this.animation = a;
+            return this;
+        }
+
+        public Builder onClose(Runnable r) {
+            this.onClose = r;
+            return this;
+        }
+
+        public Builder autoDismiss(int ms) {
+            this.autoDismissMs = ms;
+            return this;
+        }
+
+        public Builder button(ModalButton btn) {
+            if (btn != null)
+                this.buttons.add(btn);
+            return this;
+        }
+
+        /**
+         * Costruisce e mostra il modal. Ritorna l'istanza per dismiss() programmatico.
+         */
         public ModalDialog show() {
             ModalDialog d = new ModalDialog(this);
             Platform.runLater(d::buildAndShow);
@@ -352,7 +452,9 @@ public final class ModalDialog {
         }
 
         /** Costruisce senza mostrare (per show() ritardato). */
-        public ModalDialog build() { return new ModalDialog(this); }
+        public ModalDialog build() {
+            return new ModalDialog(this);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -368,7 +470,8 @@ public final class ModalDialog {
         // Chiusura su click backdrop
         if (closeOnBackdrop) {
             backdropNode.setOnMouseClicked(e -> {
-                if (e.getTarget() == backdropNode) dismiss();
+                if (e.getTarget() == backdropNode)
+                    dismiss();
             });
         }
 
@@ -376,7 +479,8 @@ public final class ModalDialog {
         dialogNode = new VBox();
         dialogNode.getStyleClass().addAll("modal-dialog", "modal-type-" + type.name().toLowerCase());
         dialogNode.setMaxWidth(maxWidth);
-        if (maxHeight > 0) dialogNode.setMaxHeight(maxHeight);
+        if (maxHeight > 0)
+            dialogNode.setMaxHeight(maxHeight);
         dialogNode.setMinWidth(Math.min(maxWidth, 280));
 
         // ── Header ────────────────────────────────────────────────────
@@ -416,7 +520,8 @@ public final class ModalDialog {
         if (closeOnEscape) {
             backdropNode.setFocusTraversable(true);
             backdropNode.setOnKeyPressed(e -> {
-                if (e.getCode() == KeyCode.ESCAPE) dismiss();
+                if (e.getCode() == KeyCode.ESCAPE)
+                    dismiss();
             });
         }
 
@@ -429,8 +534,7 @@ public final class ModalDialog {
         // ── Auto-dismiss ──────────────────────────────────────────────
         if (autoDismissMs > 0) {
             Timeline timer = new Timeline(
-                new KeyFrame(Duration.millis(autoDismissMs), e -> dismiss())
-            );
+                    new KeyFrame(Duration.millis(autoDismissMs), e -> dismiss()));
             timer.play();
         }
 
@@ -525,8 +629,10 @@ public final class ModalDialog {
             Button btn = mb.buildNode();
             HBox.setHgrow(btn, buttons.size() <= 2 ? Priority.SOMETIMES : Priority.ALWAYS);
             btn.setOnAction(e -> {
-                if (mb.getAction() != null) mb.getAction().run();
-                if (mb.closesModal()) dismiss();
+                if (mb.getAction() != null)
+                    mb.getAction().run();
+                if (mb.closesModal())
+                    dismiss();
             });
             footer.getChildren().add(btn);
         }
@@ -539,7 +645,8 @@ public final class ModalDialog {
     // ─────────────────────────────────────────────────────────────────
 
     private void playEnterAnimation() {
-        if (animation == Animation.NONE) return;
+        if (animation == Animation.NONE)
+            return;
 
         backdropNode.setOpacity(0);
 
@@ -548,41 +655,40 @@ public final class ModalDialog {
                 dialogNode.setTranslateY(60);
                 dialogNode.setOpacity(0);
                 new ParallelTransition(
-                    fadeIn(backdropNode, 200),
-                    new SequentialTransition(
-                        new PauseTransition(Duration.millis(50)),
-                        new ParallelTransition(
-                            fadeIn(dialogNode, 250),
-                            translateY(dialogNode, 60, 0, 300, Interpolator.EASE_OUT)
-                        )
-                    )
-                ).play();
+                        fadeIn(backdropNode, 200),
+                        new SequentialTransition(
+                                new PauseTransition(Duration.millis(50)),
+                                new ParallelTransition(
+                                        fadeIn(dialogNode, 250),
+                                        translateY(dialogNode, 60, 0, 300, Interpolator.EASE_OUT))))
+                        .play();
             }
             case SLIDE_DOWN -> {
                 dialogNode.setTranslateY(-60);
                 dialogNode.setOpacity(0);
                 new ParallelTransition(
-                    fadeIn(backdropNode, 200),
-                    new ParallelTransition(
-                        fadeIn(dialogNode, 250),
-                        translateY(dialogNode, -60, 0, 300, Interpolator.EASE_OUT)
-                    )
-                ).play();
+                        fadeIn(backdropNode, 200),
+                        new ParallelTransition(
+                                fadeIn(dialogNode, 250),
+                                translateY(dialogNode, -60, 0, 300, Interpolator.EASE_OUT)))
+                        .play();
             }
             case SCALE -> {
-                dialogNode.setScaleX(0.85); dialogNode.setScaleY(0.85);
+                dialogNode.setScaleX(0.85);
+                dialogNode.setScaleY(0.85);
                 dialogNode.setOpacity(0);
 
                 ScaleTransition scale = new ScaleTransition(Duration.millis(280), dialogNode);
-                scale.setFromX(0.85); scale.setFromY(0.85);
-                scale.setToX(1.0);   scale.setToY(1.0);
+                scale.setFromX(0.85);
+                scale.setFromY(0.85);
+                scale.setToX(1.0);
+                scale.setToY(1.0);
                 scale.setInterpolator(Interpolator.EASE_OUT);
 
                 new ParallelTransition(
-                    fadeIn(backdropNode, 200),
-                    fadeIn(dialogNode, 250),
-                    scale
-                ).play();
+                        fadeIn(backdropNode, 200),
+                        fadeIn(dialogNode, 250),
+                        scale).play();
             }
             case FADE -> {
                 dialogNode.setOpacity(0);
@@ -592,7 +698,10 @@ public final class ModalDialog {
     }
 
     private void playExitAnimation(Runnable onFinished) {
-        if (animation == Animation.NONE) { onFinished.run(); return; }
+        if (animation == Animation.NONE) {
+            onFinished.run();
+            return;
+        }
 
         double toY = (animation == Animation.SLIDE_DOWN) ? -40 : 40;
 
@@ -603,10 +712,9 @@ public final class ModalDialog {
         fadeDialog.setToValue(0);
 
         ParallelTransition exit = new ParallelTransition(
-            fadeBackdrop,
-            fadeDialog,
-            translateY(dialogNode, 0, toY, 200, Interpolator.EASE_IN)
-        );
+                fadeBackdrop,
+                fadeDialog,
+                translateY(dialogNode, 0, toY, 200, Interpolator.EASE_IN));
         exit.setOnFinished(e -> onFinished.run());
         exit.play();
     }
@@ -620,58 +728,69 @@ public final class ModalDialog {
      * Idempotente: chiamare più volte non causa problemi.
      */
     public void dismiss() {
-        if (dismissed) return;
+        if (dismissed)
+            return;
         dismissed = true;
 
         playExitAnimation(() -> {
             parent.getChildren().remove(backdropNode);
-            if (onClose != null) onClose.run();
+            if (onClose != null)
+                onClose.run();
         });
     }
 
     /** Chiude il modal immediatamente senza animazione. */
     public void dismissImmediate() {
-        if (dismissed) return;
+        if (dismissed)
+            return;
         dismissed = true;
         parent.getChildren().remove(backdropNode);
-        if (onClose != null) onClose.run();
+        if (onClose != null)
+            onClose.run();
     }
 
     /** true se il modal è già stato chiuso. */
-    public boolean isDismissed() { return dismissed; }
+    public boolean isDismissed() {
+        return dismissed;
+    }
 
     // ─────────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────────
 
     private static String resolveIcon(String overrideIcon, Type type) {
-        if (overrideIcon != null) return overrideIcon;
+        if (overrideIcon != null)
+            return overrideIcon;
         return switch (type) {
-            case INFO    -> "ℹ";
+            case INFO -> "ℹ";
             case SUCCESS -> "✓";
             case WARNING -> "⚠";
-            case ERROR   -> "✕";
+            case ERROR -> "✕";
             case CONFIRM -> "?";
-            case INPUT   -> "✏";
+            case INPUT -> "✏";
             case LOADING, CUSTOM -> null;
         };
     }
 
     private Pos resolveAlignment() {
         return switch (position) {
-            case TOP    -> Pos.TOP_CENTER;
+            case TOP -> Pos.TOP_CENTER;
             case BOTTOM -> Pos.BOTTOM_CENTER;
-            default     -> Pos.CENTER;
+            default -> Pos.CENTER;
         };
     }
 
     private static FadeTransition fadeIn(Node n, int ms) {
         FadeTransition ft = new FadeTransition(Duration.millis(ms), n);
-        ft.setToValue(1); return ft;
+        ft.setToValue(1);
+        return ft;
     }
 
     private static TranslateTransition translateY(Node n, double from, double to, int ms, Interpolator ip) {
         TranslateTransition tt = new TranslateTransition(Duration.millis(ms), n);
-        tt.setFromY(from); tt.setToY(to); tt.setInterpolator(ip); return tt;
+        tt.setFromY(from);
+        tt.setToY(to);
+        tt.setInterpolator(ip);
+        return tt;
     }
 }

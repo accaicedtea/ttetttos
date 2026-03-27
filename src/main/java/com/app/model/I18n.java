@@ -33,15 +33,18 @@ public final class I18n {
     }
 
     public static String t(String key) {
-        if (key == null) return "";
+        if (key == null)
+            return "";
         Map<String, String> translation = STRINGS.getOrDefault(lang, STRINGS.get("it"));
         return translation.getOrDefault(key, key);
     }
 
     public static void mergeTranslations(Map<String, Map<String, String>> m) {
-        if (m == null) return;
+        if (m == null)
+            return;
         for (Map.Entry<String, Map<String, String>> e : m.entrySet()) {
-            if (e.getKey() == null || e.getValue() == null) continue;
+            if (e.getKey() == null || e.getValue() == null)
+                continue;
             STRINGS.compute(e.getKey(), (k, existing) -> {
                 if (existing == null) {
                     return new ConcurrentHashMap<>(e.getValue());

@@ -68,13 +68,20 @@ public class SplashController extends BaseController {
     private void runSetupSequence() {
         new Thread(() -> {
 
-            // ── Step 1: Login ─────────────────────────────────────────
+            // ── Step 1: Start Watchdog e login ─────────────────────────
+            NetworkWatchdog.start(online -> {
+                System.out.println("[Net] " + (online ? "Online" : "Offline"));
+                Platform.runLater(() -> {
+                    if (!online)
+                        setStep("mdi2a-alert", "Offline", "Rete non disponibile", 0.05);
+                });
+            });
+
             setStep("mdi2l-lock", "Connessione al server...", "", 0.05);
             String loginError = null;
             try {
                 AuthService.loginTotem(API_KEY);
                 setStep("mdi2l-lock", "Connesso", "Login completato", 0.35);
-                NetworkWatchdog.start(online -> System.out.println("[Net] " + (online ? "Online" : "Offline")));
                 OrderQueue.startQueueSync();
                 sleep(300);
             } catch (Exception e) {

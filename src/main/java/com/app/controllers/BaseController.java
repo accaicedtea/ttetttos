@@ -9,9 +9,9 @@ import javafx.scene.layout.StackPane;
  * Controller base con funzionalità condivise tra tutti i controller dell'app.
  *
  * Problema originale: ogni controller re-implementava:
- *  - Binding testi I18n
- *  - Toast (showToast) — duplicato in ShopPageController e CartController
- *  - Pattern di show/hide elementi
+ * - Binding testi I18n
+ * - Toast (showToast) — duplicato in ShopPageController e CartController
+ * - Pattern di show/hide elementi
  *
  * I controller concreti estendono questa classe e chiamano i metodi
  * helper anziché duplicare il codice.
@@ -31,11 +31,14 @@ public abstract class BaseController {
      * Null-safe: ignora label null.
      */
     protected void t(Label label, String key) {
-        if (label != null) label.setText(I18n.t(key));
+        if (label != null)
+            label.setText(I18n.t(key));
     }
 
     /** Restituisce la traduzione della chiave corrente. */
-    protected String t(String key) { return I18n.t(key); }
+    protected String t(String key) {
+        return I18n.t(key);
+    }
 
     // ── Toast ─────────────────────────────────────────────────────────
 
@@ -46,7 +49,8 @@ public abstract class BaseController {
      * @param message messaggio da mostrare (già tradotto)
      */
     protected void showToast(String message) {
-        if (rootStack == null) return;
+        if (rootStack == null)
+            return;
         if (toast == null) {
             toast = new ToastOverlay();
             if (!rootStack.getChildren().contains(toast)) {
@@ -60,7 +64,8 @@ public abstract class BaseController {
 
     /** Imposta visibilità e managed insieme (entrambi devono cambiare). */
     protected static void setVisible(javafx.scene.Node node, boolean visible) {
-        if (node == null) return;
+        if (node == null)
+            return;
         node.setVisible(visible);
         node.setManaged(visible);
     }

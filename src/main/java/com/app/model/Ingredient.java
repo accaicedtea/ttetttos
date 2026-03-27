@@ -26,7 +26,8 @@ public class Ingredient {
 
     public static Ingredient fromJson(JsonObject j) {
         System.out.println("Parsing ingredient from JSON: " + j);
-        if (j == null) return null;
+        if (j == null)
+            return null;
         int id = JsonHelper.intVal(j, "id", 0);
         String nome = JsonHelper.str(j, "nome", "");
         boolean disponibile = JsonHelper.intVal(j, "disponibile", 0) == 1;
@@ -36,12 +37,14 @@ public class Ingredient {
     }
 
     public static List<Ingredient> listFromJsonArray(JsonArray arr) {
-        if (arr == null) return List.of();
+        if (arr == null)
+            return List.of();
         List<Ingredient> ret = new ArrayList<>();
         for (JsonElement e : arr) {
             if (e.isJsonObject()) {
                 Ingredient ing = fromJson(e.getAsJsonObject());
-                if (ing != null) ret.add(ing);
+                if (ing != null)
+                    ret.add(ing);
             }
         }
         return ret;

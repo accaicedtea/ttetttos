@@ -17,22 +17,22 @@ import java.util.List;
  * ProductCard — card prodotto con immagine opzionale.
  *
  * Refactoring rispetto all'originale:
- *  - Aggiunto costruttore da {@link Product} POJO
- *  - I chip allergeni usano {@link ChipFactory} invece di label inline
- *  - Costanti di layout come static final
+ * - Aggiunto costruttore da {@link Product} POJO
+ * - I chip allergeni usano {@link ChipFactory} invece di label inline
+ * - Costanti di layout come static final
  */
 public class ProductCard extends VBox {
 
-    private static final double IMAGE_HEIGHT  = 180;
+    private static final double IMAGE_HEIGHT = 180;
     private static final double CORNER_RADIUS = 16;
-    private static final double CONTENT_PAD   = 18;
+    private static final double CONTENT_PAD = 18;
 
     // ── Factory da POJO ──────────────────────────────────────────────
 
     /** Costruisce la card direttamente da un Product POJO. */
     public static ProductCard from(Product p) {
         return new ProductCard(p.nome, p.prezzoFmt, p.descrizione, p.allergeni,
-                               p.hasImage() ? p.imageUrl : null, null);
+                p.hasImage() ? p.imageUrl : null, null);
     }
 
     // ── Costruttori pubblici ─────────────────────────────────────────
@@ -46,7 +46,7 @@ public class ProductCard extends VBox {
     }
 
     public ProductCard(String name, String price, String description, List<String> allergens,
-                       String imageUrl, Image preloadedImage) {
+            String imageUrl, Image preloadedImage) {
         super(0);
         getStyleClass().add("prod-card");
         setAlignment(Pos.TOP_LEFT);
@@ -165,13 +165,20 @@ public class ProductCard extends VBox {
     // ── Animazione press ─────────────────────────────────────────────
 
     private void addPressAnimation() {
-        addEventHandler(javafx.scene.input.MouseEvent.MOUSE_PRESSED,  e -> { setScaleX(0.97); setScaleY(0.97); });
+        addEventHandler(javafx.scene.input.MouseEvent.MOUSE_PRESSED, e -> {
+            setScaleX(0.97);
+            setScaleY(0.97);
+        });
         addEventHandler(javafx.scene.input.MouseEvent.MOUSE_RELEASED, e -> {
             ScaleTransition st = new ScaleTransition(Duration.millis(120), this);
-            st.setToX(1); st.setToY(1);
+            st.setToX(1);
+            st.setToY(1);
             st.setInterpolator(javafx.animation.Interpolator.EASE_OUT);
             st.play();
         });
-        addEventHandler(javafx.scene.input.MouseEvent.MOUSE_EXITED, e -> { setScaleX(1); setScaleY(1); });
+        addEventHandler(javafx.scene.input.MouseEvent.MOUSE_EXITED, e -> {
+            setScaleX(1);
+            setScaleY(1);
+        });
     }
 }

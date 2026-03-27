@@ -135,6 +135,7 @@ public class ShopPageController extends BaseController
     private boolean syncStarted = false;
     private Timeline kumpirBtnPulse;
     private StackPane kumpirOverlay = null;
+    private Boolean lastOnlineState = null;
 
     // Cache rendering prodotti
     private final Map<String, List<ProductCard>> categoryProductCards = new HashMap<>();
@@ -259,7 +260,7 @@ public class ShopPageController extends BaseController
 
             // Fase 2 — rete → delta update
             try {
-                JsonArray fresh = IngredientService.getIngredients(true);
+                JsonArray fresh = IngredientService.getIngredients();
                 List<Ingredient> freshList = Ingredient.listFromJsonArray(fresh);
                 saveToDiskCache(freshList);
                 if (ingNodes.isEmpty())
@@ -339,7 +340,8 @@ public class ShopPageController extends BaseController
         tb.setCache(true);
         tb.setCacheHint(CacheHint.SPEED);
 
-        // Dimensioni iniziali per card ingredienti. Poi verranno adattate da syncGridGap.
+        // Dimensioni iniziali per card ingredienti. Poi verranno adattate da
+        // syncGridGap.
         tb.setMinWidth(220);
         tb.setPrefWidth(220);
         tb.setMaxWidth(260);
@@ -529,7 +531,7 @@ public class ShopPageController extends BaseController
         });
         bgSync.scheduleWithFixedDelay(() -> {
             try {
-                JsonArray fresh = IngredientService.getIngredients(true);
+                JsonArray fresh = IngredientService.getIngredients();
                 List<Ingredient> freshList = Ingredient.listFromJsonArray(fresh);
                 saveToDiskCache(freshList);
                 applyDelta(freshList);
@@ -859,7 +861,8 @@ public class ShopPageController extends BaseController
         kumpirGrid.setVgap(gap);
 
         double safeWidth = Math.max(0, cardWidth - 40); // margini del card interno
-        // Ogni card dovrebbe occupare ~1/3 con margini, ma non meno di 220 e non più di 260.
+        // Ogni card dovrebbe occupare ~1/3 con margini, ma non meno di 220 e non più di
+        // 260.
         double targetCard = Math.floor((safeWidth - 2 * gap) / 3);
         double cardW = Math.min(260, Math.max(220, targetCard));
 
@@ -1266,6 +1269,20 @@ public class ShopPageController extends BaseController
     public void setOnline(boolean online) {
         if (headerController != null)
             headerController.setOnline(online);
+
+        if (toastOverlay != null) {
+            if (lastOnlineState == null) {
+                // Stato iniziale; non notificare recupero per evitare messaggi a startup
+                lastOnlineState = online;
+                return;
+            }
+            if (!lastOnlineState && online) {
+                toastOverlay.show("Connessione internet ripristinata");
+            } else if (lastOnlineState && !online) {
+                toastOverlay.show("Connessione internet persa: modalità offline");
+            }
+            lastOnlineState = online;
+        }
     }
 
     private void showInfo(String msg) {

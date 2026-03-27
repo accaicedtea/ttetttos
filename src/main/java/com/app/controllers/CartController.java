@@ -19,25 +19,36 @@ import java.util.stream.Collectors;
  *
  * Fix rispetto alla versione precedente:
  * - allergenWarningBox / allergenWarningTitle / allergenWarningChips legati
- *   direttamente via @FXML (niente componente esterno che non si agganciava)
+ * direttamente via @FXML (niente componente esterno che non si agganciava)
  * - Mostra gli ingredienti nella riga carrello
  * - Banner allergeni in fondo visibile/nascosto in modo reattivo
  */
 public class CartController extends BaseController {
 
-    @FXML private Label      titleLabel;
-    @FXML private Label      totalBadge;
-    @FXML private ScrollPane cartScroll;
-    @FXML private VBox       cartList;
-    @FXML private Label      totalLabel;
-    @FXML private Label      totalAmount;
-    @FXML private Button     proceedBtn;
-    @FXML private StackPane  rootPane;
+    @FXML
+    private Label titleLabel;
+    @FXML
+    private Label totalBadge;
+    @FXML
+    private ScrollPane cartScroll;
+    @FXML
+    private VBox cartList;
+    @FXML
+    private Label totalLabel;
+    @FXML
+    private Label totalAmount;
+    @FXML
+    private Button proceedBtn;
+    @FXML
+    private StackPane rootPane;
 
     // Banner allergeni — collegato direttamente all'FXML
-    @FXML private HBox      allergenWarningBox;
-    @FXML private Label     allergenWarningTitle;
-    @FXML private FlowPane  allergenWarningChips;
+    @FXML
+    private HBox allergenWarningBox;
+    @FXML
+    private Label allergenWarningTitle;
+    @FXML
+    private FlowPane allergenWarningChips;
 
     @FXML
     private void initialize() {
@@ -45,14 +56,15 @@ public class CartController extends BaseController {
 
         t(titleLabel, "cart");
         t(totalLabel, "total");
-        if (proceedBtn != null) proceedBtn.setText(t("proceed") + " →");
+        if (proceedBtn != null)
+            proceedBtn.setText(t("proceed") + " →");
 
         Animations.inertiaScroll(cartScroll);
         Animations.touchFeedback(proceedBtn);
 
         // Ascolta le modifiche al carrello per aggiornare il banner in tempo reale
         CartManager.get().getItems().addListener(
-            (javafx.collections.ListChangeListener<CartItem>) c -> buildCartList());
+                (javafx.collections.ListChangeListener<CartItem>) c -> buildCartList());
 
         buildCartList();
     }
@@ -115,8 +127,8 @@ public class CartController extends BaseController {
 
         // Controlli quantità
         Button minus = new Button();
-        Label  qty   = new Label(String.valueOf(item.getQty()));
-        Button plus  = new Button("+");
+        Label qty = new Label(String.valueOf(item.getQty()));
+        Button plus = new Button("+");
         minus.getStyleClass().add("qty-btn");
         qty.getStyleClass().add("qty-label");
         plus.getStyleClass().add("qty-btn");
@@ -167,7 +179,8 @@ public class CartController extends BaseController {
      * li mostra come chip nel banner. Se non ci sono allergeni, nasconde il banner.
      */
     private void updateAllergenBanner(List<CartItem> items) {
-        if (allergenWarningBox == null) return;
+        if (allergenWarningBox == null)
+            return;
 
         // Raccoglie allergeni unici (case-insensitive)
         List<String> allAllergens = items.stream()
@@ -192,10 +205,9 @@ public class CartController extends BaseController {
 
         if (allergenWarningTitle != null) {
             allergenWarningTitle.setText(
-                allAllergens.size() == 1
-                    ? "Attenzione: 1 allergene nel tuo ordine"
-                    : "Attenzione: " + allAllergens.size() + " allergeni nel tuo ordine"
-            );
+                    allAllergens.size() == 1
+                            ? "Attenzione: 1 allergene nel tuo ordine"
+                            : "Attenzione: " + allAllergens.size() + " allergeni nel tuo ordine");
         }
 
         setVisible(allergenWarningBox, true);
@@ -203,15 +215,18 @@ public class CartController extends BaseController {
 
     private void hideAllergenBanner() {
         setVisible(allergenWarningBox, false);
-        if (allergenWarningChips != null) allergenWarningChips.getChildren().clear();
+        if (allergenWarningChips != null)
+            allergenWarningChips.getChildren().clear();
     }
 
     // ── Totali ────────────────────────────────────────────────────────
 
     private void updateTotals() {
         String total = CartManager.get().totalPriceFormatted();
-        if (totalAmount != null) totalAmount.setText(total);
-        if (totalBadge  != null) totalBadge.setText(total);
+        if (totalAmount != null)
+            totalAmount.setText(total);
+        if (totalBadge != null)
+            totalBadge.setText(total);
     }
 
     // ── Navigazione ───────────────────────────────────────────────────
@@ -233,12 +248,13 @@ public class CartController extends BaseController {
  * NOTA su CartItem.getIngredienti():
  * Se CartItem non ha ancora un campo List<String> ingredienti, aggiungilo:
  *
- *   private List<String> ingredienti = List.of();
- *   public List<String> getIngredienti() { return ingredienti; }
+ * private List<String> ingredienti = List.of();
+ * public List<String> getIngredienti() { return ingredienti; }
  *
  * e nel builder:
- *   public Builder ingredienti(List<String> v) { this.ingredienti = v; return this; }
+ * public Builder ingredienti(List<String> v) { this.ingredienti = v; return
+ * this; }
  *
  * Poi in CartItem.fromProduct(Product p):
- *   .ingredienti(p.ingredienti)
+ * .ingredienti(p.ingredienti)
  */

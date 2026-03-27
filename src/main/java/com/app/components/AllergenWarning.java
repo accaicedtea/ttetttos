@@ -10,19 +10,20 @@ import com.app.model.I18n;
 import java.util.*;
 
 /**
- * Componente riutilizzabile: banner allergeni "Attenzione allergeni nell'ordine".
+ * Componente riutilizzabile: banner allergeni "Attenzione allergeni
+ * nell'ordine".
  *
  * Era duplicato in CartController e ShopPageController.
  * Adesso è un VBox auto-gestito che si mostra/nasconde da solo.
  *
  * Uso:
- *   AllergenWarning warn = new AllergenWarning();
- *   someParent.getChildren().add(warn);
- *   warn.update(myAllergenList);   // mostra o nasconde automaticamente
+ * AllergenWarning warn = new AllergenWarning();
+ * someParent.getChildren().add(warn);
+ * warn.update(myAllergenList); // mostra o nasconde automaticamente
  */
 public class AllergenWarning extends VBox {
 
-    private final Label    title;
+    private final Label title;
     private final FlowPane chips;
 
     public AllergenWarning() {
@@ -34,7 +35,8 @@ public class AllergenWarning extends VBox {
         title.getStyleClass().add("allergen-warning-title");
 
         chips = new FlowPane();
-        chips.setHgap(6); chips.setVgap(6);
+        chips.setHgap(6);
+        chips.setVgap(6);
 
         getChildren().addAll(title, chips);
         setVisible(false);
@@ -43,9 +45,11 @@ public class AllergenWarning extends VBox {
 
     /**
      * Aggiorna il banner con gli allergeni unici dalla lista di item.
-     * Si mostra automaticamente se ci sono allergeni, si nasconde se non ce ne sono.
+     * Si mostra automaticamente se ci sono allergeni, si nasconde se non ce ne
+     * sono.
      *
-     * @param allAllergens lista flat di allergeni (stringhe, eventualmente ripetute)
+     * @param allAllergens lista flat di allergeni (stringhe, eventualmente
+     *                     ripetute)
      */
     public void update(List<String> allAllergens) {
         chips.getChildren().clear();

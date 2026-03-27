@@ -41,17 +41,19 @@ public class Api {
             throw new Exception("Risposta non JSON: " + body.substring(0, Math.min(body.length(), 200)));
         }
         int status = response.statusCode();
-        if (status >= 200 && status < 300) return result;
+        if (status >= 200 && status < 300)
+            return result;
         // Log corpo completo per debug (utile per 422 Unprocessable Entity)
         System.err.println("[Api] HTTP " + status + " body: " + body);
         String msg = result.has("message") ? result.get("message").getAsString()
-                   : result.has("error")   ? result.get("error").getAsString()
-                   : "Errore HTTP " + status;
+                : result.has("error") ? result.get("error").getAsString()
+                        : "Errore HTTP " + status;
         throw new Exception("HTTP " + status + ": " + msg);
     }
 
     private static void requireToken() throws Exception {
-        if (!SessionManager.isLoggedIn()) throw new Exception("Token mancante, devi fare login");
+        if (!SessionManager.isLoggedIn())
+            throw new Exception("Token mancante, devi fare login");
     }
 
     /**
@@ -67,7 +69,8 @@ public class Api {
             } catch (java.io.IOException e) {
                 last = e;
                 System.err.println("[Api] Tentativo " + attempt + "/" + maxTries + " fallito: " + e.getMessage());
-                if (attempt < maxTries) Thread.sleep(600L * attempt);
+                if (attempt < maxTries)
+                    Thread.sleep(600L * attempt);
             }
         }
         throw last;
@@ -80,13 +83,14 @@ public class Api {
     }
 
     public static JsonObject apiPostPublic(String endpoint, JsonObject data,
-                                           Map<String, String> extra) throws Exception {
+            Map<String, String> extra) throws Exception {
         String body = data != null ? data.toString() : "{}";
         HttpRequest.Builder b = HttpRequest.newBuilder()
                 .uri(URI.create(BASE_URL + endpoint))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body));
-        if (extra != null) extra.forEach(b::header);
+        if (extra != null)
+            extra.forEach(b::header);
         return handleResponse(send(b.build()));
     }
 
@@ -105,8 +109,8 @@ public class Api {
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
                         .uri(URI.create(BASE_URL + endpoint))
-                        .GET()
-        ).build();
+                        .GET())
+                .build();
         return handleResponse(send(req));
     }
 
@@ -116,8 +120,8 @@ public class Api {
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
                         .uri(URI.create(BASE_URL + endpoint))
-                        .POST(HttpRequest.BodyPublishers.ofString(body))
-        ).build();
+                        .POST(HttpRequest.BodyPublishers.ofString(body)))
+                .build();
         return handleResponse(send(req));
     }
 
@@ -127,8 +131,8 @@ public class Api {
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
                         .uri(URI.create(BASE_URL + endpoint))
-                        .PUT(HttpRequest.BodyPublishers.ofString(body))
-        ).build();
+                        .PUT(HttpRequest.BodyPublishers.ofString(body)))
+                .build();
         return handleResponse(send(req));
     }
 
@@ -138,8 +142,8 @@ public class Api {
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
                         .uri(URI.create(BASE_URL + endpoint))
-                        .method("PATCH", HttpRequest.BodyPublishers.ofString(body))
-        ).build();
+                        .method("PATCH", HttpRequest.BodyPublishers.ofString(body)))
+                .build();
         return handleResponse(send(req));
     }
 
@@ -148,8 +152,8 @@ public class Api {
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
                         .uri(URI.create(BASE_URL + endpoint))
-                        .DELETE()
-        ).build();
+                        .DELETE())
+                .build();
         return handleResponse(send(req));
     }
 }

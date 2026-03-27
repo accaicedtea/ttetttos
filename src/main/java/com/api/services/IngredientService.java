@@ -6,11 +6,12 @@ import com.google.gson.JsonObject;
 
 public final class IngredientService {
 
-    private IngredientService() {}
+    private IngredientService() {
+    }
 
-    public static JsonArray getIngredients(boolean onlyAvailable) throws Exception {
+    public static JsonArray getIngredients() throws Exception {
         String endpoint = "ingredienti";
-        // if (onlyAvailable) endpoint += "?disponibile=1";
+
         JsonObject resp = Api.apiGet(endpoint);
         if (resp.has("data") && resp.get("data").isJsonArray()) {
             return resp.getAsJsonArray("data");

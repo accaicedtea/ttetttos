@@ -14,18 +14,18 @@ import javafx.util.Duration;
  * inline non riutilizzabile.
  *
  * Uso:
- *   ToastOverlay toast = new ToastOverlay();
- *   rootStack.getChildren().add(toast);         // aggiunto allo StackPane principale
- *   StackPane.setAlignment(toast, Pos.BOTTOM_CENTER);
- *   toast.show("Aggiunto!");
+ * ToastOverlay toast = new ToastOverlay();
+ * rootStack.getChildren().add(toast); // aggiunto allo StackPane principale
+ * StackPane.setAlignment(toast, Pos.BOTTOM_CENTER);
+ * toast.show("Aggiunto!");
  */
 public class ToastOverlay extends HBox {
 
-    private static final int SHOW_MS   = 1400;  // durata di visibilità piena
-    private static final int FADE_MS   = 250;   // fade in / fade out
+    private static final int SHOW_MS = 1400; // durata di visibilità piena
+    private static final int FADE_MS = 250; // fade in / fade out
 
     private final Label label;
-    private Timeline  timeline;
+    private Timeline timeline;
 
     public ToastOverlay() {
         getStyleClass().add("toast-box");
@@ -46,7 +46,8 @@ public class ToastOverlay extends HBox {
 
     /** Mostra il toast con il messaggio dato per la durata predefinita. */
     public void show(String message) {
-        if (timeline != null) timeline.stop();
+        if (timeline != null)
+            timeline.stop();
 
         label.setText(message);
         setOpacity(0);
@@ -55,18 +56,20 @@ public class ToastOverlay extends HBox {
         setManaged(true);
 
         timeline = new Timeline(
-            new KeyFrame(Duration.millis(0),
-                new KeyValue(opacityProperty(),    0),
-                new KeyValue(translateYProperty(), 20)),
-            new KeyFrame(Duration.millis(FADE_MS),
-                new KeyValue(opacityProperty(),    1),
-                new KeyValue(translateYProperty(), 0)),
-            new KeyFrame(Duration.millis(FADE_MS + SHOW_MS),
-                new KeyValue(opacityProperty(),    1)),
-            new KeyFrame(Duration.millis(FADE_MS + SHOW_MS + FADE_MS),
-                new KeyValue(opacityProperty(),    0))
-        );
-        timeline.setOnFinished(e -> { setVisible(false); setManaged(false); });
+                new KeyFrame(Duration.millis(0),
+                        new KeyValue(opacityProperty(), 0),
+                        new KeyValue(translateYProperty(), 20)),
+                new KeyFrame(Duration.millis(FADE_MS),
+                        new KeyValue(opacityProperty(), 1),
+                        new KeyValue(translateYProperty(), 0)),
+                new KeyFrame(Duration.millis(FADE_MS + SHOW_MS),
+                        new KeyValue(opacityProperty(), 1)),
+                new KeyFrame(Duration.millis(FADE_MS + SHOW_MS + FADE_MS),
+                        new KeyValue(opacityProperty(), 0)));
+        timeline.setOnFinished(e -> {
+            setVisible(false);
+            setManaged(false);
+        });
         timeline.play();
     }
 }

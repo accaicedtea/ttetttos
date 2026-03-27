@@ -8,8 +8,6 @@ public final class IngredientCache {
 
     private static List<Ingredient> cached = new ArrayList<>();
 
-    private IngredientCache() {}
-
     public static synchronized List<Ingredient> get() {
         return Collections.unmodifiableList(new ArrayList<>(cached));
     }

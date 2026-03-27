@@ -24,7 +24,15 @@ public class AuthService {
         return loginTotem(email);
     }
 
-    public static JsonObject refreshToken() throws Exception { return Api.apiPost("auth/refresh", new JsonObject()); }
-    public static JsonObject ping()         throws Exception { return Api.apiPost("auth/ping",    new JsonObject()); }
-    public static void       logout()                        { SessionManager.clearToken(); }
+    public static JsonObject refreshToken() throws Exception {
+        return Api.apiPost("auth/refresh", new JsonObject());
+    }
+
+    public static JsonObject ping() throws Exception {
+        return Api.apiPost("auth/ping", new JsonObject());
+    }
+
+    public static void logout() {
+        SessionManager.clearToken();
+    }
 }
