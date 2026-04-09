@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.app.pojo.Ingredient;
+
 public final class IngredientCache {
 
     private static List<Ingredient> cached = new ArrayList<>();

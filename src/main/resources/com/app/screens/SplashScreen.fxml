@@ -7,9 +7,9 @@
 <?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <StackPane xmlns="http://javafx.com/javafx/21"
-           xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="com.app.controllers.SplashController"
-           styleClass="splash-root">
+    xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="com.app.controllers.SplashController"
+    styleClass="splash-root">
 
     <StackPane fx:id="splashCircle1" styleClass="splash-circle-1" />
     <StackPane fx:id="splashCircle2" styleClass="splash-circle-2" />
@@ -18,26 +18,26 @@
 
         <!-- Logo icona -->
         <FontIcon fx:id="logoLabel"
-                  iconLiteral="mdi2f-food-fork-drink"
-                  iconSize="100"
-                  styleClass="splash-logo-icon" />
+            iconLiteral="mdi2f-food-fork-drink"
+            iconSize="100"
+            styleClass="splash-logo-icon" />
 
-        <Label text="Totem Ordini"              styleClass="splash-app-name" />
+        <Label text="Totem Ordini" styleClass="splash-app-name" />
         <Label text="Sistema di ordinazione digitale" styleClass="splash-app-sub" />
 
         <Region prefHeight="60" />
 
         <!-- Step corrente -->
         <FontIcon fx:id="stepIconNode" iconLiteral="mdi2c-cog"
-                  iconSize="36" styleClass="splash-step-icon-node" />
+            iconSize="36" styleClass="splash-step-icon-node" />
         <Label fx:id="stepLabel" text="Avvio in corso..."
-               styleClass="splash-step-label" />
+            styleClass="splash-step-label" />
 
         <Region prefHeight="24" />
 
         <ProgressBar fx:id="progressBar" progress="0"
-                     styleClass="splash-progress"
-                     maxWidth="500" prefHeight="10" />
+            styleClass="splash-progress"
+            maxWidth="500" prefHeight="10" />
 
         <Region prefHeight="16" />
 

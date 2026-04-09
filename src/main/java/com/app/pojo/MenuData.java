@@ -10,10 +10,10 @@ import java.util.List;
  * POJO che rappresenta l'intera risposta /menu.
  *
  * Gestisce le varianti di struttura del server:
- *   { data: { categorie: [...] } }
- *   { data: { menu: [...] } }
- *   { data: [...] }
- *   { categorie: [...] }
+ * { data: { categorie: [...] } }
+ * { data: { menu: [...] } }
+ * { data: [...] }
+ * { categorie: [...] }
  */
 public final class MenuData {
 
@@ -33,31 +33,43 @@ public final class MenuData {
         if (raw != null) {
             for (JsonElement el : raw) {
                 if (el.isJsonObject()) {
-                    try { list.add(Category.from(el.getAsJsonObject())); }
-                    catch (Exception ignored) {}
+                    try {
+                        list.add(Category.from(el.getAsJsonObject()));
+                    } catch (Exception ignored) {
+                    }
                 }
             }
         }
         return new MenuData(list);
     }
 
-    public boolean isEmpty() { return categorie.isEmpty(); }
-    public int size()        { return categorie.size(); }
+    public boolean isEmpty() {
+        return categorie.isEmpty();
+    }
+
+    public int size() {
+        return categorie.size();
+    }
 
     // ── Parsing struttura risposta ────────────────────────────────────
 
     private static JsonArray extractCategories(JsonObject r) {
-        if (r == null) return null;
+        if (r == null)
+            return null;
         if (r.has("data")) {
             JsonElement data = r.get("data");
             if (data.isJsonObject()) {
                 JsonObject d = data.getAsJsonObject();
-                if (d.has("categorie") && d.get("categorie").isJsonArray()) return d.getAsJsonArray("categorie");
-                if (d.has("menu")      && d.get("menu").isJsonArray())      return d.getAsJsonArray("menu");
+                if (d.has("categorie") && d.get("categorie").isJsonArray())
+                    return d.getAsJsonArray("categorie");
+                if (d.has("menu") && d.get("menu").isJsonArray())
+                    return d.getAsJsonArray("menu");
             }
-            if (data.isJsonArray()) return data.getAsJsonArray();
+            if (data.isJsonArray())
+                return data.getAsJsonArray();
         }
-        if (r.has("categorie") && r.get("categorie").isJsonArray()) return r.getAsJsonArray("categorie");
+        if (r.has("categorie") && r.get("categorie").isJsonArray())
+            return r.getAsJsonArray("categorie");
         return null;
     }
 }

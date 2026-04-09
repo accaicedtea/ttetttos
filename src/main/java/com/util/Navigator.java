@@ -57,7 +57,8 @@ public class Navigator {
      */
     public static void refreshTheme() {
         nodeCache.values().forEach(n -> {
-            if (n instanceof Parent p) ThemeManager.applyTo(p);
+            if (n instanceof Parent p)
+                ThemeManager.applyTo(p);
         });
     }
 

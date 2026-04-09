@@ -11,9 +11,9 @@
 <?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <StackPane fx:id="rootStack"
-           xmlns="http://javafx.com/javafx/21"
-           xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="com.app.controllers.ShopPageController">
+    xmlns="http://javafx.com/javafx/21"
+    xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="com.app.controllers.ShopPageController">
 
     <BorderPane styleClass="main-pane">
 
@@ -28,23 +28,23 @@
 
                 <!-- Categorie (cresce per riempire lo spazio disponibile) -->
                 <ScrollPane fx:id="categoriesScroll"
-                            fitToWidth="true"
-                            focusTraversable="false"
-                            hbarPolicy="NEVER"
-                            vbarPolicy="NEVER"
-                            styleClass="categories-scroll"
-                            VBox.vgrow="ALWAYS">
+                    fitToWidth="true"
+                    focusTraversable="false"
+                    hbarPolicy="NEVER"
+                    vbarPolicy="NEVER"
+                    styleClass="categories-scroll"
+                    VBox.vgrow="ALWAYS">
                     <VBox fx:id="categoriesPane" spacing="2" styleClass="categories-pane" />
                 </ScrollPane>
 
                 <!-- Bottone kumpir: SOTTO le categorie, ben visibile, grande e touch-friendly -->
                 <VBox styleClass="compose-kumpir-container" alignment="CENTER" spacing="0">
                     <Button fx:id="composeKumpirBtn"
-                            text="🥔  Componi il tuo Kumpir"
-                            styleClass="compose-kumpir-btn"
-                            maxWidth="Infinity"
-                            wrapText="true"
-                            focusTraversable="false" />
+                        text="🥔  Componi il tuo Kumpir"
+                        styleClass="compose-kumpir-btn"
+                        maxWidth="Infinity"
+                        wrapText="true"
+                        focusTraversable="false" />
                 </VBox>
 
             </VBox>
@@ -53,11 +53,11 @@
         <!-- ══ CENTER: Prodotti ══ -->
         <center>
             <ScrollPane fx:id="productsScroll"
-                        fitToWidth="true" focusTraversable="false"
-                        hbarPolicy="NEVER" vbarPolicy="NEVER"
-                        styleClass="products-scroll">
+                fitToWidth="true" focusTraversable="false"
+                hbarPolicy="NEVER" vbarPolicy="NEVER"
+                styleClass="products-scroll">
                 <FlowPane fx:id="productsPane" hgap="16" vgap="16"
-                          styleClass="products-pane" />
+                    styleClass="products-pane" />
             </ScrollPane>
         </center>
 
@@ -65,9 +65,9 @@
 
     <!-- ══ MODAL PRODOTTO ══ -->
     <StackPane fx:id="modalOverlay"
-               visible="false" managed="false"
-               styleClass="modal-overlay" alignment="CENTER"
-               onMouseClicked="#onModalOverlayClicked">
+        visible="false" managed="false"
+        styleClass="modal-overlay" alignment="CENTER"
+        onMouseClicked="#onModalOverlayClicked">
 
         <VBox fx:id="modalCard" spacing="0" styleClass="modal-card">
 
@@ -78,10 +78,10 @@
                     <Label fx:id="modalPrice" styleClass="modal-price" />
                 </VBox>
                 <Button fx:id="modalClose" onAction="#hideModal"
-                        styleClass="modal-close" focusTraversable="false">
+                    styleClass="modal-close" focusTraversable="false">
                     <graphic>
                         <FontIcon iconLiteral="mdi2c-close" iconSize="22"
-                                  styleClass="modal-close-icon" />
+                            styleClass="modal-close-icon" />
                     </graphic>
                 </Button>
             </HBox>
@@ -93,37 +93,37 @@
 
                     <!-- Allergeni -->
                     <VBox fx:id="modalAllergenSection" spacing="10"
-                          managed="false" visible="false">
+                        managed="false" visible="false">
                         <HBox spacing="8" alignment="CENTER_LEFT">
                             <FontIcon iconLiteral="mdi2a-alert-rhombus"
-                                      iconSize="20" styleClass="allergen-icon" />
+                                iconSize="20" styleClass="allergen-icon" />
                             <Label text="Allergeni" styleClass="modal-section-label" />
                         </HBox>
                         <FlowPane fx:id="modalAllergenChips" hgap="10" vgap="10"
-                                  styleClass="allergen-chips-pane" />
+                            styleClass="allergen-chips-pane" />
                     </VBox>
 
                     <!-- Ingredienti -->
                     <VBox fx:id="modalIngredientSection" spacing="10"
-                          managed="false" visible="false">
+                        managed="false" visible="false">
                         <HBox spacing="8" alignment="CENTER_LEFT">
                             <FontIcon iconLiteral="mdi2f-food-variant"
-                                      iconSize="20" styleClass="ingredient-icon" />
+                                iconSize="20" styleClass="ingredient-icon" />
                             <Label text="Ingredienti" styleClass="modal-section-label" />
                         </HBox>
                         <FlowPane fx:id="modalIngredients" hgap="10" vgap="10"
-                                  styleClass="ingredients-pane" />
+                            styleClass="ingredients-pane" />
                     </VBox>
                 </VBox>
             </ScrollPane>
 
             <!-- Aggiungi al carrello -->
             <Button fx:id="addToCartBtn" onAction="#onAddToCart"
-                    styleClass="add-to-cart-btn"
-                    text="Aggiungi al carrello" maxWidth="Infinity">
+                styleClass="add-to-cart-btn"
+                text="Aggiungi al carrello" maxWidth="Infinity">
                 <graphic>
                     <FontIcon iconLiteral="mdi2c-cart-plus"
-                              iconSize="26" styleClass="add-to-cart-icon" />
+                        iconSize="26" styleClass="add-to-cart-icon" />
                 </graphic>
             </Button>
 
@@ -132,19 +132,19 @@
 
     <!-- ══ TOAST ══ -->
     <HBox fx:id="toastBox" alignment="CENTER" spacing="10"
-          styleClass="toast-label"
-          visible="false" managed="false"
-          StackPane.alignment="BOTTOM_CENTER">
+        styleClass="toast-label"
+        visible="false" managed="false"
+        StackPane.alignment="BOTTOM_CENTER">
         <FontIcon iconLiteral="mdi2c-check-circle" iconSize="22"
-                  styleClass="toast-icon" />
+            styleClass="toast-icon" />
         <Label fx:id="toastLabel" text="Aggiunto!" styleClass="toast-text" />
     </HBox>
 
     <!-- ══ QUICK CART ══ -->
     <Button fx:id="quickCartBtn" text="" styleClass="quick-cart-btn"
-            visible="false" managed="false"
-            onAction="#onQuickCartClick"
-            StackPane.alignment="BOTTOM_RIGHT">
+        visible="false" managed="false"
+        onAction="#onQuickCartClick"
+        StackPane.alignment="BOTTOM_RIGHT">
         <graphic>
             <FontIcon iconLiteral="mdi2c-cart" iconSize="20" styleClass="quick-cart-icon" />
         </graphic>

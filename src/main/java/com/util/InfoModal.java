@@ -10,7 +10,8 @@ public class InfoModal {
     public static void show(StackPane parent, String title, String message, Runnable onConfirm) {
         VBox modalBox = new VBox(18);
         modalBox.setAlignment(Pos.CENTER);
-        modalBox.setStyle("-fx-background-color: #fff; -fx-padding: 32; -fx-background-radius: 16; -fx-effect: dropshadow(gaussian, #00000055, 18, 0, 0, 4);");
+        modalBox.setStyle(
+                "-fx-background-color: #fff; -fx-padding: 32; -fx-background-radius: 16; -fx-effect: dropshadow(gaussian, #00000055, 18, 0, 0, 4);");
 
         Label titleLabel = new Label(title);
         titleLabel.setStyle("-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #222;");
@@ -19,14 +20,17 @@ public class InfoModal {
         msgLabel.setWrapText(true);
 
         Button confirmBtn = new Button("Conferma");
-        confirmBtn.setStyle("-fx-font-size: 16px; -fx-background-color: #5b9cf5; -fx-text-fill: white; -fx-background-radius: 8;");
+        confirmBtn.setStyle(
+                "-fx-font-size: 16px; -fx-background-color: #5b9cf5; -fx-text-fill: white; -fx-background-radius: 8;");
         confirmBtn.setOnAction(e -> {
             parent.getChildren().remove(modalBox);
-            if (onConfirm != null) onConfirm.run();
+            if (onConfirm != null)
+                onConfirm.run();
         });
 
         Button closeBtn = new Button("Annulla");
-        closeBtn.setStyle("-fx-font-size: 16px; -fx-background-color: #e05555; -fx-text-fill: white; -fx-background-radius: 8;");
+        closeBtn.setStyle(
+                "-fx-font-size: 16px; -fx-background-color: #e05555; -fx-text-fill: white; -fx-background-radius: 8;");
         closeBtn.setOnAction(e -> parent.getChildren().remove(modalBox));
 
         modalBox.getChildren().addAll(titleLabel, msgLabel, confirmBtn, closeBtn);

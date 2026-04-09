@@ -8,9 +8,9 @@
 <?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <StackPane xmlns="http://javafx.com/javafx/21"
-           xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="com.app.controllers.ConfirmModalController"
-           styleClass="confirm-root" fx:id="confirmRoot">
+    xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="com.app.controllers.ConfirmModalController"
+    styleClass="confirm-root" fx:id="confirmRoot">
 
     <StackPane fx:id="bgCircle1" styleClass="confirm-bg-circle-1" />
     <StackPane fx:id="bgCircle2" styleClass="confirm-bg-circle-2" />
@@ -18,7 +18,8 @@
 
     <VBox fx:id="contentBox" alignment="CENTER" spacing="24" styleClass="confirm-container">
         <StackPane fx:id="checkCircle" styleClass="check-circle">
-            <FontIcon fx:id="checkIconNode" iconLiteral="mdi2c-help" iconSize="100" styleClass="check-icon" />
+            <FontIcon fx:id="checkIconNode" iconLiteral="mdi2c-help" iconSize="100"
+                styleClass="check-icon" />
         </StackPane>
 
         <Label fx:id="titleLabel" text="Conferma" styleClass="confirm-title" wrapText="true" />

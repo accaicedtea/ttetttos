@@ -12,32 +12,45 @@ import java.util.List;
  */
 public final class JsonHelper {
 
-    private JsonHelper() {}
+    private JsonHelper() {
+    }
 
     // ── Stringhe ─────────────────────────────────────────────────────
 
     public static String str(JsonObject o, String key, String fallback) {
-        if (o == null || !o.has(key) || o.get(key).isJsonNull()) return fallback;
+        if (o == null || !o.has(key) || o.get(key).isJsonNull())
+            return fallback;
         return o.get(key).getAsString();
     }
 
-    public static String str(JsonObject o, String key) { return str(o, key, ""); }
+    public static String str(JsonObject o, String key) {
+        return str(o, key, "");
+    }
 
     // ── Numeri ───────────────────────────────────────────────────────
 
     public static int intVal(JsonObject o, String key, int fallback) {
-        try { return (o != null && o.has(key) && !o.get(key).isJsonNull()) ? o.get(key).getAsInt() : fallback; }
-        catch (Exception e) { return fallback; }
+        try {
+            return (o != null && o.has(key) && !o.get(key).isJsonNull()) ? o.get(key).getAsInt() : fallback;
+        } catch (Exception e) {
+            return fallback;
+        }
     }
 
     public static double doubleVal(JsonObject o, String key, double fallback) {
-        try { return (o != null && o.has(key) && !o.get(key).isJsonNull()) ? o.get(key).getAsDouble() : fallback; }
-        catch (Exception e) { return fallback; }
+        try {
+            return (o != null && o.has(key) && !o.get(key).isJsonNull()) ? o.get(key).getAsDouble() : fallback;
+        } catch (Exception e) {
+            return fallback;
+        }
     }
 
     public static boolean bool(JsonObject o, String key, boolean fallback) {
-        try { return (o != null && o.has(key) && !o.get(key).isJsonNull()) ? o.get(key).getAsBoolean() : fallback; }
-        catch (Exception e) { return fallback; }
+        try {
+            return (o != null && o.has(key) && !o.get(key).isJsonNull()) ? o.get(key).getAsBoolean() : fallback;
+        } catch (Exception e) {
+            return fallback;
+        }
     }
 
     // ── Array / Oggetti ──────────────────────────────────────────────
@@ -55,19 +68,25 @@ public final class JsonHelper {
     /** JsonArray di stringhe → List<String> (salta null). */
     public static List<String> toStringList(JsonArray arr) {
         List<String> out = new ArrayList<>();
-        if (arr == null) return out;
-        for (JsonElement el : arr) if (!el.isJsonNull()) out.add(el.getAsString());
+        if (arr == null)
+            return out;
+        for (JsonElement el : arr)
+            if (!el.isJsonNull())
+                out.add(el.getAsString());
         return out;
     }
 
     /** JsonArray di oggetti-ingrediente (con campo "nome") → List<String>. */
     public static List<String> toIngredientNames(JsonArray arr) {
         List<String> out = new ArrayList<>();
-        if (arr == null) return out;
+        if (arr == null)
+            return out;
         for (JsonElement el : arr) {
-            if (!el.isJsonObject()) continue;
+            if (!el.isJsonObject())
+                continue;
             String name = str(el.getAsJsonObject(), "nome");
-            if (!name.isBlank()) out.add(name);
+            if (!name.isBlank())
+                out.add(name);
         }
         return out;
     }
@@ -76,9 +95,13 @@ public final class JsonHelper {
 
     /** Legge prezzo come double, gestisce sia numeri sia stringhe "12,50". */
     public static double parsePrice(JsonObject o, String key) {
-        if (o == null || !o.has(key) || o.get(key).isJsonNull()) return 0.0;
-        try { return Double.parseDouble(o.get(key).getAsString().replace(',', '.')); }
-        catch (Exception e) { return 0.0; }
+        if (o == null || !o.has(key) || o.get(key).isJsonNull())
+            return 0.0;
+        try {
+            return Double.parseDouble(o.get(key).getAsString().replace(',', '.'));
+        } catch (Exception e) {
+            return 0.0;
+        }
     }
 
     /** Formatta double come "€ 12,50". Ritorna "" se prezzo ≤ 0. */

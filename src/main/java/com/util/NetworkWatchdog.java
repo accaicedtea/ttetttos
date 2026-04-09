@@ -18,37 +18,38 @@ import java.util.function.Consumer;
  * Watchdog di rete + heartbeat al server.
  *
  * Ogni INTERVAL_MS secondi:
- *   1. Raccoglie metriche di sistema (CPU, RAM, disco, OS, IP)
- *   2. POST  /auth/ping  con il corpo JSON (struttura tabella totem_heartbeat)
- *   3. Notifica il listener se lo stato online/offline cambia
+ * 1. Raccoglie metriche di sistema (CPU, RAM, disco, OS, IP)
+ * 2. POST /auth/ping con il corpo JSON (struttura tabella totem_heartbeat)
+ * 3. Notifica il listener se lo stato online/offline cambia
  *
  * Campi inviati:
- *   ip_pubblico, app_versione, java_versione, os_info,
- *   disco_libero_mb, ram_libera_mb, cpu_percent,
- *   internet_ok, ordini_in_coda
+ * ip_pubblico, app_versione, java_versione, os_info,
+ * disco_libero_mb, ram_libera_mb, cpu_percent,
+ * internet_ok, ordini_in_coda
  */
 public class NetworkWatchdog {
 
     public static final String APP_VERSION = "1.0";
 
-    private static final int INTERVAL_ONLINE_MS  = 15_000;
-    private static final int INTERVAL_OFFLINE_MS =  5_000;
-    private static final int PING_TIMEOUT_MS     =  6_000;
+    private static final int INTERVAL_ONLINE_MS = 15_000;
+    private static final int INTERVAL_OFFLINE_MS = 5_000;
+    private static final int PING_TIMEOUT_MS = 6_000;
 
     private static final HttpClient CLIENT = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofMillis(PING_TIMEOUT_MS))
             .build();
 
-    private static Thread           thread   = null;
-    private static volatile boolean running  = false;
-    private static volatile boolean online   = false;
+    private static Thread thread = null;
+    private static volatile boolean running = false;
+    private static volatile boolean online = false;
     private static Consumer<Boolean> listener = null;
 
     // -- API pubblica --
 
     public static synchronized void start(Consumer<Boolean> onStatusChange) {
-        if (running) return;
+        if (running)
+            return;
         running = true;
         listener = onStatusChange;
 
@@ -90,15 +91,21 @@ public class NetworkWatchdog {
 
     public static synchronized void stop() {
         running = false;
-        if (thread != null) { thread.interrupt(); thread = null; }
+        if (thread != null) {
+            thread.interrupt();
+            thread = null;
+        }
     }
 
     public static void setListener(Consumer<Boolean> cb) {
         listener = cb;
-        if (cb != null) Platform.runLater(() -> cb.accept(online));
+        if (cb != null)
+            Platform.runLater(() -> cb.accept(online));
     }
 
-    public static boolean isOnline() { return online; }
+    public static boolean isOnline() {
+        return online;
+    }
 
     // -- Ping + heartbeat --
 
@@ -107,7 +114,8 @@ public class NetworkWatchdog {
      * Ritorna true se il server risponde, false altrimenti.
      */
     private static boolean sendPing() {
-        // Prova un ping HTTP semplice prima di tentare il codice business (buildHeartbeat).
+        // Prova un ping HTTP semplice prima di tentare il codice business
+        // (buildHeartbeat).
         // Serve a distinguere offline di sistema da server non raggiungibile.
         if (!rawPing()) {
             // se ping HTTP fallisce, lungo tentativo socket:
@@ -151,14 +159,13 @@ public class NetworkWatchdog {
     }
 
     // -- Raccolta metriche di sistema --
-
     private static JsonObject buildHeartbeat() {
         JsonObject j = new JsonObject();
 
         // app_versione, java_versione, os_info
-        j.addProperty("app_versione",  APP_VERSION);
+        j.addProperty("app_versione", APP_VERSION);
         j.addProperty("java_versione", System.getProperty("java.version", "?"));
-        j.addProperty("os_info",       buildOsInfo());
+        j.addProperty("os_info", buildOsInfo());
 
         // ip_pubblico (meglio lasciare che il server lo ricavi dall'header)
         // ma proviamo a rilevarlo localmente come fallback
@@ -186,9 +193,9 @@ public class NetworkWatchdog {
     }
 
     private static String buildOsInfo() {
-        String name    = System.getProperty("os.name",    "?");
+        String name = System.getProperty("os.name", "?");
         String version = System.getProperty("os.version", "?");
-        String arch    = System.getProperty("os.arch",    "?");
+        String arch = System.getProperty("os.arch", "?");
         return name + " " + version + " (" + arch + ")";
     }
 
@@ -211,11 +218,13 @@ public class NetworkWatchdog {
             OperatingSystemMXBean os = ManagementFactory.getOperatingSystemMXBean();
             if (os instanceof com.sun.management.OperatingSystemMXBean sunOs) {
                 long free = sunOs.getFreeMemorySize();
-                if (free > 0) return (int) (free / (1024 * 1024));
+                if (free > 0)
+                    return (int) (free / (1024 * 1024));
             }
             // Seconda scelta: leggi /proc/meminfo (Linux)
             int memAvail = readProcMeminfo();
-            if (memAvail > 0) return memAvail;
+            if (memAvail > 0)
+                return memAvail;
             // Fallback: Runtime JVM heap (meno accurato)
             Runtime rt = Runtime.getRuntime();
             long free = rt.freeMemory() + (rt.maxMemory() - rt.totalMemory());
@@ -232,10 +241,11 @@ public class NetworkWatchdog {
     private static int readProcMeminfo() {
         try {
             java.nio.file.Path p = java.nio.file.Path.of("/proc/meminfo");
-            if (!java.nio.file.Files.exists(p)) return 0;
+            if (!java.nio.file.Files.exists(p))
+                return 0;
             for (String line : java.nio.file.Files.readAllLines(p)) {
                 if (line.startsWith("MemAvailable:")) {
-                    // Formato: "MemAvailable:    1234567 kB"
+                    // Formato: "MemAvailable: 1234567 kB"
                     String[] parts = line.split("\\s+");
                     if (parts.length >= 2) {
                         long kb = Long.parseLong(parts[1].trim());
@@ -243,7 +253,8 @@ public class NetworkWatchdog {
                     }
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         return 0;
     }
 
@@ -253,24 +264,30 @@ public class NetworkWatchdog {
             for (FileStore store : FileSystems.getDefault().getFileStores()) {
                 // Salta filesystem virtuali: tmpfs, devtmpfs, proc, sys, cgroup, ecc.
                 String type = store.type();
-                if (type == null) continue;
+                if (type == null)
+                    continue;
                 switch (type.toLowerCase()) {
                     case "tmpfs", "devtmpfs", "proc", "sysfs", "cgroup",
-                         "cgroup2", "devpts", "securityfs", "pstore",
-                         "bpf", "tracefs", "hugetlbfs", "mqueue",
-                         "debugfs", "configfs", "fusectl", "overlay",
-                         "nsfs", "ramfs", "autofs" -> { continue; }
+                            "cgroup2", "devpts", "securityfs", "pstore",
+                            "bpf", "tracefs", "hugetlbfs", "mqueue",
+                            "debugfs", "configfs", "fusectl", "overlay",
+                            "nsfs", "ramfs", "autofs" -> {
+                        continue;
+                    }
                 }
                 // Prendi il filesystem con piu spazio libero (il disco principale)
                 long usable = store.getUsableSpace();
-                if (usable > maxUsable) maxUsable = usable;
+                if (usable > maxUsable)
+                    maxUsable = usable;
             }
             return (int) (maxUsable / (1024 * 1024));
         } catch (Exception e) {
             // Fallback: spazio libero su path corrente
             try {
                 return (int) (new java.io.File("/").getUsableSpace() / (1024 * 1024));
-            } catch (Exception ex) { return 0; }
+            } catch (Exception ex) {
+                return 0;
+            }
         }
     }
 
@@ -279,11 +296,12 @@ public class NetworkWatchdog {
             OperatingSystemMXBean os = ManagementFactory.getOperatingSystemMXBean();
             if (os instanceof com.sun.management.OperatingSystemMXBean sunOs) {
                 double load = sunOs.getCpuLoad();
-                if (load >= 0) return (int) Math.round(load * 100);
+                if (load >= 0)
+                    return (int) Math.round(load * 100);
             }
             // Fallback: system load average / core count
             double load = os.getSystemLoadAverage();
-            int    cores = os.getAvailableProcessors();
+            int cores = os.getAvailableProcessors();
             if (load >= 0 && cores > 0)
                 return (int) Math.min(100, Math.round(load / cores * 100));
         } catch (Exception e) {
@@ -291,27 +309,32 @@ public class NetworkWatchdog {
         }
         return 0;
     }
+
     /**
      * Legge la temperatura CPU in gradi Celsius.
      *
      * Strategia (in ordine di priorit?):
-     *   1. /sys/class/thermal/thermal_zonetemp  - Linux standard (Raspberry Pi, SBC, laptop)
-     *   2. /sys/class/hwmon/hwmon temp*_input     - hwmon (Intel, AMD desktop)
-     *   3. Comando sensors command (lm-sensors) - fallback universale
-     *   4. 0.0 se nulla funziona
+     * 1. /sys/class/thermal/thermal_zonetemp - Linux standard (Raspberry Pi, SBC,
+     * laptop)
+     * 2. /sys/class/hwmon/hwmon temp*_input - hwmon (Intel, AMD desktop)
+     * 3. Comando sensors command (lm-sensors) - fallback universale
+     * 4. 0.0 se nulla funziona
      */
     private static double getCpuTemperature() {
         // Strategia 1: thermal_zone (comune su ARM, laptop, Pi)
         double t = readThermalZone();
-        if (t > 0) return t;
+        if (t > 0)
+            return t;
 
         // Strategia 2: hwmon (PC desktop/server)
         t = readHwmon();
-        if (t > 0) return t;
+        if (t > 0)
+            return t;
 
         // Strategia 3: lm-sensors (richiede package installato)
         t = readSensors();
-        if (t > 0) return t;
+        if (t > 0)
+            return t;
 
         return 0.0;
     }
@@ -320,7 +343,8 @@ public class NetworkWatchdog {
     private static double readThermalZone() {
         try {
             java.nio.file.Path base = java.nio.file.Path.of("/sys/class/thermal");
-            if (!java.nio.file.Files.exists(base)) return 0;
+            if (!java.nio.file.Files.exists(base))
+                return 0;
 
             double maxTemp = 0;
             try (var stream = java.nio.file.Files.list(base)) {
@@ -328,7 +352,8 @@ public class NetworkWatchdog {
                     // Leggi solo zone di tipo CPU (x86_pkg_temp, cpu-thermal, ecc.)
                     java.nio.file.Path typePath = zone.resolve("type");
                     java.nio.file.Path tempPath = zone.resolve("temp");
-                    if (!java.nio.file.Files.exists(tempPath)) continue;
+                    if (!java.nio.file.Files.exists(tempPath))
+                        continue;
 
                     String type = "";
                     if (java.nio.file.Files.exists(typePath)) {
@@ -344,13 +369,15 @@ public class NetworkWatchdog {
                             || type.contains("soc")
                             || type.contains("thermal");
 
-                    if (!isCpu) continue;
+                    if (!isCpu)
+                        continue;
 
                     String raw = java.nio.file.Files.readString(tempPath).strip();
                     double milliC = Double.parseDouble(raw);
                     // I valori > 1000 sono in milligradi
                     double celsius = milliC > 1000 ? milliC / 1000.0 : milliC;
-                    if (celsius > maxTemp && celsius < 120) maxTemp = celsius;
+                    if (celsius > maxTemp && celsius < 120)
+                        maxTemp = celsius;
                 }
             }
             return maxTemp;
@@ -363,31 +390,36 @@ public class NetworkWatchdog {
     private static double readHwmon() {
         try {
             java.nio.file.Path base = java.nio.file.Path.of("/sys/class/hwmon");
-            if (!java.nio.file.Files.exists(base)) return 0;
+            if (!java.nio.file.Files.exists(base))
+                return 0;
 
             double maxTemp = 0;
             try (var hwmonStream = java.nio.file.Files.list(base)) {
                 for (java.nio.file.Path hwmon : hwmonStream.toList()) {
                     // Controlla il nome del dispositivo (coretemp, k10temp, ecc.)
                     java.nio.file.Path namePath = hwmon.resolve("name");
-                    if (!java.nio.file.Files.exists(namePath)) continue;
+                    if (!java.nio.file.Files.exists(namePath))
+                        continue;
                     String name = java.nio.file.Files.readString(namePath).strip().toLowerCase();
 
                     // Solo sensori CPU
                     if (!name.contains("coretemp") && !name.contains("k10temp")
                             && !name.contains("zenpower") && !name.contains("cpu")
-                            && !name.contains("acpi")) continue;
+                            && !name.contains("acpi"))
+                        continue;
 
                     // Leggi tutti i file temp*_input in questa directory
                     try (var tempStream = java.nio.file.Files.list(hwmon)) {
                         for (java.nio.file.Path f : tempStream.toList()) {
                             String fname = f.getFileName().toString();
-                            if (!fname.startsWith("temp") || !fname.endsWith("_input")) continue;
+                            if (!fname.startsWith("temp") || !fname.endsWith("_input"))
+                                continue;
 
                             String raw = java.nio.file.Files.readString(f).strip();
                             double milliC = Double.parseDouble(raw);
                             double celsius = milliC > 1000 ? milliC / 1000.0 : milliC;
-                            if (celsius > maxTemp && celsius < 120) maxTemp = celsius;
+                            if (celsius > maxTemp && celsius < 120)
+                                maxTemp = celsius;
                         }
                     }
                 }
@@ -409,28 +441,31 @@ public class NetworkWatchdog {
             try (var reader = new java.io.BufferedReader(
                     new java.io.InputStreamReader(proc.getInputStream()))) {
                 output = reader.lines()
-                               .collect(java.util.stream.Collectors.joining("\n"));
+                        .collect(java.util.stream.Collectors.joining("\n"));
             }
 
             proc.waitFor(3, java.util.concurrent.TimeUnit.SECONDS);
 
-            // Cerca righe come "  temp1_input: 45.000"
+            // Cerca righe come " temp1_input: 45.000"
             double maxTemp = 0;
             for (String line : output.split("\n")) {
                 line = line.trim();
-                if (!line.contains("temp") || !line.contains("_input")) continue;
+                if (!line.contains("temp") || !line.contains("_input"))
+                    continue;
                 String[] parts = line.split(":");
-                if (parts.length < 2) continue;
+                if (parts.length < 2)
+                    continue;
                 try {
                     double t = Double.parseDouble(parts[1].trim());
-                    if (t > maxTemp && t < 120) maxTemp = t;
-                } catch (NumberFormatException ignored) {}
+                    if (t > maxTemp && t < 120)
+                        maxTemp = t;
+                } catch (NumberFormatException ignored) {
+                }
             }
             return maxTemp;
         } catch (Exception e) {
             return 0; // sensors non installato o non disponibile
         }
     }
-
 
 }

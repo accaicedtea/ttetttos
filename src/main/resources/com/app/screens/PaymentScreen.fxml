@@ -8,9 +8,9 @@
 <?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <StackPane xmlns="http://javafx.com/javafx/21"
-           xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="com.app.controllers.PaymentController"
-           styleClass="screen-root">
+    xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="com.app.controllers.PaymentController"
+    styleClass="screen-root">
 
     <VBox alignment="CENTER" spacing="0" styleClass="payment-container">
 
@@ -18,16 +18,16 @@
             <Button onAction="#onBack" styleClass="back-btn" focusTraversable="false">
                 <graphic>
                     <FontIcon iconLiteral="mdi2a-arrow-left" iconSize="26"
-                              styleClass="back-icon" />
+                        styleClass="back-icon" />
                 </graphic>
             </Button>
         </HBox>
 
         <HBox alignment="CENTER" spacing="16">
             <FontIcon iconLiteral="mdi2r-receipt" iconSize="38"
-                      styleClass="payment-header-icon" />
+                styleClass="payment-header-icon" />
             <Label fx:id="titleLabel" text="Come vuoi pagare?"
-                   styleClass="payment-title" />
+                styleClass="payment-title" />
         </HBox>
 
         <Region prefHeight="12" />
@@ -40,20 +40,21 @@
 
             <!-- Contanti -->
             <VBox fx:id="cashCard" alignment="CENTER" spacing="20"
-                  styleClass="payment-card" onMouseClicked="#onCash">
+                styleClass="payment-card" onMouseClicked="#onCash">
                 <FontIcon iconLiteral="mdi2c-cash" iconSize="72"
-                          styleClass="payment-card-icon payment-cash-icon" />
-                <Label fx:id="cashLabel"    text="Contanti"        styleClass="payment-method-title" />
+                    styleClass="payment-card-icon payment-cash-icon" />
+                <Label fx:id="cashLabel" text="Contanti" styleClass="payment-method-title" />
                 <Label fx:id="cashSubLabel" text="Paga alla cassa" styleClass="payment-method-sub" />
             </VBox>
 
             <!-- Carta -->
             <VBox fx:id="cardCard" alignment="CENTER" spacing="20"
-                  styleClass="payment-card" onMouseClicked="#onCard">
+                styleClass="payment-card" onMouseClicked="#onCard">
                 <FontIcon iconLiteral="mdi2c-credit-card" iconSize="72"
-                          styleClass="payment-card-icon payment-card-icon-style" />
-                <Label fx:id="cardLabel"    text="Carta"              styleClass="payment-method-title" />
-                <Label fx:id="cardSubLabel" text="Bancomat / Credito" styleClass="payment-method-sub" />
+                    styleClass="payment-card-icon payment-card-icon-style" />
+                <Label fx:id="cardLabel" text="Carta" styleClass="payment-method-title" />
+                <Label fx:id="cardSubLabel" text="Bancomat / Credito"
+                    styleClass="payment-method-sub" />
             </VBox>
 
         </HBox>

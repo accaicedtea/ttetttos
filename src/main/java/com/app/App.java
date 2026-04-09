@@ -37,17 +37,15 @@ public class App extends Application {
         ThemeManager.set(ThemeManager.Theme.DARK);
 
         scene.getAccelerators().put(
-            new KeyCodeCombination(KeyCode.H, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN),
-            () -> {
-                Platform.exit();
-                System.exit(0);
-            }
-        );
+                new KeyCodeCombination(KeyCode.H, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN),
+                () -> {
+                    Platform.exit();
+                    System.exit(0);
+                });
 
         scene.getAccelerators().put(
-            new KeyCodeCombination(KeyCode.M, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN),
-            () -> toggleMemoryStatsOverlay(rootPane)
-        );
+                new KeyCodeCombination(KeyCode.M, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN),
+                () -> toggleMemoryStatsOverlay(rootPane));
 
         stage.setScene(scene);
         stage.setTitle("TotemOrder");
@@ -76,7 +74,8 @@ public class App extends Application {
     private void showMemoryStatsOverlay(StackPane root) {
         if (memoryStatsLabel == null) {
             memoryStatsLabel = new javafx.scene.control.Label();
-            memoryStatsLabel.setStyle("-fx-background-color: rgba(0,0,0,0.84); -fx-text-fill: white; -fx-padding: 10; -fx-font-size: 12px; -fx-font-family: 'Segoe UI', 'Arial'; -fx-border-radius: 6; -fx-background-radius: 6;");
+            memoryStatsLabel.setStyle(
+                    "-fx-background-color: rgba(0,0,0,0.84); -fx-text-fill: white; -fx-padding: 10; -fx-font-size: 12px; -fx-font-family: 'Segoe UI', 'Arial'; -fx-border-radius: 6; -fx-background-radius: 6;");
             memoryStatsLabel.setPrefWidth(310);
             memoryStatsLabel.setWrapText(true);
             StackPane.setAlignment(memoryStatsLabel, javafx.geometry.Pos.TOP_RIGHT);
@@ -93,7 +92,8 @@ public class App extends Application {
         if (memoryStatsTicker != null) {
             memoryStatsTicker.stop();
         }
-        memoryStatsTicker = new javafx.animation.Timeline(new javafx.animation.KeyFrame(javafx.util.Duration.millis(500), e -> updateMemoryStats(root)));
+        memoryStatsTicker = new javafx.animation.Timeline(
+                new javafx.animation.KeyFrame(javafx.util.Duration.millis(500), e -> updateMemoryStats(root)));
         memoryStatsTicker.setCycleCount(javafx.animation.Animation.INDEFINITE);
         memoryStatsTicker.play();
 
@@ -118,8 +118,8 @@ public class App extends Application {
             long jvmTotal = runtime.totalMemory();
             long jvmMax = runtime.maxMemory();
 
-            com.sun.management.OperatingSystemMXBean osBean =
-                    (com.sun.management.OperatingSystemMXBean) java.lang.management.ManagementFactory.getOperatingSystemMXBean();
+            com.sun.management.OperatingSystemMXBean osBean = (com.sun.management.OperatingSystemMXBean) java.lang.management.ManagementFactory
+                    .getOperatingSystemMXBean();
             long sysTotal = -1;
             long sysFree = -1;
             try {
@@ -141,8 +141,7 @@ public class App extends Application {
                     humanReadableBytes(jvmUsed), humanReadableBytes(jvmTotal), humanReadableBytes(jvmMax),
                     sysFree >= 0 ? humanReadableBytes(sysFree) : "n/a",
                     sysTotal >= 0 ? humanReadableBytes(sysTotal) : "n/a",
-                    threadCount, daemonCount
-            );
+                    threadCount, daemonCount);
 
             memoryStatsLabel.setText(text);
 
@@ -152,7 +151,8 @@ public class App extends Application {
     }
 
     private String humanReadableBytes(long bytes) {
-        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024)
+            return bytes + " B";
         int unit = 1024;
         int exp = (int) (Math.log(bytes) / Math.log(unit));
         String pre = "KMGTPE".charAt(exp - 1) + "i";

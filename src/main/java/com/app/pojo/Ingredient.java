@@ -1,4 +1,4 @@
-package com.app.model;
+package com.app.pojo;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;

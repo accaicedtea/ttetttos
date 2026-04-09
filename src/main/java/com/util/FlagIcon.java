@@ -25,11 +25,11 @@ import java.util.regex.Pattern;
 public class FlagIcon {
 
     private static final Pattern VIEWBOX = Pattern.compile(
-        "viewBox=\"([0-9.]+)\\s+([0-9.]+)\\s+([0-9.]+)\\s+([0-9.]+)\"");
+            "viewBox=\"([0-9.]+)\\s+([0-9.]+)\\s+([0-9.]+)\\s+([0-9.]+)\"");
     private static final Pattern PATH_FILL_FIRST = Pattern.compile(
-        "<path[^>]*fill=\"([^\"]+)\"[^>]*d=\"([^\"]+)\"[^>]*/>");
+            "<path[^>]*fill=\"([^\"]+)\"[^>]*d=\"([^\"]+)\"[^>]*/>");
     private static final Pattern PATH_D_FIRST = Pattern.compile(
-        "<path[^>]*d=\"([^\"]+)\"[^>]*fill=\"([^\"]+)\"[^>]*/>");
+            "<path[^>]*d=\"([^\"]+)\"[^>]*fill=\"([^\"]+)\"[^>]*/>");
 
     /**
      * Carica la bandiera e la scala esattamente a maxWidth x maxHeight.
@@ -42,7 +42,7 @@ public class FlagIcon {
             case "de" -> "de";
             case "fr" -> "fr";
             case "ar" -> "ar";
-            default   -> "gb";
+            default -> "gb";
         };
 
         // Placeholder arabo (nessun SVG disponibile)
@@ -53,7 +53,8 @@ public class FlagIcon {
         String resource = "/com/app/imgs/flags/" + code + ".svg";
 
         try (InputStream is = FlagIcon.class.getResourceAsStream(resource)) {
-            if (is == null) return buildColorPlaceholder(maxWidth, maxHeight);
+            if (is == null)
+                return buildColorPlaceholder(maxWidth, maxHeight);
 
             String svg = readAll(is);
 
@@ -90,7 +91,7 @@ public class FlagIcon {
             wrapper.setMaxSize(maxWidth, maxHeight);
 
             // Centra il gruppo scalato nel wrapper
-            group.setTranslateX((maxWidth  - scaledW) / 2.0);
+            group.setTranslateX((maxWidth - scaledW) / 2.0);
             group.setTranslateY((maxHeight - scaledH) / 2.0);
 
             // Clip: nessun pixel esce dal wrapper
@@ -114,16 +115,17 @@ public class FlagIcon {
     private static void addPaths(Group group, String svg) {
         // Prova prima fill prima di d, poi d prima di fill
         boolean found = tryPattern(group, svg, PATH_FILL_FIRST, 1, 2);
-        if (!found)     tryPattern(group, svg, PATH_D_FIRST,    2, 1);
+        if (!found)
+            tryPattern(group, svg, PATH_D_FIRST, 2, 1);
     }
 
     private static boolean tryPattern(Group group, String svg,
-                                       Pattern p, int fillGroup, int dGroup) {
+            Pattern p, int fillGroup, int dGroup) {
         Matcher m = p.matcher(svg);
         boolean any = false;
         while (m.find()) {
             String fill = m.group(fillGroup);
-            String d    = m.group(dGroup);
+            String d = m.group(dGroup);
             SVGPath path = new SVGPath();
             path.setContent(d);
             try {
@@ -147,7 +149,8 @@ public class FlagIcon {
         p.setMaxSize(w, h);
 
         Rectangle bg = new Rectangle(w, h);
-        bg.setArcWidth(8); bg.setArcHeight(8);
+        bg.setArcWidth(8);
+        bg.setArcHeight(8);
         bg.setFill(Color.web("#006400", 0.15));
         bg.setStroke(Color.web("#006400", 0.40));
         bg.setStrokeWidth(1.5);
@@ -170,7 +173,8 @@ public class FlagIcon {
         p.setMaxSize(w, h);
 
         Rectangle bg = new Rectangle(w, h);
-        bg.setArcWidth(8); bg.setArcHeight(8);
+        bg.setArcWidth(8);
+        bg.setArcHeight(8);
         bg.setFill(Color.web("#444466"));
 
         Text t = new Text("?");
@@ -190,7 +194,8 @@ public class FlagIcon {
                 new InputStreamReader(is, StandardCharsets.UTF_8))) {
             StringBuilder sb = new StringBuilder();
             String line;
-            while ((line = r.readLine()) != null) sb.append(line).append('\n');
+            while ((line = r.readLine()) != null)
+                sb.append(line).append('\n');
             return sb.toString();
         } catch (Exception e) {
             return "";

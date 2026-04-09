@@ -13,16 +13,18 @@ public class AppController {
     private Runnable onTimeout;
     private Thread timerThread;
 
-    private AppController() {}
+    private AppController() {
+    }
 
     public static AppController getInstance() {
-        if (instance == null) instance = new AppController();
+        if (instance == null)
+            instance = new AppController();
         return instance;
     }
 
     public void attachToScene(Scene scene, Runnable onTimeoutAction) {
         this.onTimeout = () -> {
-            
+
         };
         EventHandler<MouseEvent> mouseHandler = e -> resetTimer();
         EventHandler<TouchEvent> touchHandler = e -> resetTimer();
@@ -36,13 +38,18 @@ public class AppController {
     }
 
     private void startTimer() {
-        if (timerThread != null && timerThread.isAlive()) return;
+        if (timerThread != null && timerThread.isAlive())
+            return;
         timerThread = new Thread(() -> {
             while (true) {
-                try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ignored) {
+                }
                 if (System.currentTimeMillis() - lastActivity > INACTIVITY_TIMEOUT_MS) {
                     Platform.runLater(() -> {
-                        if (onTimeout != null) onTimeout.run();
+                        if (onTimeout != null)
+                            onTimeout.run();
                     });
                     resetTimer();
                 }

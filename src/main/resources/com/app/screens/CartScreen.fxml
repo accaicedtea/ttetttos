@@ -11,10 +11,10 @@
 <?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <StackPane fx:id="rootPane"
-           xmlns="http://javafx.com/javafx/21"
-           xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="com.app.controllers.CartController"
-           styleClass="screen-root">
+    xmlns="http://javafx.com/javafx/21"
+    xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="com.app.controllers.CartController"
+    styleClass="screen-root">
 
     <BorderPane>
 
@@ -24,11 +24,11 @@
                 <Button onAction="#onBack" styleClass="back-btn" focusTraversable="false">
                     <graphic>
                         <FontIcon iconLiteral="mdi2a-arrow-left" iconSize="26"
-                                  styleClass="back-icon" />
+                            styleClass="back-icon" />
                     </graphic>
                 </Button>
                 <FontIcon iconLiteral="mdi2c-cart" iconSize="28"
-                          styleClass="screen-header-icon" />
+                    styleClass="screen-header-icon" />
                 <Label fx:id="titleLabel" text="Carrello" styleClass="screen-title" />
                 <Region HBox.hgrow="ALWAYS" />
                 <Label fx:id="totalBadge" styleClass="cart-total-badge" text="€ 0,00" />
@@ -38,9 +38,9 @@
         <!-- ══ CENTER: Lista prodotti ══ -->
         <center>
             <ScrollPane fx:id="cartScroll"
-                        fitToWidth="true"
-                        hbarPolicy="NEVER" vbarPolicy="NEVER"
-                        styleClass="cart-scroll">
+                fitToWidth="true"
+                hbarPolicy="NEVER" vbarPolicy="NEVER"
+                styleClass="cart-scroll">
                 <VBox fx:id="cartList" spacing="14" styleClass="cart-list" />
             </ScrollPane>
         </center>
@@ -52,21 +52,21 @@
                 <!-- ── Banner allergeni ── -->
                 <!-- visible=false / managed=false: nascosto se non ci sono allergeni -->
                 <HBox fx:id="allergenWarningBox"
-                      spacing="12" alignment="CENTER_LEFT"
-                      styleClass="cart-allergen-warning"
-                      visible="false" managed="false">
+                    spacing="12" alignment="CENTER_LEFT"
+                    styleClass="cart-allergen-warning"
+                    visible="false" managed="false">
 
                     <FontIcon iconLiteral="mdi2a-alert-rhombus" iconSize="28"
-                              styleClass="cart-allergen-icon" />
+                        styleClass="cart-allergen-icon" />
 
                     <VBox spacing="6" HBox.hgrow="ALWAYS">
                         <Label fx:id="allergenWarningTitle"
-                               text="Attenzione: allergeni nel tuo ordine"
-                               styleClass="cart-allergen-title" />
+                            text="Attenzione: allergeni nel tuo ordine"
+                            styleClass="cart-allergen-title" />
                         <!-- Chip allergeni — popolati dal controller -->
                         <FlowPane fx:id="allergenWarningChips"
-                                  hgap="8" vgap="6"
-                                  styleClass="allergen-chips-pane" />
+                            hgap="8" vgap="6"
+                            styleClass="allergen-chips-pane" />
                     </VBox>
 
                 </HBox>
@@ -80,13 +80,13 @@
 
                 <!-- ── CTA ── -->
                 <Button fx:id="proceedBtn"
-                        onAction="#onProceed"
-                        styleClass="cta-btn"
-                        text="Procedi al pagamento"
-                        maxWidth="Infinity">
+                    onAction="#onProceed"
+                    styleClass="cta-btn"
+                    text="Procedi al pagamento"
+                    maxWidth="Infinity">
                     <graphic>
                         <FontIcon iconLiteral="mdi2a-arrow-right-circle"
-                                  iconSize="28" styleClass="cta-icon" />
+                            iconSize="28" styleClass="cta-icon" />
                     </graphic>
                 </Button>
 

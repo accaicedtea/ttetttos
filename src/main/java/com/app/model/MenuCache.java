@@ -25,7 +25,9 @@ public final class MenuCache {
     private static final Path PROD_CACHE = Path.of("/opt/kiosk/menu-cache.json");
     private static final Path DEV_CACHE = Path.of("./menu-cache.json");
     private static final Path CACHE_PATH = Files.isWritable(PROD_CACHE.getParent()) ? PROD_CACHE : DEV_CACHE;
-    private static final long CACHE_TTL_SECONDS = Long.parseLong(System.getProperty("menu.cache.ttl.seconds", "300")); // default 5 minuti
+    private static final long CACHE_TTL_SECONDS = Long.parseLong(System.getProperty("menu.cache.ttl.seconds", "300")); // default
+                                                                                                                       // 5
+                                                                                                                       // minuti
 
     private static ScheduledExecutorService syncExecutor;
 
@@ -73,7 +75,8 @@ public final class MenuCache {
         out.add("ts", new JsonPrimitive(System.currentTimeMillis()));
         try {
             Files.createDirectories(CACHE_PATH.getParent());
-            Files.writeString(CACHE_PATH, out.toString(), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            Files.writeString(CACHE_PATH, out.toString(), StandardCharsets.UTF_8, StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING);
         } catch (IOException e) {
             RemoteLogger.error("MenuCache", "save error", e);
         }

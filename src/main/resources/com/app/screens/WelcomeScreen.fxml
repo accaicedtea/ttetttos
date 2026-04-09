@@ -9,24 +9,24 @@
 <?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <StackPane xmlns="http://javafx.com/javafx/21"
-           xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="com.app.controllers.WelcomeController"
-           styleClass="welcome-root">
+  xmlns:fx="http://javafx.com/fxml/1"
+  fx:controller="com.app.controllers.WelcomeController"
+  styleClass="welcome-root">
 
   <VBox fx:id="welcomeContainer" alignment="CENTER" spacing="0"
-        styleClass="welcome-container">
+    styleClass="welcome-container">
 
     <!-- Logo -->
     <FontIcon iconLiteral="mdi2f-food-fork-drink" iconSize="100"
-              styleClass="welcome-logo-icon" />
+      styleClass="welcome-logo-icon" />
 
-    <Label fx:id="titleLabel"    text="Benvenuto"          styleClass="welcome-title" />
+    <Label fx:id="titleLabel" text="Benvenuto" styleClass="welcome-title" />
     <Label fx:id="subtitleLabel" text="Tocca per iniziare" styleClass="welcome-subtitle" />
 
     <Region prefHeight="20" />
 
     <Label fx:id="chooseLangLabel" text="Scegli la tua lingua"
-           styleClass="welcome-choose-lang" />
+      styleClass="welcome-choose-lang" />
 
     <Region prefHeight="24" />
 
@@ -39,13 +39,13 @@
 
     <!-- Pulsante start -->
     <Button fx:id="startBtn" onAction="#onStart"
-            styleClass="start-btn"
-            text="Inizia l'ordine  →"
-            minWidth="400" minHeight="80"
-            visible="false" managed="false">
+      styleClass="start-btn"
+      text="Inizia l'ordine  →"
+      minWidth="400" minHeight="80"
+      visible="false" managed="false">
       <graphic>
         <FontIcon iconLiteral="mdi2a-arrow-right-circle" iconSize="32"
-                  styleClass="start-btn-icon" />
+          styleClass="start-btn-icon" />
       </graphic>
     </Button>
 

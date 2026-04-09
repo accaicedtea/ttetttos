@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 import com.app.components.ToastOverlay;
 import com.app.model.CartItem;
 import com.app.model.CartManager;
-import com.app.model.Ingredient;
+import com.app.pojo.Ingredient;
 import com.api.services.IngredientService;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -37,55 +37,55 @@ import com.util.RemoteLogger;
  * MODIFICHE CHIAVE rispetto alla versione originale
  * ─────────────────────────────────────────────────
  * 1. FlowPane → TilePane: dimensiona tutte le card uniformemente tramite
- *    setPrefTileWidth / setPrefTileHeight invece di toccare ogni figlio
- *    singolarmente. Questo elimina il "balletto" di resize su hover.
+ * setPrefTileWidth / setPrefTileHeight invece di toccare ogni figlio
+ * singolarmente. Questo elimina il "balletto" di resize su hover.
  *
  * 2. syncGridGap → doSyncGrid:
- *    - Debounced (16 ms, 1 frame) per non rieseguire ad ogni pixel di resize
- *    - Cache lastTileW / lastTileH: se la dimensione non cambia di almeno 1 px
- *      non fa nulla (evita il re-layout spurio che sembrava un "resize on hover")
- *    - Calcola tileW in modo che 3 card (o 2 su viewport stretto) riempiano
- *      ESATTAMENTE la riga disponibile
+ * - Debounced (16 ms, 1 frame) per non rieseguire ad ogni pixel di resize
+ * - Cache lastTileW / lastTileH: se la dimensione non cambia di almeno 1 px
+ * non fa nulla (evita il re-layout spurio che sembrava un "resize on hover")
+ * - Calcola tileW in modo che 3 card (o 2 su viewport stretto) riempiano
+ * ESATTAMENTE la riga disponibile
  *
  * 3. createIngNodeFX:
- *    - Rimosse le dimensioni fisse sul ToggleButton (le gestisce TilePane)
- *    - Aggiunto setMaxSize(MAX, MAX) perché TilePane espande i figli fino
- *      alla dimensione del tile solo se questi lo consentono
- *    - inner VBox usa USE_COMPUTED_SIZE: niente width hardcoded che
- *      potrebbe confliggere con il tile
+ * - Rimosse le dimensioni fisse sul ToggleButton (le gestisce TilePane)
+ * - Aggiunto setMaxSize(MAX, MAX) perché TilePane espande i figli fino
+ * alla dimensione del tile solo se questi lo consentono
+ * - inner VBox usa USE_COMPUTED_SIZE: niente width hardcoded che
+ * potrebbe confliggere con il tile
  *
  * 4. CSS (_kumpir.css) — cambiamento richiesto separatamente:
- *    - .kumpir-ingredient-card: -fx-border-width: 2  (era 1.5)
- *      Il salto 1.5→2 su :selected causava un layout-shift di 0.5px visibile.
- *      Tenendolo uniforme a 2 il motore JavaFX non ricalcola il layout.
+ * - .kumpir-ingredient-card: -fx-border-width: 2 (era 1.5)
+ * Il salto 1.5→2 su :selected causava un layout-shift di 0.5px visibile.
+ * Tenendolo uniforme a 2 il motore JavaFX non ricalcola il layout.
  */
 public class ComposeKumpirController extends BaseController {
 
     private static final double KUMPIR_BASE_PRICE = 5.50;
-    private static final String  PRICE_BASE_FMT   = formatPriceStatic(KUMPIR_BASE_PRICE);
-    private static final String  LABEL_UNAVAILABLE = "Non disponibile";
-    private static final Gson    GSON              = new Gson();
+    private static final String PRICE_BASE_FMT = formatPriceStatic(KUMPIR_BASE_PRICE);
+    private static final String LABEL_UNAVAILABLE = "Non disponibile";
+    private static final Gson GSON = new Gson();
 
     /* ── tile dimensions (cache, no more per-child inline sizing) ── */
-    private static final double TILE_ASPECT   = 1.0;   // card quadrata 1:1
-    private static final double TILE_MIN_W    = 150.0; // più piccola come richiesto
-    private static final double TILE_MAX_W    = 240.0;
-    private static final int    PREF_COLS     = 3;
-    private static final int    MIN_COLS      = 2;
+    private static final double TILE_ASPECT = 1.0; // card quadrata 1:1
+    private static final double TILE_MIN_W = 150.0; // più piccola come richiesto
+    private static final double TILE_MAX_W = 240.0;
+    private static final int PREF_COLS = 3;
+    private static final int MIN_COLS = 2;
 
     private static final Path CACHE_FILE = Path.of(
             System.getProperty("user.home"), ".kumpirapp", "ingredients_cache.json");
 
     private final ShopHeaderController headerController;
-    private final ExecutorService       backgroundExecutor;
-    private ScheduledExecutorService    bgSync;
+    private final ExecutorService backgroundExecutor;
+    private ScheduledExecutorService bgSync;
 
-    private Button       composeKumpirBtn;
+    private Button composeKumpirBtn;
     private ToastOverlay toastOverlay;
-    private StackPane    kumpirOverlay;
-    private VBox         kumpirCard;
-    private Label        kumpirTotalLbl;
-    private Label        kumpirCountLbl;
+    private StackPane kumpirOverlay;
+    private VBox kumpirCard;
+    private Label kumpirTotalLbl;
+    private Label kumpirCountLbl;
     private ToggleButton kumpirFilterNoAllergens;
     private ToggleButton kumpirFilterNoGluten;
     private ToggleButton kumpirFilterNoLactose;
@@ -95,8 +95,8 @@ public class ComposeKumpirController extends BaseController {
 
     /* ── debounce e cache per syncGridGap ── */
     private Timeline syncDebounce;
-    private double   lastTileW = -1;
-    private double   lastTileH = -1;
+    private double lastTileW = -1;
+    private double lastTileH = -1;
 
     private Timeline filterDebounce;
     private Timeline kumpirBtnPulse;
@@ -106,25 +106,26 @@ public class ComposeKumpirController extends BaseController {
             ToggleButton btn,
             Label nameLbl,
             Label priceLbl,
-            Label allergenBadge) {}
+            Label allergenBadge) {
+    }
 
-    private final List<IngNode>       ingNodes    = new ArrayList<>();
+    private final List<IngNode> ingNodes = new ArrayList<>();
     private final Map<Integer, IngNode> ingNodeById = new HashMap<>();
-    private final Set<Integer>        selectedIds = new HashSet<>();
+    private final Set<Integer> selectedIds = new HashSet<>();
 
     private volatile boolean suppressSelectionEvents = false;
-    private volatile boolean nodesReady              = false;
-    private int    selectedCount             = 0;
-    private double selectedIngredientsTotal  = 0.0;
+    private volatile boolean nodesReady = false;
+    private int selectedCount = 0;
+    private double selectedIngredientsTotal = 0.0;
 
     // ────────────────────────────────────────────────────────────────────────
     // Costruttore / init
     // ────────────────────────────────────────────────────────────────────────
 
     public ComposeKumpirController(StackPane rootStack,
-                                   ShopHeaderController headerController) {
-        this.rootStack          = rootStack;
-        this.headerController   = headerController;
+            ShopHeaderController headerController) {
+        this.rootStack = rootStack;
+        this.headerController = headerController;
         this.backgroundExecutor = Executors.newFixedThreadPool(
                 Math.max(2, Runtime.getRuntime().availableProcessors()));
     }
@@ -146,13 +147,16 @@ public class ComposeKumpirController extends BaseController {
     private void prebuildIngredientNodes() {
         backgroundExecutor.submit(() -> {
             List<Ingredient> cached = loadFromDiskCache();
-            if (!cached.isEmpty()) buildNodesFromList(cached);
+            if (!cached.isEmpty())
+                buildNodesFromList(cached);
             try {
-                JsonArray fresh     = IngredientService.getIngredients();
+                JsonArray fresh = IngredientService.getIngredients();
                 List<Ingredient> fl = Ingredient.listFromJsonArray(fresh);
                 saveToDiskCache(fl);
-                if (ingNodes.isEmpty()) buildNodesFromList(fl);
-                else                    applyDelta(fl);
+                if (ingNodes.isEmpty())
+                    buildNodesFromList(fl);
+                else
+                    applyDelta(fl);
             } catch (Exception e) {
                 RemoteLogger.error("ComposeKumpir", "prebuild ingredients", e);
             }
@@ -161,7 +165,8 @@ public class ComposeKumpirController extends BaseController {
     }
 
     private void buildNodesFromList(List<Ingredient> list) {
-        record IngData(Ingredient ing, boolean hasAllergens, String allergenText) {}
+        record IngData(Ingredient ing, boolean hasAllergens, String allergenText) {
+        }
 
         List<IngData> prepared = list.stream()
                 .map(ing -> new IngData(
@@ -189,7 +194,8 @@ public class ComposeKumpirController extends BaseController {
             nodesReady = true;
 
             /* calcola le dimensioni tile una volta sola all'avvio */
-            if (kumpirCard != null) syncGridGap(kumpirCard.getWidth());
+            if (kumpirCard != null)
+                syncGridGap(kumpirCard.getWidth());
 
             enableKumpirButton();
         });
@@ -200,13 +206,14 @@ public class ComposeKumpirController extends BaseController {
     // ────────────────────────────────────────────────────────────────────────
 
     private IngNode createIngNodeFX(Ingredient ing,
-                                    boolean hasAllergens,
-                                    String  allergenText) {
+            boolean hasAllergens,
+            String allergenText) {
         ToggleButton tb = new ToggleButton();
         tb.getStyleClass().add("kumpir-ingredient-card");
         tb.setFocusTraversable(false);
         tb.setDisable(!ing.disponibile);
-        if (!ing.disponibile) tb.getStyleClass().add("ingredient-unavailable");
+        if (!ing.disponibile)
+            tb.getStyleClass().add("ingredient-unavailable");
 
         tb.setCache(true);
         tb.setCacheHint(CacheHint.SPEED);
@@ -256,10 +263,11 @@ public class ComposeKumpirController extends BaseController {
 
         tb.setGraphic(inner);
 
-        final int    id    = ing.id;
+        final int id = ing.id;
         final double price = ing.prezzo;
         tb.selectedProperty().addListener((obs, wasOn, isOn) -> {
-            if (tb.isDisabled() || suppressSelectionEvents) return;
+            if (tb.isDisabled() || suppressSelectionEvents)
+                return;
             if (isOn) {
                 if (selectedIds.add(id)) {
                     selectedCount++;
@@ -285,21 +293,26 @@ public class ComposeKumpirController extends BaseController {
         Map<Integer, Ingredient> freshMap = new HashMap<>(freshList.size() * 2);
         freshList.forEach(i -> freshMap.put(i.id, i));
 
-        List<Ingredient> toAdd    = new ArrayList<>();
+        List<Ingredient> toAdd = new ArrayList<>();
         List<Ingredient> toUpdate = new ArrayList<>();
-        List<Integer>    toRemove = new ArrayList<>();
+        List<Integer> toRemove = new ArrayList<>();
 
         for (Ingredient fresh : freshList) {
             IngNode existing = ingNodeById.get(fresh.id);
-            if (existing == null)           toAdd.add(fresh);
-            else if (changed(existing.ing(), fresh)) toUpdate.add(fresh);
+            if (existing == null)
+                toAdd.add(fresh);
+            else if (changed(existing.ing(), fresh))
+                toUpdate.add(fresh);
         }
         for (IngNode node : ingNodes)
-            if (!freshMap.containsKey(node.ing().id)) toRemove.add(node.ing().id);
+            if (!freshMap.containsKey(node.ing().id))
+                toRemove.add(node.ing().id);
 
-        if (toAdd.isEmpty() && toUpdate.isEmpty() && toRemove.isEmpty()) return;
+        if (toAdd.isEmpty() && toUpdate.isEmpty() && toRemove.isEmpty())
+            return;
 
-        record IngData(Ingredient ing, boolean hasAllergens, String allergenText) {}
+        record IngData(Ingredient ing, boolean hasAllergens, String allergenText) {
+        }
         List<IngData> addData = toAdd.stream()
                 .map(ing -> new IngData(
                         ing, !ing.allergeni.isEmpty(),
@@ -312,15 +325,17 @@ public class ComposeKumpirController extends BaseController {
                 if (n != null) {
                     ingNodes.remove(n);
                     kumpirGrid.getChildren().remove(n.btn());
-                    if (selectedIds.remove(id)) selectedCount--;
+                    if (selectedIds.remove(id))
+                        selectedCount--;
                 }
             });
 
             for (Ingredient fresh : toUpdate) {
                 IngNode node = ingNodeById.get(fresh.id);
-                if (node == null) continue;
+                if (node == null)
+                    continue;
                 patchIngNode(node, fresh);
-                int idx     = ingNodes.indexOf(node);
+                int idx = ingNodes.indexOf(node);
                 IngNode upd = new IngNode(fresh, node.btn(), node.nameLbl(),
                         node.priceLbl(), node.allergenBadge());
                 ingNodes.set(idx, upd);
@@ -338,7 +353,8 @@ public class ComposeKumpirController extends BaseController {
                 kumpirGrid.setManaged(true);
             }
 
-            if (kumpirCard != null) syncGridGap(kumpirCard.getWidth());
+            if (kumpirCard != null)
+                syncGridGap(kumpirCard.getWidth());
         });
     }
 
@@ -390,14 +406,15 @@ public class ComposeKumpirController extends BaseController {
     // ────────────────────────────────────────────────────────────────────────
 
     private void ensureKumpirGrid() {
-        if (kumpirGrid != null) return;
+        if (kumpirGrid != null)
+            return;
 
         kumpirGrid = new TilePane();
         kumpirGrid.getStyleClass().add("kumpir-ingredient-grid");
         kumpirGrid.setPadding(new Insets(16));
-        kumpirGrid.setAlignment(Pos.TOP_CENTER);        // centro orizzontale
-        kumpirGrid.setTileAlignment(Pos.CENTER);        // card centrate nelle celle
-        kumpirGrid.setPrefColumns(PREF_COLS);           // hint per il calcolo preferred width
+        kumpirGrid.setAlignment(Pos.TOP_CENTER); // centro orizzontale
+        kumpirGrid.setTileAlignment(Pos.CENTER); // card centrate nelle celle
+        kumpirGrid.setPrefColumns(PREF_COLS); // hint per il calcolo preferred width
         kumpirGrid.setCache(true);
         kumpirGrid.setCacheHint(CacheHint.SPEED);
     }
@@ -412,7 +429,8 @@ public class ComposeKumpirController extends BaseController {
      * Chiamata multipla nella stessa frame = una sola esecuzione effettiva.
      */
     private void syncGridGap(double cardWidth) {
-        if (syncDebounce != null) syncDebounce.stop();
+        if (syncDebounce != null)
+            syncDebounce.stop();
         syncDebounce = new Timeline(
                 new KeyFrame(Duration.millis(16), e -> doSyncGrid(cardWidth)));
         syncDebounce.play();
@@ -421,19 +439,20 @@ public class ComposeKumpirController extends BaseController {
     /**
      * Calcolo effettivo delle dimensioni tile.
      * – Sceglie 3 colonne se c'è spazio sufficiente, altrimenti 2.
-     * – tileW = (spazio disponibile – gap totale) / colonne  → riga piena esatta.
+     * – tileW = (spazio disponibile – gap totale) / colonne → riga piena esatta.
      * – Aggiorna TilePane solo se il valore è cambiato di almeno 1 px (cache),
-     *   così un ridimensionamento sub-pixel (es. hover che tocca il layout)
-     *   non scatena un re-layout visibile.
+     * così un ridimensionamento sub-pixel (es. hover che tocca il layout)
+     * non scatena un re-layout visibile.
      */
     private void doSyncGrid(double cardWidth) {
-        if (kumpirGrid == null || cardWidth <= 0) return;
+        if (kumpirGrid == null || cardWidth <= 0)
+            return;
 
-        Insets  pad  = kumpirGrid.getPadding();
-        double  padH = (pad != null) ? pad.getLeft() + pad.getRight() : 32.0;
-        double  avail = cardWidth - padH;
+        Insets pad = kumpirGrid.getPadding();
+        double padH = (pad != null) ? pad.getLeft() + pad.getRight() : 32.0;
+        double avail = cardWidth - padH;
 
-        double  gap   = cardWidth < 640 ? 10 : cardWidth < 840 ? 12 : 16;
+        double gap = cardWidth < 640 ? 10 : cardWidth < 840 ? 12 : 16;
 
         /* Fisso minimo 3 colonne; se c'è sufficiente larghezza si va anche a 4. */
         int cols = 3;
@@ -446,7 +465,8 @@ public class ComposeKumpirController extends BaseController {
         double tileH = Math.round(tileW * TILE_ASPECT);
 
         /* cache: non toccare nulla se non cambia di almeno 1 px */
-        if (Math.abs(tileW - lastTileW) < 1.0 && Math.abs(tileH - lastTileH) < 1.0) return;
+        if (Math.abs(tileW - lastTileW) < 1.0 && Math.abs(tileH - lastTileH) < 1.0)
+            return;
         lastTileW = tileW;
         lastTileH = tileH;
 
@@ -473,7 +493,7 @@ public class ComposeKumpirController extends BaseController {
         });
         bgSync.scheduleWithFixedDelay(() -> {
             try {
-                JsonArray        fresh     = IngredientService.getIngredients();
+                JsonArray fresh = IngredientService.getIngredients();
                 List<Ingredient> freshList = Ingredient.listFromJsonArray(fresh);
                 saveToDiskCache(freshList);
                 applyDelta(freshList);
@@ -493,8 +513,8 @@ public class ComposeKumpirController extends BaseController {
             var arr = new JsonArray();
             for (Ingredient ing : list) {
                 var obj = new JsonObject();
-                obj.addProperty("id",         ing.id);
-                obj.addProperty("nome",       ing.nome);
+                obj.addProperty("id", ing.id);
+                obj.addProperty("nome", ing.nome);
                 obj.addProperty("disponibile", ing.disponibile ? 1 : 0);
                 var allergens = new JsonArray();
                 ing.allergeni.forEach(allergens::add);
@@ -509,9 +529,10 @@ public class ComposeKumpirController extends BaseController {
 
     private List<Ingredient> loadFromDiskCache() {
         try {
-            if (!Files.exists(CACHE_FILE)) return List.of();
-            String    json = Files.readString(CACHE_FILE, StandardCharsets.UTF_8);
-            JsonArray arr  = GSON.fromJson(json, JsonArray.class);
+            if (!Files.exists(CACHE_FILE))
+                return List.of();
+            String json = Files.readString(CACHE_FILE, StandardCharsets.UTF_8);
+            JsonArray arr = GSON.fromJson(json, JsonArray.class);
             return Ingredient.listFromJsonArray(arr);
         } catch (Exception e) {
             RemoteLogger.error("ComposeKumpir", "loadFromDiskCache", e);
@@ -532,25 +553,27 @@ public class ComposeKumpirController extends BaseController {
     }
 
     private void showKumpirModal() {
-        if (rootStack == null || kumpirOverlay == null) return;
+        if (rootStack == null || kumpirOverlay == null)
+            return;
         resetKumpirModalState();
         if (!rootStack.getChildren().contains(kumpirOverlay))
             rootStack.getChildren().add(kumpirOverlay);
         kumpirOverlay.setVisible(true);
         new Timeline(
                 new KeyFrame(Duration.ZERO,
-                        new KeyValue(kumpirCard.opacityProperty(),  0.0),
-                        new KeyValue(kumpirCard.scaleXProperty(),   0.92),
-                        new KeyValue(kumpirCard.scaleYProperty(),   0.92)),
+                        new KeyValue(kumpirCard.opacityProperty(), 0.0),
+                        new KeyValue(kumpirCard.scaleXProperty(), 0.92),
+                        new KeyValue(kumpirCard.scaleYProperty(), 0.92)),
                 new KeyFrame(Duration.millis(180),
-                        new KeyValue(kumpirCard.opacityProperty(),  1.0, Interpolator.EASE_OUT),
-                        new KeyValue(kumpirCard.scaleXProperty(),   1.00, Interpolator.EASE_OUT),
-                        new KeyValue(kumpirCard.scaleYProperty(),   1.00, Interpolator.EASE_OUT)))
+                        new KeyValue(kumpirCard.opacityProperty(), 1.0, Interpolator.EASE_OUT),
+                        new KeyValue(kumpirCard.scaleXProperty(), 1.00, Interpolator.EASE_OUT),
+                        new KeyValue(kumpirCard.scaleYProperty(), 1.00, Interpolator.EASE_OUT)))
                 .play();
     }
 
     private void buildKumpirModalStructure() {
-        if (rootStack == null || kumpirGrid == null) return;
+        if (rootStack == null || kumpirGrid == null)
+            return;
 
         kumpirTotalLbl = new Label(PRICE_BASE_FMT);
         kumpirTotalLbl.getStyleClass().add("kumpir-total-label");
@@ -570,10 +593,12 @@ public class ComposeKumpirController extends BaseController {
         kumpirCard.setCache(true);
         kumpirCard.setCacheHint(CacheHint.SPEED);
 
-        /* Listener sul rootStack per adattare la card al ridimensionamento
+        /*
+         * Listener sul rootStack per adattare la card al ridimensionamento
          * della finestra. La syncGridGap è debounced, quindi anche se lo
          * listener scatta molte volte, doSyncGrid viene eseguito una volta
-         * per frame (16 ms). */
+         * per frame (16 ms).
+         */
         ChangeListener<Number> sizeListener = (obs, o, n) -> syncCardSize();
         rootStack.widthProperty().addListener(sizeListener);
         rootStack.heightProperty().addListener(sizeListener);
@@ -590,7 +615,7 @@ public class ComposeKumpirController extends BaseController {
         titleLbl.getStyleClass().add("kumpir-modal-title");
         Label subtitleLbl = new Label(
                 "Base patata: € " + String.format("%.2f", KUMPIR_BASE_PRICE).replace('.', ',')
-                + "  •  Ingredienti con prezzo variabile");
+                        + "  •  Ingredienti con prezzo variabile");
         subtitleLbl.getStyleClass().add("kumpir-modal-subtitle");
         titleBlock.getChildren().addAll(titleLbl, subtitleLbl);
 
@@ -601,8 +626,8 @@ public class ComposeKumpirController extends BaseController {
 
         /* ── filter bar ── */
         kumpirFilterNoAllergens = filterChip("Senza allergeni");
-        kumpirFilterNoGluten    = filterChip("Senza glutine");
-        kumpirFilterNoLactose   = filterChip("Senza lattosio");
+        kumpirFilterNoGluten = filterChip("Senza glutine");
+        kumpirFilterNoLactose = filterChip("Senza lattosio");
 
         FlowPane filterFlow = new FlowPane(8, 8);
         filterFlow.setAlignment(Pos.CENTER_LEFT);
@@ -614,24 +639,28 @@ public class ComposeKumpirController extends BaseController {
         filterBar.setPadding(new Insets(12, 16, 12, 16));
 
         Runnable applyFilter = () -> {
-            boolean noAll    = kumpirFilterNoAllergens.isSelected();
+            boolean noAll = kumpirFilterNoAllergens.isSelected();
             boolean noGluten = kumpirFilterNoGluten.isSelected();
-            boolean noLac    = kumpirFilterNoLactose.isSelected();
+            boolean noLac = kumpirFilterNoLactose.isSelected();
             for (IngNode ic : ingNodes) {
-                Ingredient ing  = ic.ing();
-                boolean    show = true;
-                if (noAll && !ing.allergeni.isEmpty()) show = false;
+                Ingredient ing = ic.ing();
+                boolean show = true;
+                if (noAll && !ing.allergeni.isEmpty())
+                    show = false;
                 if (show && noGluten && ing.allergeni.stream()
-                        .anyMatch(a -> a.equalsIgnoreCase("glutine")))    show = false;
-                if (show && noLac   && ing.allergeni.stream()
-                        .anyMatch(a -> a.equalsIgnoreCase("latte e derivati"))) show = false;
+                        .anyMatch(a -> a.equalsIgnoreCase("glutine")))
+                    show = false;
+                if (show && noLac && ing.allergeni.stream()
+                        .anyMatch(a -> a.equalsIgnoreCase("latte e derivati")))
+                    show = false;
                 ic.btn().setManaged(show);
                 ic.btn().setVisible(show);
             }
         };
 
         ChangeListener<Boolean> filterListener = (obs, o, n) -> {
-            if (filterDebounce != null) filterDebounce.stop();
+            if (filterDebounce != null)
+                filterDebounce.stop();
             filterDebounce = new Timeline(
                     new KeyFrame(Duration.millis(30), e -> applyFilter.run()));
             filterDebounce.play();
@@ -673,19 +702,20 @@ public class ComposeKumpirController extends BaseController {
             Timeline out = new Timeline(
                     new KeyFrame(Duration.ZERO,
                             new KeyValue(kumpirCard.opacityProperty(), 1.0),
-                            new KeyValue(kumpirCard.scaleXProperty(),  1.0),
-                            new KeyValue(kumpirCard.scaleYProperty(),  1.0)),
+                            new KeyValue(kumpirCard.scaleXProperty(), 1.0),
+                            new KeyValue(kumpirCard.scaleYProperty(), 1.0)),
                     new KeyFrame(Duration.millis(130),
                             new KeyValue(kumpirCard.opacityProperty(), 0.0, Interpolator.EASE_IN),
-                            new KeyValue(kumpirCard.scaleXProperty(),  0.94, Interpolator.EASE_IN),
-                            new KeyValue(kumpirCard.scaleYProperty(),  0.94, Interpolator.EASE_IN)));
+                            new KeyValue(kumpirCard.scaleXProperty(), 0.94, Interpolator.EASE_IN),
+                            new KeyValue(kumpirCard.scaleYProperty(), 0.94, Interpolator.EASE_IN)));
             out.setOnFinished(ev -> kumpirOverlay.setVisible(false));
             out.play();
         };
 
         closeBtn.setOnAction(e -> closeOverlay.run());
         kumpirOverlay.setOnMouseClicked(e -> {
-            if (e.getTarget() == kumpirOverlay) closeOverlay.run();
+            if (e.getTarget() == kumpirOverlay)
+                closeOverlay.run();
         });
 
         /* ── aggiungi al carrello ── */
@@ -695,9 +725,9 @@ public class ComposeKumpirController extends BaseController {
                 showToast("Seleziona almeno un ingrediente! 🥔");
                 return;
             }
-            double   finalTotal = KUMPIR_BASE_PRICE + selectedIngredientsTotal;
+            double finalTotal = KUMPIR_BASE_PRICE + selectedIngredientsTotal;
             CartItem item = CartItem.builder(0, "Kumpir personalizzato",
-                            formatPrice(finalTotal), finalTotal)
+                    formatPrice(finalTotal), finalTotal)
                     .category("kumpir")
                     .allergens(new ArrayList<>())
                     .build();
@@ -707,8 +737,10 @@ public class ComposeKumpirController extends BaseController {
                 headerController.setCartCount(CartManager.get().totalItems());
                 headerController.bounceCart();
             }
-            if (toastOverlay != null) toastOverlay.show("Kumpir aggiunto al carrello! 🥔");
-            else                      showToast("Kumpir aggiunto al carrello! 🥔");
+            if (toastOverlay != null)
+                toastOverlay.show("Kumpir aggiunto al carrello! 🥔");
+            else
+                showToast("Kumpir aggiunto al carrello! 🥔");
         });
 
         kumpirCard.getChildren().addAll(modalHeader, filterBar, gridScroll, totalBar);
@@ -721,10 +753,12 @@ public class ComposeKumpirController extends BaseController {
     // ────────────────────────────────────────────────────────────────────────
 
     private void syncCardSize() {
-        if (kumpirCard == null || rootStack == null) return;
+        if (kumpirCard == null || rootStack == null)
+            return;
         double sw = rootStack.getWidth();
         double sh = rootStack.getHeight();
-        if (sw <= 0 || sh <= 0) return;
+        if (sw <= 0 || sh <= 0)
+            return;
 
         boolean portrait = sh > sw * 1.15;
         double w, h;
@@ -755,37 +789,47 @@ public class ComposeKumpirController extends BaseController {
         suppressSelectionEvents = true;
         for (int id : selectedIds) {
             IngNode n = ingNodeById.get(id);
-            if (n != null) n.btn().setSelected(false);
+            if (n != null)
+                n.btn().setSelected(false);
         }
         selectedIds.clear();
-        selectedCount            = 0;
+        selectedCount = 0;
         selectedIngredientsTotal = 0.0;
-        suppressSelectionEvents  = false;
+        suppressSelectionEvents = false;
 
-        if (filterDebounce != null) { filterDebounce.stop(); filterDebounce = null; }
-        if (kumpirFilterNoAllergens != null) kumpirFilterNoAllergens.setSelected(false);
-        if (kumpirFilterNoGluten    != null) kumpirFilterNoGluten.setSelected(false);
-        if (kumpirFilterNoLactose   != null) kumpirFilterNoLactose.setSelected(false);
+        if (filterDebounce != null) {
+            filterDebounce.stop();
+            filterDebounce = null;
+        }
+        if (kumpirFilterNoAllergens != null)
+            kumpirFilterNoAllergens.setSelected(false);
+        if (kumpirFilterNoGluten != null)
+            kumpirFilterNoGluten.setSelected(false);
+        if (kumpirFilterNoLactose != null)
+            kumpirFilterNoLactose.setSelected(false);
 
         for (IngNode n : ingNodes) {
             n.btn().setManaged(true);
             n.btn().setVisible(true);
         }
 
-        if (kumpirTotalLbl != null) kumpirTotalLbl.setText(PRICE_BASE_FMT);
-        if (kumpirCountLbl != null) kumpirCountLbl.setText("Nessun ingrediente selezionato");
+        if (kumpirTotalLbl != null)
+            kumpirTotalLbl.setText(PRICE_BASE_FMT);
+        if (kumpirCountLbl != null)
+            kumpirCountLbl.setText("Nessun ingrediente selezionato");
     }
 
     private void updateKumpirTotals() {
-        if (kumpirTotalLbl == null || kumpirCountLbl == null) return;
+        if (kumpirTotalLbl == null || kumpirCountLbl == null)
+            return;
         double total = KUMPIR_BASE_PRICE + selectedIngredientsTotal;
         kumpirTotalLbl.setText(formatPrice(total));
         kumpirCountLbl.setText(selectedCount == 0
                 ? "Nessun ingrediente selezionato"
                 : selectedCount + " ingredient"
-                + (selectedCount == 1 ? "e" : "i")
-                + " selezionat"
-                + (selectedCount == 1 ? "o" : "i"));
+                        + (selectedCount == 1 ? "e" : "i")
+                        + " selezionat"
+                        + (selectedCount == 1 ? "o" : "i"));
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -793,7 +837,8 @@ public class ComposeKumpirController extends BaseController {
     // ────────────────────────────────────────────────────────────────────────
 
     private void initComposeKumpirButton() {
-        if (composeKumpirBtn == null) return;
+        if (composeKumpirBtn == null)
+            return;
         composeKumpirBtn.setText("Componi il tuo Kumpir");
         composeKumpirBtn.setDisable(true);
         composeKumpirBtn.setOnAction(e -> openComposeKumpir());
@@ -812,7 +857,8 @@ public class ComposeKumpirController extends BaseController {
     }
 
     private void enableKumpirButton() {
-        if (composeKumpirBtn == null) return;
+        if (composeKumpirBtn == null)
+            return;
         composeKumpirBtn.setDisable(false);
         kumpirBtnPulse.play();
         buildKumpirModalStructure();
@@ -835,16 +881,17 @@ public class ComposeKumpirController extends BaseController {
 
     private void shakeNode(Node node) {
         new Timeline(
-                new KeyFrame(Duration.ZERO,         new KeyValue(node.translateXProperty(),  0)),
-                new KeyFrame(Duration.millis(55),   new KeyValue(node.translateXProperty(), -9)),
-                new KeyFrame(Duration.millis(110),  new KeyValue(node.translateXProperty(),  9)),
-                new KeyFrame(Duration.millis(165),  new KeyValue(node.translateXProperty(), -7)),
-                new KeyFrame(Duration.millis(220),  new KeyValue(node.translateXProperty(),  7)),
-                new KeyFrame(Duration.millis(275),  new KeyValue(node.translateXProperty(),  0))).play();
+                new KeyFrame(Duration.ZERO, new KeyValue(node.translateXProperty(), 0)),
+                new KeyFrame(Duration.millis(55), new KeyValue(node.translateXProperty(), -9)),
+                new KeyFrame(Duration.millis(110), new KeyValue(node.translateXProperty(), 9)),
+                new KeyFrame(Duration.millis(165), new KeyValue(node.translateXProperty(), -7)),
+                new KeyFrame(Duration.millis(220), new KeyValue(node.translateXProperty(), 7)),
+                new KeyFrame(Duration.millis(275), new KeyValue(node.translateXProperty(), 0))).play();
     }
 
     public void setOnline(boolean online) {
-        if (headerController != null) headerController.setOnline(online);
+        if (headerController != null)
+            headerController.setOnline(online);
         if (toastOverlay != null)
             showToast(online
                     ? "Connessione internet ripristinata"
@@ -852,10 +899,15 @@ public class ComposeKumpirController extends BaseController {
     }
 
     public void destroy() {
-        if (bgSync             != null && !bgSync.isShutdown())             bgSync.shutdownNow();
-        if (backgroundExecutor != null && !backgroundExecutor.isShutdown()) backgroundExecutor.shutdownNow();
-        if (kumpirBtnPulse  != null) kumpirBtnPulse.stop();
-        if (filterDebounce  != null) filterDebounce.stop();
-        if (syncDebounce    != null) syncDebounce.stop();
+        if (bgSync != null && !bgSync.isShutdown())
+            bgSync.shutdownNow();
+        if (backgroundExecutor != null && !backgroundExecutor.isShutdown())
+            backgroundExecutor.shutdownNow();
+        if (kumpirBtnPulse != null)
+            kumpirBtnPulse.stop();
+        if (filterDebounce != null)
+            filterDebounce.stop();
+        if (syncDebounce != null)
+            syncDebounce.stop();
     }
 }

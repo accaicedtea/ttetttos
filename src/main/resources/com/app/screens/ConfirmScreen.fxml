@@ -6,42 +6,42 @@
 <?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <StackPane xmlns="http://javafx.com/javafx/21"
-           xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="com.app.controllers.ConfirmController"
-           styleClass="confirm-root" fx:id="confirmRoot">
+       xmlns:fx="http://javafx.com/fxml/1"
+       fx:controller="com.app.controllers.ConfirmController"
+       styleClass="confirm-root" fx:id="confirmRoot">
 
-    <StackPane fx:id="bgCircle1" styleClass="confirm-bg-circle-1" />
-    <StackPane fx:id="bgCircle2" styleClass="confirm-bg-circle-2" />
-    <StackPane fx:id="bgCircle3" styleClass="confirm-bg-circle-3" />
+       <StackPane fx:id="bgCircle1" styleClass="confirm-bg-circle-1" />
+       <StackPane fx:id="bgCircle2" styleClass="confirm-bg-circle-2" />
+       <StackPane fx:id="bgCircle3" styleClass="confirm-bg-circle-3" />
 
-    <VBox fx:id="contentBox" alignment="CENTER" spacing="24"
-          styleClass="confirm-container">
+       <VBox fx:id="contentBox" alignment="CENTER" spacing="24"
+              styleClass="confirm-container">
 
-        <!-- Cerchio con check icon MDI -->
-        <StackPane fx:id="checkCircle" styleClass="check-circle">
-            <FontIcon fx:id="checkIconNode"
-                      iconLiteral="mdi2c-check-bold"
-                      iconSize="100"
-                      styleClass="check-icon" />
-        </StackPane>
+              <!-- Cerchio con check icon MDI -->
+              <StackPane fx:id="checkCircle" styleClass="check-circle">
+                     <FontIcon fx:id="checkIconNode"
+                            iconLiteral="mdi2c-check-bold"
+                            iconSize="100"
+                            styleClass="check-icon" />
+              </StackPane>
 
-        <Label fx:id="titleLabel" text="Ordine confermato!"
-               styleClass="confirm-title" wrapText="true" />
+              <Label fx:id="titleLabel" text="Ordine confermato!"
+                     styleClass="confirm-title" wrapText="true" />
 
-        <VBox alignment="CENTER" spacing="6">
-            <Label fx:id="numberSubLabel" text="Il tuo numero è"
-                   styleClass="confirm-number-sub" />
-            <Label fx:id="orderNumber" text="42" styleClass="confirm-number" />
-        </VBox>
+              <VBox alignment="CENTER" spacing="6">
+                     <Label fx:id="numberSubLabel" text="Il tuo numero è"
+                            styleClass="confirm-number-sub" />
+                     <Label fx:id="orderNumber" text="42" styleClass="confirm-number" />
+              </VBox>
 
-        <Label fx:id="msgLabel"
-               text="Ritira il tuo ordine alla cassa.&#10;Grazie!"
-               styleClass="confirm-msg" wrapText="true" />
+              <Label fx:id="msgLabel"
+                     text="Ritira il tuo ordine alla cassa.&#10;Grazie!"
+                     styleClass="confirm-msg" wrapText="true" />
 
-        <Region prefHeight="30" />
+              <Region prefHeight="30" />
 
-        <Label fx:id="countdownLabel" text="" styleClass="confirm-countdown" />
+              <Label fx:id="countdownLabel" text="" styleClass="confirm-countdown" />
 
-    </VBox>
+       </VBox>
 
 </StackPane>
