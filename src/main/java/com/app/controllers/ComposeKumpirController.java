@@ -558,6 +558,12 @@ public class ComposeKumpirController extends BaseController {
         resetKumpirModalState();
         if (!rootStack.getChildren().contains(kumpirOverlay))
             rootStack.getChildren().add(kumpirOverlay);
+            
+        // Applica l'effetto blur allo sfondo (primo figlio dello stack)
+        if (!rootStack.getChildren().isEmpty() && rootStack.getChildren().get(0) != kumpirOverlay) {
+            rootStack.getChildren().get(0).setEffect(new javafx.scene.effect.GaussianBlur(10));
+        }
+
         kumpirOverlay.setVisible(true);
         new Timeline(
                 new KeyFrame(Duration.ZERO,
@@ -587,6 +593,7 @@ public class ComposeKumpirController extends BaseController {
         kumpirOverlay.prefWidthProperty().bind(rootStack.widthProperty());
         kumpirOverlay.prefHeightProperty().bind(rootStack.heightProperty());
         kumpirOverlay.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        kumpirOverlay.setStyle("-fx-background-color: rgba(0, 0, 0, 0.4);");
 
         kumpirCard = new VBox(0);
         kumpirCard.getStyleClass().add("kumpir-modal-card");
@@ -708,7 +715,14 @@ public class ComposeKumpirController extends BaseController {
                             new KeyValue(kumpirCard.opacityProperty(), 0.0, Interpolator.EASE_IN),
                             new KeyValue(kumpirCard.scaleXProperty(), 0.94, Interpolator.EASE_IN),
                             new KeyValue(kumpirCard.scaleYProperty(), 0.94, Interpolator.EASE_IN)));
-            out.setOnFinished(ev -> kumpirOverlay.setVisible(false));
+            
+            out.setOnFinished(ev -> {
+                kumpirOverlay.setVisible(false);
+                // Rimuovi l'effetto blur dal contenuto principale
+                if (!rootStack.getChildren().isEmpty() && rootStack.getChildren().get(0) != kumpirOverlay) {
+                    rootStack.getChildren().get(0).setEffect(null);
+                }
+            });
             out.play();
         };
 
@@ -726,9 +740,17 @@ public class ComposeKumpirController extends BaseController {
                 return;
             }
             double finalTotal = KUMPIR_BASE_PRICE + selectedIngredientsTotal;
+            
+            List<String> selectedNames = selectedIds.stream()
+                .map(ingNodeById::get)
+                .filter(java.util.Objects::nonNull)
+                .map(node -> node.ing().nome)
+                .collect(java.util.stream.Collectors.toList());
+
             CartItem item = CartItem.builder(0, "Kumpir personalizzato",
                     formatPrice(finalTotal), finalTotal)
                     .category("kumpir")
+                    .ingredienti(selectedNames)
                     .allergens(new ArrayList<>())
                     .build();
             CartManager.get().addItem(item);

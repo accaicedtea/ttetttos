@@ -14,6 +14,7 @@ import com.app.model.OrderQueue;
 import com.app.model.TranslationManager;
 import com.util.Navigator;
 import com.util.NetworkWatchdog;
+import com.util.SystemManager;
 
 /**
  * SplashController — schermata di avvio con sequenza di loading.
@@ -38,7 +39,7 @@ public class SplashController extends BaseController {
     private ProgressBar progressBar;
 
     private static final String API_KEY = System.getProperty("totem.api.key",
-            System.getenv().getOrDefault("TOTEM_API_KEY", "api_key_totem_1"));
+            System.getenv().getOrDefault("TOTEM_API_KEY", "api_key_totem_2_per_sviluppo_locale"));
 
     @FXML
     private void initialize() {
@@ -68,15 +69,7 @@ public class SplashController extends BaseController {
     private void runSetupSequence() {
         new Thread(() -> {
 
-            // ── Step 1: Start Watchdog e login ─────────────────────────
-            NetworkWatchdog.start(online -> {
-                System.out.println("[Net] " + (online ? "Online" : "Offline"));
-                Platform.runLater(() -> {
-                    if (!online)
-                        setStep("mdi2a-alert", "Offline", "Rete non disponibile", 0.05);
-                });
-            });
-
+            // ── Step 0: Login PRIMA di NetworkWatchdog ────────────────
             setStep("mdi2l-lock", "Connessione al server...", "", 0.05);
             String loginError = null;
             try {
@@ -87,9 +80,28 @@ public class SplashController extends BaseController {
             } catch (Exception e) {
                 loginError = e.getMessage();
                 setStep("mdi2a-alert", "Connessione fallita", "Uso modalità offline", 0.35);
-                System.err.println("[Splash] Login fallito: " + e.getMessage());
+                System.err.println("[Splash] Login fallito: " + loginError);
                 sleep(800);
+
+                // Se il sistema e' stato bloccato (es. API key non valida), interrompi setup e navigazione.
+                if (SystemManager.isAppLocked()) {
+                    return;
+                }
             }
+
+            // ── Step 1: Avvia NetworkWatchdog DOPO il login ────────────
+            sleep(500); // Aspetta che il token sia veramente salvato
+            NetworkWatchdog.start(online -> {
+                System.out.println("[Net] " + (online ? "Online" : "Offline"));
+                Platform.runLater(() -> {
+                    if (!online)
+                        setStep("mdi2a-alert", "Offline", "Rete non disponibile", 0.05);
+                });
+            });
+
+            // ── Step 1.5: Esiti aggiornamenti pendenti e controllo ─────
+            setStep("mdi2c-cloud-sync", "Verifica aggiornamenti...", "", 0.38);
+            com.api.services.UpdateService.checkPendingStates();
 
             // ── Step 2: Menu ──────────────────────────────────────────
             setStep("mdi2c-clipboard-list", "Caricamento menu...", "", 0.40);

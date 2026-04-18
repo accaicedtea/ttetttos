@@ -34,7 +34,9 @@ public class App extends Application {
 
         Scene scene = new Scene(rootPane);
         ThemeManager.init(scene);
-        ThemeManager.set(ThemeManager.Theme.DARK);
+
+        // Select theme
+        ThemeManager.set(ThemeManager.Theme.LIGHT);
 
         scene.getAccelerators().put(
                 new KeyCodeCombination(KeyCode.H, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN),
@@ -49,9 +51,18 @@ public class App extends Application {
 
         stage.setScene(scene);
         stage.setTitle("TotemOrder");
-        stage.initStyle(StageStyle.UNDECORATED); // rimuove chiudi/riduci/espandi
+
+        // --- INIZIO OTTIMIZZAZIONI KIOSK LINUX ---
+        stage.initStyle(StageStyle.UNDECORATED); 
+        stage.setAlwaysOnTop(true);
+        stage.setMaximized(true);
+        stage.setResizable(false);
         stage.setFullScreen(true);
         stage.setFullScreenExitHint("");
+        stage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
+        scene.setCursor(javafx.scene.Cursor.NONE); // Rimuovi commento per nascondere mouse su schermi touch se serve
+        // --- FINE OTTIMIZZAZIONI KIOSK LINUX ---
+
         stage.show();
 
         Navigator.init(rootPane);

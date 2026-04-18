@@ -10,7 +10,7 @@ public class ThemeManager {
         DARK, LIGHT
     }
 
-    private static Theme current = Theme.DARK;
+    private static Theme current = Theme.LIGHT;
     private static Scene scene;
 
     private static final String DARK_CSS = "/com/app/styles/dark-theme.css";

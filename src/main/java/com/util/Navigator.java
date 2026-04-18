@@ -69,6 +69,11 @@ public class Navigator {
     }
 
     public static void goTo(Screen screen, Object data) {
+        if (SystemManager.isAppLocked()) {
+            System.out.println("[Nav] Navigazione bloccata: applicazione in lock");
+            return;
+        }
+
         currentScreen = screen;
         if (!Platform.isFxApplicationThread()) {
             Platform.runLater(() -> goTo(screen, data));
@@ -207,6 +212,9 @@ public class Navigator {
         inT.setToX(0);
         inT.setInterpolator(Interpolator.EASE_BOTH);
 
+        inT.setOnFinished(e -> root.setMouseTransparent(false));
+
+        root.setMouseTransparent(true);
         if (outgoing != null) {
             final Node old = outgoing;
             TranslateTransition outT = new TranslateTransition(Duration.millis(280), old);

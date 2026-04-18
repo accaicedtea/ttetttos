@@ -113,6 +113,7 @@ public class ConfirmModal {
         } catch (Exception e) {
             // Fallback: esegui l'azione direttamente se l'FXML non è disponibile
             System.err.println("[ConfirmModal] FXML non caricabile: " + e.getMessage());
+            e.printStackTrace();
             if (onConfirm != null)
                 onConfirm.run();
         }

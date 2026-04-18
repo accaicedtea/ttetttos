@@ -42,6 +42,9 @@ public class ToastOverlay extends HBox {
         // Posizionamento nel StackPane padre
         StackPane.setAlignment(this, Pos.BOTTOM_CENTER);
         StackPane.setMargin(this, new javafx.geometry.Insets(0, 0, 40, 0));
+        
+        // FIX: impedisce al Toast di bloccare i click sui pulsanti sottostanti
+        setMouseTransparent(true);
     }
 
     /** Mostra il toast con il messaggio dato per la durata predefinita. */

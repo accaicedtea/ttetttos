@@ -330,7 +330,17 @@ while true; do
         fi
     fi
 
-    if [ \$CRASH_COUNT -ge ${CRASH_MAX_RETRIES} ]; then
+    if [ \$CRASH_COUNT -ge ${CRASH_MAX_RETRIES} ]; then        # Rollback check
+        if [ -f "/home/${KIOSK_USER}/.totem-kiosk/app/demo-1.jar.bak" ]; then
+            crash "Limite crash superato, eseguo ROLLBACK alla versione precedente..."
+            mv "/home/${KIOSK_USER}/.totem-kiosk/app/demo-1.jar.bak" "/home/${KIOSK_USER}/.totem-kiosk/app/demo-1.jar"
+            # L'app leggerà questo file per comunicare "rollback" al server
+            touch "/home/${KIOSK_USER}/.totem-kiosk/app/rollback_pending.json"
+            CRASH_COUNT=0
+            log "Rollback applicato. Attesa 5s poi riavvio..."
+            sleep 5
+            continue
+        fi
         crash "Limite crash raggiunto. Reboot tra 10s..."
         sleep 10
         sudo /sbin/reboot

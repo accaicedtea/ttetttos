@@ -5,33 +5,33 @@
 
 .root {
     /* ── Palette di base ───────────────────────────────────────────── */
-    -color-bg:        #f2f2f7;
-    -color-surface:   #ffffff;
-    -color-surface2:  #e8e8f0;
-    -color-border:    #d0d0df;
-    -color-sidebar:   #e4e4ec;
+    -color-bg:        #F4F6F8;
+    -color-surface:   #FFFFFF;
+    -color-surface2:  #E9ECEF;
+    -color-border:    #DEE2E6;
+    -color-sidebar:   #FFFFFF;
 
     /* ── Accent & semantici ────────────────────────────────────────── */
-    -color-accent:    #2b6ed4;
-    -color-green:     #1d8a4f;
-    -color-orange:    #b06520;
-    -color-red:       #c03030;
+    -color-accent:    #FF6B00;
+    -color-green:     #10B981;
+    -color-orange:    #F59E0B;
+    -color-red:       #EF4444;
 
     /* Nuove variabili per gold e arancione scuro (usate in kumpir e chips) */
-    -color-gold:        #ffd200;
-    -color-orange-dark: #b06520;
+    -color-gold:        #FBBF24;
+    -color-orange-dark: #EA580C;
 
     /* ── Testo ─────────────────────────────────────────────────────── */
-    -color-text:      #1a1a2e;
-    -color-muted:     #5a5a7a;
-    -color-dim:       #9090a8;
+    -color-text:      #1F2937;
+    -color-muted:     #6B7280;
+    -color-dim:       #9CA3AF;
 
     /* ── Override JavaFX defaults ──────────────────────────────────── */
     -fx-base:                    -color-surface;
     -fx-background:              -color-bg;
     -fx-control-inner-background: -color-surface;
     -fx-text-fill:               -color-text;
-    -fx-font-family:             "Segoe UI", "Ubuntu", "Noto Sans", sans-serif;
+    -fx-font-family:             "IBM Plex Sans", "Segoe UI", "Ubuntuuntu", sans-serif;
     -fx-font-size:               18px;
     -fx-focus-color:             transparent;
     -fx-faint-focus-color:       transparent;

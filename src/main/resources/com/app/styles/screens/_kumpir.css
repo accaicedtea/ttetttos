@@ -23,7 +23,7 @@
 }
 
 .compose-kumpir-btn {
-    -fx-background-color: linear-gradient(to bottom right, #2ea632, #1f8e3a);
+    -fx-background-color: linear-gradient(to bottom right, -color-green, derive(-color-green, -15%));
     -fx-text-fill: white;
     -fx-font-size: 16px;
     -fx-font-weight: bold;
@@ -34,33 +34,33 @@
     -fx-min-width: 180;
     -fx-min-height: 52;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.30), 14, 0, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 14, 0, 0, 0);
 }
 
 .compose-kumpir-btn:hover {
-    -fx-background-color: linear-gradient(to bottom right, #3bc74f, #2aa03b);
+    -fx-background-color: linear-gradient(to bottom right, derive(-color-green, 10%), -color-green);
 }
 
 .compose-kumpir-btn:pressed {
-    -fx-background-color: linear-gradient(to bottom right, #b06520, #ffd200);
-    -fx-effect: dropshadow(gaussian, rgba(255,210,0, 0.3), 8, 0.2, 0, 2);
+    -fx-background-color: linear-gradient(to bottom right, -color-orange-dark, -color-gold);
+    -fx-effect: dropshadow(gaussian, rgba(251, 191, 36, 0.3), 8, 0.2, 0, 2);
     -fx-translate-y: 1;
 }
 
 .kumpir-modal-card {
-    -fx-background-color: #1c2128;
+    -fx-background-color: -color-surface;
     -fx-background-radius: 20;
-    -fx-border-color: rgba(227,179,65, 0.25);
+    -fx-border-color: -color-border;
     -fx-border-width: 1.5;
     -fx-border-radius: 20;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.30), 40, 0.5, 0, 10);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 40, 0.5, 0, 10);
 }
 
 .kumpir-modal-header {
-    -fx-background-color: linear-gradient(to right, #21262d, #161b22);
+    -fx-background-color: linear-gradient(to right, -color-surface2, -color-surface);
     -fx-background-radius: 20 20 0 0;
     -fx-padding: 20 24 20 24;
-    -fx-border-color: transparent transparent rgba(227,179,65, 0.18) transparent;
+    -fx-border-color: transparent transparent -color-border transparent;
     -fx-border-width: 0 0 1 0;
 }
 
@@ -77,7 +77,7 @@
 
 .kumpir-filter-bar {
     -fx-background-color: -color-surface2;
-    -fx-border-color: transparent transparent rgba(0, 0, 50, 0.07) transparent;
+    -fx-border-color: transparent transparent -color-border transparent;
     -fx-border-width: 0 0 1 0;
 }
 
@@ -94,11 +94,11 @@
 }
 
 .kumpir-filter-chip:selected {
-    -fx-background-color: linear-gradient(to right, #b06520, #ffd200);
-    -fx-text-fill: #ffffff;
+    -fx-background-color: linear-gradient(to right, -color-orange-dark, -color-gold);
+    -fx-text-fill: white;
     -fx-font-weight: bold;
     -fx-border-color: transparent;
-    -fx-effect: dropshadow(gaussian, rgba(255,210,0, 0.3), 8, 0.2, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(251, 191, 36, 0.3), 8, 0.2, 0, 0);
 }
 
 .kumpir-grid-scroll {
@@ -147,22 +147,22 @@
 }
 
 .kumpir-ingredient-card:hover {
-    -fx-background-color: #1f242b;
-    -fx-border-color: rgba(227,179,65, 0.4);
+    -fx-background-color: -color-surface2;
+    -fx-border-color: -color-orange;
     -fx-effect: dropshadow(gaussian, rgba(227,179,65, 0.2), 10, 0.2, 0, 0);
     /* nessuna variazione di dimensione → nessun re-layout */
 }
 
 .kumpir-ingredient-card:selected {
-    -fx-background-color: linear-gradient(to bottom right, #252831, #2a3037);
-    -fx-border-color: #ffd200;
+    -fx-background-color: linear-gradient(to bottom right, -color-surface2, -color-surface);
+    -fx-border-color: -color-gold;
     -fx-border-width: 2;          /* FIX: stesso valore del base state */
-    -fx-effect: dropshadow(gaussian, rgba(255,210,0, 0.4), 12, 0.3, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(251, 191, 36, 0.4), 12, 0.3, 0, 0);
 }
 
 .kumpir-ingredient-card:pressed {
     -fx-translate-y: 1;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 4, 0.1, 0, 1);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 4, 0.1, 0, 1);
 }
 
 .kumpir-ingredient-card.ingredient-unavailable {
@@ -173,41 +173,41 @@
 .kumpir-ingredient-name {
     -fx-font-size: 20px;
     -fx-font-weight: bold;
-    -fx-text-fill: #e6edf3;
+    -fx-text-fill: -color-text;
 }
 
 .kumpir-ingredient-card:selected .kumpir-ingredient-name {
-    -fx-text-fill: #ffd200;
+    -fx-text-fill: -color-gold;
 }
 
 .kumpir-ingredient-price {
     -fx-font-size: 18px;
-    -fx-text-fill: #3fb950;
+    -fx-text-fill: -color-green;
     -fx-font-weight: bold;
 }
 
 .kumpir-ingredient-card:selected .kumpir-ingredient-price {
-    -fx-text-fill: #67d473;
+    -fx-text-fill: derive(-color-green, 20%);
 }
 
 .kumpir-allergen-badge {
     -fx-font-size: 12px;
-    -fx-text-fill: #e3b341;
+    -fx-text-fill: -color-orange;
     -fx-padding: 2 6 2 6;
-    -fx-background-color: rgba(227,179,65, 0.12);
+    -fx-background-color: rgba(251, 191, 36, 0.12);
     -fx-background-radius: 6;
 }
 
 .kumpir-ingredient-unavailable-label {
     -fx-font-size: 13px;
-    -fx-text-fill: #f85149;
+    -fx-text-fill: -color-red;
     -fx-font-style: italic;
 }
 
 .kumpir-total-bar {
-    -fx-background-color: linear-gradient(to right, #21262d, #161b22);
+    -fx-background-color: linear-gradient(to right, -color-surface2, -color-surface);
     -fx-background-radius: 0 0 20 20;
-    -fx-border-color: rgba(227,179,65, 0.18) transparent transparent transparent;
+    -fx-border-color: -color-border transparent transparent transparent;
     -fx-border-width: 1 0 0 0;
 }
 
@@ -219,12 +219,12 @@
 .kumpir-total-label {
     -fx-font-size: 32px;
     -fx-font-weight: bold;
-    -fx-text-fill: #ffd200;
-    -fx-effect: dropshadow(gaussian, rgba(255,210,0, 0.3), 8, 0.2, 0, 0);
+    -fx-text-fill: -color-gold;
+    -fx-effect: dropshadow(gaussian, rgba(251, 191, 36, 0.3), 8, 0.2, 0, 0);
 }
 
 .kumpir-add-btn {
-    -fx-background-color: linear-gradient(to bottom right, #28a745, #1e7e34);
+    -fx-background-color: linear-gradient(to bottom right, -color-green, derive(-color-green, -15%));
     -fx-text-fill: white;
     -fx-font-size: 18px;
     -fx-font-weight: bold;
@@ -237,12 +237,12 @@
 }
 
 .kumpir-add-btn:hover {
-    -fx-background-color: linear-gradient(to bottom right, #34c45a, #28a745);
-    -fx-effect: dropshadow(gaussian, rgba(40, 200, 80, 0.5), 16, 0.4, 0, 6);
+    -fx-background-color: linear-gradient(to bottom right, derive(-color-green, 10%), -color-green);
+    -fx-effect: dropshadow(gaussian, -color-green, 16, 0.4, 0, 6);
 }
 
 .kumpir-add-btn:pressed {
-    -fx-background-color: linear-gradient(to bottom right, #1e7e34, #155724);
+    -fx-background-color: linear-gradient(to bottom right, derive(-color-green, -15%), derive(-color-green, -25%));
     -fx-effect: dropshadow(gaussian, rgba(40, 120, 69, 0.3), 6, 0.2, 0, 2);
     -fx-translate-y: 1;
 }

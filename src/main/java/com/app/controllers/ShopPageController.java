@@ -123,6 +123,7 @@ public class ShopPageController extends BaseController
     private boolean syncStarted = false;
     private ComposeKumpirController composeKumpirController;
     private Boolean lastOnlineState = null;
+    private static boolean hasNotifiedOnlineReturn = false;
     private ExecutorService backgroundExecutor;
 
     // Cache rendering prodotti
@@ -442,7 +443,10 @@ public class ShopPageController extends BaseController
                 return;
             }
             if (!lastOnlineState && online) {
-                toastOverlay.show("Connessione internet ripristinata");
+                if (!hasNotifiedOnlineReturn) {
+                    toastOverlay.show("Connessione internet ripristinata");
+                    hasNotifiedOnlineReturn = true;
+                }
             } else if (lastOnlineState && !online) {
                 toastOverlay.show("Connessione internet persa: modalità offline");
             }

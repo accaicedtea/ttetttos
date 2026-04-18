@@ -162,7 +162,15 @@ public final class OrderQueue {
             p.addProperty("iva", item.getIva());
             p.addProperty("totale_riga", round2(item.getPriceVal() * item.getQty()));
             p.addProperty("note", (String) null);
-            p.add("ingredienti", new JsonArray());
+            JsonArray ingArray = new JsonArray();
+            if (item.getIngredienti() != null) {
+                for (String ing : item.getIngredienti()) {
+                    JsonObject ingObj = new JsonObject();
+                    ingObj.addProperty("nome", ing);
+                    ingArray.add(ingObj);
+                }
+            }
+            p.add("ingredienti", ingArray);
             prodotti.add(p);
         }
         body.add("prodotti", prodotti);

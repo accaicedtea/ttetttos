@@ -12,7 +12,7 @@
     -fx-font-weight:       bold;
     -fx-padding:           16 36;
     -fx-translate-y:       -40;
-    -fx-effect:            dropshadow(gaussian, rgba(0,0,0,0.20), 8, 0, 0, 3);
+    -fx-effect:            dropshadow(gaussian, rgba(0, 0, 0, 0.1), 8, 0, 0, 3);
 }
 
 .toast-text {

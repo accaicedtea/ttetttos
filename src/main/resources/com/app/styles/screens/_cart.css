@@ -21,33 +21,37 @@
 /* ── Riga articolo ───────────────────────────────────────────────── */
 .cart-row {
     -fx-background-color:  -color-surface;
-    -fx-background-radius: 16;
-    -fx-border-color:      -color-border;
-    -fx-border-radius:     16;
-    -fx-border-width:      1;
-    -fx-padding:           20 22;
-    -fx-effect:            dropshadow(gaussian, rgba(0,0,0,0.08), 4, 0, 0, 1);
+    -fx-background-radius: 20;
+    -fx-border-color:      transparent;
+    -fx-border-radius:     20;
+    -fx-border-width:      0;
+    -fx-padding:           24 28;
+    -fx-effect:            dropshadow(gaussian, rgba(0,0,0,0.06), 8, 0, 0, 2);
 }
 
 .cart-item-name {
-    -fx-font-size:   20px;
-    -fx-font-weight: bold;
+    -fx-font-size:   24px;
+    -fx-font-weight: 800;
     -fx-text-fill:   -color-text;
 }
 .cart-item-price {
-    -fx-font-size: 16px;
-    -fx-text-fill: -color-muted;
+    -fx-font-size: 18px;
+    -fx-text-fill: -color-dim;
 }
 .cart-item-total {
-    -fx-font-size:   22px;
+    -fx-font-size:   26px;
     -fx-font-weight: bold;
     -fx-text-fill:   -color-accent;
 }
-.cart-item-ingredients {
-    -fx-font-size:  12px;
-    -fx-text-fill:  #7a9e7a;
-    -fx-wrap-text:  true;
-    -fx-padding:    0 0 2 0;
+.cart-ingredient-chip {
+    -fx-font-size:         14px;
+    -fx-text-fill:         -color-text;
+    -fx-background-color:  -color-surface2;
+    -fx-padding:           4 10;
+    -fx-background-radius: 12;
+    -fx-border-color:      -color-border;
+    -fx-border-radius:     12;
+    -fx-border-width:      1;
 }
 
 /* ── Controllo quantità ──────────────────────────────────────────── */
@@ -65,6 +69,16 @@
 }
 .qty-btn:pressed {
     -fx-background-color: -color-border;
+}
+
+.qty-btn.trash-btn {
+    -fx-text-fill: white;
+    -fx-background-color: #e53935;
+    -fx-border-color: #c62828;
+}
+
+.qty-btn.trash-btn:pressed {
+    -fx-background-color: #b71c1c;
 }
 
 .qty-label {

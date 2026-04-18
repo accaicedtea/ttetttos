@@ -53,6 +53,9 @@ public class WelcomeController extends BaseController implements Navigator.DataR
         buildLanguageButtons();
         Animations.touchFeedback(startBtn);
         animateEntrance();
+        
+        // Esegue il controllo aggiornamenti (scatterà una volta sola per l'intero ciclo di vita grazie alla flag interna)
+        com.api.services.UpdateService.checkForUpdates();
     }
 
     @Override

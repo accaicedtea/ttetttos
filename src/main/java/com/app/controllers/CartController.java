@@ -93,7 +93,7 @@ public class CartController extends BaseController {
     // ── Riga carrello ─────────────────────────────────────────────────
 
     private HBox buildRow(CartItem item) {
-        VBox info = new VBox(5);
+        VBox info = new VBox(8);
         HBox.setHgrow(info, Priority.ALWAYS);
 
         // Nome prodotto
@@ -101,29 +101,34 @@ public class CartController extends BaseController {
         name.getStyleClass().add("cart-item-name");
         name.setWrapText(true);
         info.getChildren().add(name);
+        
+        // Prezzo unitario
+        Label price = new Label(item.getPrice());
+        price.getStyleClass().add("cart-item-price");
+        info.getChildren().add(price);
 
-        // Ingredienti (se presenti)
-        List<String> ingredienti = item.getIngredienti(); // vedi nota sotto *
+        // Ingredienti (se presenti) resi più eleganti
+        List<String> ingredienti = item.getIngredienti(); 
         if (ingredienti != null && !ingredienti.isEmpty()) {
-            Label ingLabel = new Label("Ingredienti: " + String.join(", ", ingredienti));
-            ingLabel.getStyleClass().add("cart-item-ingredients");
-            ingLabel.setWrapText(true);
-            info.getChildren().add(ingLabel);
+            FlowPane ingPane = new FlowPane();
+            ingPane.setHgap(6);
+            ingPane.setVgap(6);
+            for (String ing : ingredienti) {
+                Label lbl = new Label(ing);
+                lbl.getStyleClass().add("cart-ingredient-chip");
+                ingPane.getChildren().add(lbl);
+            }
+            info.getChildren().add(ingPane);
         }
 
         // Chip allergeni per singola voce
         if (item.getAllergens() != null && !item.getAllergens().isEmpty()) {
             FlowPane chips = new FlowPane();
-            chips.setHgap(5);
-            chips.setVgap(4);
+            chips.setHgap(6);
+            chips.setVgap(6);
             ChipFactory.fillAllergens(chips, item.getAllergens(), ChipFactory.ChipType.CART);
             info.getChildren().add(chips);
         }
-
-        // Prezzo unitario
-        Label price = new Label(item.getPrice());
-        price.getStyleClass().add("cart-item-price");
-        info.getChildren().add(price);
 
         // Controlli quantità
         Button minus = new Button();
@@ -135,7 +140,17 @@ public class CartController extends BaseController {
         Animations.touchFeedback(minus);
         Animations.touchFeedback(plus);
 
-        Runnable syncMinusIcon = () -> minus.setText(item.getQty() <= 1 ? "🗑" : "−");
+        Runnable syncMinusIcon = () -> {
+            boolean isTrash = item.getQty() <= 1;
+            minus.setText(isTrash ? "🗑" : "−");
+            if (isTrash) {
+                if (!minus.getStyleClass().contains("trash-btn")) {
+                    minus.getStyleClass().add("trash-btn");
+                }
+            } else {
+                minus.getStyleClass().remove("trash-btn");
+            }
+        };
         syncMinusIcon.run();
 
         Label rowTotal = new Label(item.totalFormatted());
@@ -153,12 +168,17 @@ public class CartController extends BaseController {
                 updateTotals();
                 return;
             }
-            ConfirmModal.show(rootPane,
-                    t("remove_item"), t("remove_item_confirm"),
-                    () -> {
+            com.app.components.ModalDialog.builder(rootPane)
+                    .type(com.app.components.ModalDialog.Type.WARNING)
+                    .title(t("remove_item"))
+                    .message(t("remove_item_confirm"))
+                    .width(700)
+                    .button(com.app.components.ModalButton.cancel(t("cancel")))
+                    .button(com.app.components.ModalButton.danger(t("confirm"), () -> {
                         CartManager.get().removeItem(item);
                         buildCartList();
-                    });
+                    }))
+                    .show();
         });
 
         plus.setOnAction(e -> {

@@ -9,6 +9,7 @@
 }
 
 .confirm-container {
+    -fx-background-color: transparent;
     -fx-padding:   60 40;
     -fx-max-width: 800;
 }

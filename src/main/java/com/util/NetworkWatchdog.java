@@ -1,5 +1,6 @@
 package com.util;
 
+import com.api.Api;
 import com.google.gson.JsonObject;
 import javafx.application.Platform;
 
@@ -12,7 +13,9 @@ import java.net.http.HttpResponse;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystems;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.prefs.Preferences;
 
 /**
  * Watchdog di rete + heartbeat al server.
@@ -30,6 +33,12 @@ import java.util.function.Consumer;
 public class NetworkWatchdog {
 
     public static final String APP_VERSION = "1.0";
+
+    // ===== CONFIGURAZIONE PARAMETRICA E DEBUG =====
+    public static boolean DEBUG_SIMULATE_UPDATE = false;
+    public static boolean DEBUG_SIMULATE_OFFLINE = false;
+    public static int MAX_OFFLINE_DAYS = 30;
+    // ==============================================
 
     private static final int INTERVAL_ONLINE_MS = 15_000;
     private static final int INTERVAL_OFFLINE_MS = 5_000;
@@ -114,22 +123,87 @@ public class NetworkWatchdog {
      * Ritorna true se il server risponde, false altrimenti.
      */
     private static boolean sendPing() {
+        if (DEBUG_SIMULATE_OFFLINE) {
+            checkOfflineLock(false, null);
+            return false;
+        }
+
         // Prova un ping HTTP semplice prima di tentare il codice business
-        // (buildHeartbeat).
-        // Serve a distinguere offline di sistema da server non raggiungibile.
-        if (!rawPing()) {
-            // se ping HTTP fallisce, lungo tentativo socket:
-            if (!isNetworkReachable())
-                return false;
+        if (!rawPing() && !isNetworkReachable()) {
+            checkOfflineLock(false, null);
+            return false;
         }
 
         try {
-            buildHeartbeat();
+            JsonObject payload = buildHeartbeat();
+            
+            // Simula un update se il parametro di debug è attivo
+            if (DEBUG_SIMULATE_UPDATE) {
+                JsonObject debugData = new JsonObject();
+                debugData.addProperty("versione_a", "1.1-DEBUG");
+                debugData.addProperty("aggiornamento_id", 9999L);
+                
+                JsonObject debugResponse = new JsonObject();
+                debugResponse.add("data", debugData);
+                
+                System.out.println("[Watchdog] Trovato aggiornamento (simulato)! Versione target: 1.1-DEBUG");
+                SystemManager.showUpdatePrompt("1.1-DEBUG", 9999L);
+                return true;
+            }
+            
+            // Invia dati al server con Authorization: Bearer (non public)
+            JsonObject response = Api.apiPost("auth/ping", payload);
+            
+            // Aggiorna e resetta il timer del blocco offline
+            checkOfflineLock(true, response);
+
+
             return true;
         } catch (Exception e) {
-            // Se il server non risponde (o token non disponibile), mantieni status online
-            // se la connettività base è ancora presente
-            return isNetworkReachable();
+            System.err.println("[Watchdog] Errore API: " + e.getMessage());
+            boolean networkOk = isNetworkReachable();
+            checkOfflineLock(networkOk, null);
+            return networkOk;
+        }
+    }
+
+    /**
+     * Usa le java.util.prefs persistenti su disco per resistere ai riavvii
+     * e valutare se il Kiosk è rimasto disconnesso senza permessi per un tot di giorni.
+     */
+    private static void checkOfflineLock(boolean isOnlineNow, JsonObject serverResponse) {
+        Preferences prefs = Preferences.userNodeForPackage(NetworkWatchdog.class);
+        long nowMs = System.currentTimeMillis();
+        
+        if (isOnlineNow) {
+            // Aggiorna e salva permanentemente il timestamp
+            prefs.putLong("last_online_timestamp", nowMs);
+            
+            // Reagisce attivamente in base al database remoto
+            boolean lockedByDb = serverResponse != null && serverResponse.has("is_locked") && serverResponse.get("is_locked").getAsBoolean();
+            if (lockedByDb) {
+                String lockMessage = serverResponse.has("lock_message") ? serverResponse.get("lock_message").getAsString() : "Totem sospeso dal server.";
+                Platform.runLater(() -> SystemManager.lockApp(lockMessage));
+            } else {
+                // Se il db lo dà come sbloccato e non è offline, rimuoviamo un eventuale blocco pregresso
+                Platform.runLater(() -> SystemManager.unlockApp());
+            }
+
+        } else {
+            // Se offline, calcola da quanto tempo
+            long lastOnlineMs = prefs.getLong("last_online_timestamp", nowMs);
+            
+            // Caso in cui non fosse ma stato online da quando installato
+            if (lastOnlineMs == nowMs && !prefs.getBoolean("has_initialized", false)) {
+                prefs.putLong("last_online_timestamp", nowMs);
+                prefs.putBoolean("has_initialized", true);
+            }
+            
+            long daysOffline = TimeUnit.MILLISECONDS.toDays(nowMs - lastOnlineMs);
+            if (daysOffline > MAX_OFFLINE_DAYS) {
+                System.out.println("[Watchdog] Kiosk offline da " + daysOffline + " gg. Innesco blocco di sicurezza.");
+                Platform.runLater(() -> SystemManager.lockApp("Dispositivo bloccato per sicurezza.\nRimasto offline per più di " + MAX_OFFLINE_DAYS + " giorni consecutivi."));
+            }
         }
     }
 

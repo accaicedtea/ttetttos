@@ -95,6 +95,7 @@ public final class I18n {
         m.put("choose_at_least_one", "Seleziona almeno un ingrediente");
         m.put("kumpir_added", "Kumpir aggiunto al carrello");
         m.put("cancel", "Annulla");
+        m.put("confirm", "Conferma");
         return m;
     }
 
@@ -138,6 +139,7 @@ public final class I18n {
         m.put("choose_at_least_one", "Please choose at least one ingredient");
         m.put("kumpir_added", "Kumpir added to cart");
         m.put("cancel", "Cancel");
+        m.put("confirm", "Confirm");
         return m;
     }
 
@@ -181,6 +183,7 @@ public final class I18n {
         m.put("choose_at_least_one", "Wähle mindestens eine Zutat");
         m.put("kumpir_added", "Kumpir zum Warenkorb hinzugefügt");
         m.put("cancel", "Abbrechen");
+        m.put("confirm", "Bestätigen");
         return m;
     }
 
@@ -224,6 +227,7 @@ public final class I18n {
         m.put("choose_at_least_one", "Veuillez choisir au moins un ingrédient");
         m.put("kumpir_added", "Kumpir ajouté au panier");
         m.put("cancel", "Annuler");
+        m.put("confirm", "Confirmer");
         return m;
     }
 
@@ -267,6 +271,7 @@ public final class I18n {
         m.put("choose_at_least_one", "يرجى اختيار مكون واحد على الأقل");
         m.put("kumpir_added", "تمت إضافة kumpir إلى العربة");
         m.put("cancel", "إلغاء");
+        m.put("confirm", "تأكيد");
         return m;
     }
 }

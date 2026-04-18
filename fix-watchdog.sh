@@ -48,7 +48,17 @@ while true; do
 
     # Troppi crash → reboot
     if [ \$CRASH_COUNT -ge ${CRASH_MAX_RETRIES} ]; then
-        crash "Limite crash raggiunto (\${CRASH_COUNT}). Reboot tra 10s..."
+        if [ -f "/home/kiosk/.totem-kiosk/app/demo-1.jar.bak" ]; then
+            crash "Limite crash raggiunto con backup. Eseguo ROLLBACK..."
+            mv "/home/kiosk/.totem-kiosk/app/demo-1.jar.bak" "/home/kiosk/.totem-kiosk/app/demo-1.jar"
+            touch "/home/kiosk/.totem-kiosk/app/rollback_pending.json"
+            CRASH_COUNT=0
+            log "Rollback completato. Attesa 5s poi riavvio app..."
+            sleep 5
+            continue
+        fi
+        
+        crash "Limite crash raggiunto e nessun backup. Reboot tra 10s..."
         sleep 10
         sudo /sbin/reboot
         exit 1

@@ -1,5 +1,6 @@
 package com.api;
 
+import com.util.SystemManager;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -26,8 +27,8 @@ public class Api {
         b.header("Content-Type", "application/json");
         String token = SessionManager.getToken();
         if (token != null && !token.isBlank()) {
+            // Per le richieste autenticate usa Authorization: Bearer
             b.header("Authorization", "Bearer " + token);
-            b.header("X-Api-Key", token);
         }
         return b;
     }
@@ -45,9 +46,19 @@ public class Api {
             return result;
         // Log corpo completo per debug (utile per 422 Unprocessable Entity)
         System.err.println("[Api] HTTP " + status + " body: " + body);
+        System.err.println("[Api] Richiesta: " + response.request().toString());
+        System.err.println("[Api] Header Authorization inviato: " + response.request().headers().firstValue("Authorization"));
         String msg = result.has("message") ? result.get("message").getAsString()
                 : result.has("error") ? result.get("error").getAsString()
+                : result.has("messaggio") ? result.get("messaggio").getAsString()
                         : "Errore HTTP " + status;
+
+        // Se la API key e' invalida, blocca immediatamente il totem.
+        if (status == 401 && "totem disattivato".equalsIgnoreCase(msg)) {
+            SessionManager.clearToken();
+            SystemManager.lockApp("Totem disattivato. Accesso disabilitato.\nContatta l'assistenza tecnica.");
+        }
+
         throw new Exception("HTTP " + status + ": " + msg);
     }
 

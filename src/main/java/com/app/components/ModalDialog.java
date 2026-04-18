@@ -479,8 +479,11 @@ public final class ModalDialog {
         dialogNode = new VBox();
         dialogNode.getStyleClass().addAll("modal-dialog", "modal-type-" + type.name().toLowerCase());
         dialogNode.setMaxWidth(maxWidth);
-        if (maxHeight > 0)
+        if (maxHeight > 0) {
             dialogNode.setMaxHeight(maxHeight);
+        } else {
+            dialogNode.setMaxHeight(Region.USE_PREF_SIZE);
+        }
         dialogNode.setMinWidth(Math.min(maxWidth, 280));
 
         // ── Header ────────────────────────────────────────────────────
@@ -565,6 +568,7 @@ public final class ModalDialog {
         if (title != null && !title.isBlank()) {
             Label titleLbl = new Label(title);
             titleLbl.getStyleClass().add("modal-title");
+            titleLbl.setStyle("-fx-font-size: 32px;"); // Ingrandisce forzatamente il titolo
             titleLbl.setWrapText(true);
             titleBox.getChildren().add(titleLbl);
         }

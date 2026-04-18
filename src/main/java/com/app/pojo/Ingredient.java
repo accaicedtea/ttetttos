@@ -31,9 +31,17 @@ public class Ingredient {
             return null;
         int id = JsonHelper.intVal(j, "id", 0);
         String nome = JsonHelper.str(j, "nome", "");
-        boolean disponibile = JsonHelper.intVal(j, "disponibile", 0) == 1;
+        
+        // Verifica se disponibile è boolean o int dal server CodeIgniter
+        boolean disponibile;
+        if (j.has("disponibile") && j.get("disponibile").isJsonPrimitive() && j.get("disponibile").getAsJsonPrimitive().isBoolean()) {
+            disponibile = j.get("disponibile").getAsBoolean();
+        } else {
+            disponibile = JsonHelper.intVal(j, "disponibile", 0) == 1;
+        }
+
         List<String> allergeni = JsonHelper.toStringList(JsonHelper.arr(j, "allergeni"));
-        double prezzo = JsonHelper.parsePrice(j, "prezzo");
+        double prezzo = JsonHelper.doubleVal(j, "prezzo", 0.0);
         return new Ingredient(id, nome, disponibile, allergeni, prezzo);
     }
 
