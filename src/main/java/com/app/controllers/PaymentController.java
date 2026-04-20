@@ -1,8 +1,11 @@
 package com.app.controllers;
 
 import javafx.animation.*;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
@@ -19,7 +22,11 @@ import com.util.Navigator;
  * - Estende BaseController (t(), setVisible())
  * - Nessun'altra modifica funzionale
  */
-public class PaymentController extends BaseController {
+public class PaymentController extends BaseController implements Navigator.ScreenReturnable {
+
+    // Inactivity monitoring
+    private EventHandler<MouseEvent> inactivityResetMouseHandler;
+    private EventHandler<KeyEvent> inactivityResetKeyHandler;
 
     @FXML
     private Label titleLabel;
@@ -36,6 +43,10 @@ public class PaymentController extends BaseController {
     @FXML
     private StackPane rootPane;
 
+    private final javafx.beans.value.ChangeListener<Boolean> networkListener = (obs, oldVal, newVal) -> {
+        updateCardStatus(newVal);
+    };
+
     @FXML
     private void initialize() {
         this.rootStack = rootPane;
@@ -51,6 +62,46 @@ public class PaymentController extends BaseController {
         Animations.touchFeedback(cashCard);
         Animations.touchFeedback(cardCard);
         animateCards();
+
+        // Controlla lo stato iniziale
+        updateCardStatus(com.util.NetworkWatchdog.isOnline());
+        // Aggiungi un listener alla property globale per cambiarlo in tempo reale
+        com.util.NetworkWatchdog.onlineProperty.addListener(networkListener);
+
+        // Setup inactivity monitoring
+        setupInactivityMonitoring();
+    }
+
+    @Override
+    public void onReturn() {
+        // Avvia il monitoraggio dell'inattività quando si ritorna a questo schermo
+        com.util.InactivityManager.startMonitoring(Navigator.Screen.PAYMENT, rootStack);
+    }
+
+    private void setupInactivityMonitoring() {
+        if (rootStack == null) return;
+
+        // Handler per mouse e tastiera che resetta il timer
+        inactivityResetMouseHandler = event -> com.util.InactivityManager.resetTimer();
+        inactivityResetKeyHandler = event -> com.util.InactivityManager.resetTimer();
+
+        // Aggiungi event filter al rootStack per catturare tutte le interazioni
+        rootStack.addEventFilter(MouseEvent.ANY, inactivityResetMouseHandler);
+        rootStack.addEventFilter(KeyEvent.ANY, inactivityResetKeyHandler);
+
+        // Avvia il monitoraggio con rootStack per il dialogo di conferma
+        com.util.InactivityManager.startMonitoring(Navigator.Screen.PAYMENT, rootStack);
+    }
+
+    private void updateCardStatus(boolean online) {
+        if (cardCard != null) {
+            cardCard.setDisable(!online);
+            if (!online) {
+                cardSubLabel.setText("NON DISPONIBILE OFFLINE");
+            } else {
+                t(cardSubLabel, "card_sub");
+            }
+        }
     }
 
     @FXML
@@ -77,8 +128,8 @@ public class PaymentController extends BaseController {
         setVisible(cardCard, true);
         cardCard.setDisable(true);
 
-        OrderQueue.submitOrder(CartManager.get(), method,
-                orderNumber -> Navigator.goTo(Navigator.Screen.CONFIRM, orderNumber));
+        final int orderId = com.app.model.OrderStateManager.get().getCurrentOrderId(); java.util.concurrent.Executors.newSingleThreadExecutor().submit(() -> { try { com.api.services.OrdersService.startPayment(orderId); javafx.application.Platform.runLater(() -> { com.app.model.OrderStateManager.get().transitionToPaymentStarted(); Navigator.goTo(Navigator.Screen.CONFIRM, String.valueOf(orderId)); }); } catch(Exception e) { e.printStackTrace(); javafx.application.Platform.runLater(() -> Navigator.goTo(Navigator.Screen.CONFIRM, String.valueOf(orderId))); } });
+                
     }
 
     private void animateCards() {

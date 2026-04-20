@@ -2,6 +2,7 @@ package com.app.model;
 
 import com.api.services.OrdersService;
 import com.google.gson.*;
+import com.app.model.OrderStateManager;
 
 import java.nio.file.*;
 import java.time.Duration;
@@ -102,27 +103,30 @@ public final class OrderQueue {
         }
     }
 
-    public static void submitOrder(CartManager cart, String method,
-            java.util.function.Consumer<String> onDone) {
-        String pagamento = switch (method) {
-            case "cash" -> "contanti";
-            case "card" -> "carta";
-            default -> method;
-        };
+    public static void createOrderAsync(CartManager cart, Runnable onSuccess, java.util.function.Consumer<String> onError) {
+        String pagamento = "N/A"; // Il pagamento effettivo verrà gestito dopo
         JsonObject payload = buildServerPayload(cart, pagamento);
-        System.err.println("[OrderQueue] submitOrder payload: " + payload.toString());
+        System.err.println("[OrderQueue] createOrderAsync payload: " + payload.toString());
+        
         EXECUTOR.submit(() -> {
             try {
                 JsonObject resp = OrdersService.createOrder(payload);
                 String numero = extractNumeroOrdine(resp);
+                
+                try {
+                    int orderId = Integer.parseInt(numero);
+                    OrderStateManager.get().createOrder(orderId);
+                } catch (NumberFormatException e) {
+                    System.err.println("[OrderQueue] Invalid order ID format: " + numero);
+                }
+                
                 clearCurrentOrder();
-                if (onDone != null)
-                    javafx.application.Platform.runLater(() -> onDone.accept(numero));
+                if (onSuccess != null)
+                    javafx.application.Platform.runLater(onSuccess);
             } catch (Exception e) {
-                System.err.println("[OrderQueue] Offline, coda: " + e.getMessage());
-                String localNum = addToQueue(payload);
-                if (onDone != null)
-                    javafx.application.Platform.runLater(() -> onDone.accept(localNum));
+                System.err.println("[OrderQueue] Errore creazione ordine: " + e.getMessage());
+                if (onError != null)
+                    javafx.application.Platform.runLater(() -> onError.accept(e.getMessage()));
             }
         });
     }

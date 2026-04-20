@@ -216,6 +216,85 @@ public final class ModalDialog {
     }
 
     /**
+     * Modal di conferma con countdown automatico.
+     * Se l'utente non risponde entro i secondi specificati, esegue l'azione onTimeout.
+     * 
+     * <pre>
+     * ModalDialog.confirmWithTimeout(rootPane, "Conferma?", "Sei sicuro?", 10,
+     *     () -> System.out.println("Continua"),
+     *     () -> System.out.println("Chiudi")
+     * );
+     * </pre>
+     *
+     * @param timeoutSeconds secondi prima del timeout automatico
+     * @param onContinue azione se l'utente clicca "Continua a ordinare" (verde)
+     * @param onClose azione se l'utente clicca "Chiudi" (rosso) o se il timeout scade
+     */
+    public static ModalDialog confirmWithTimeout(StackPane parent, String title, String message,
+            int timeoutSeconds, Runnable onContinue, Runnable onClose) {
+        
+        Label countdownLabel = new Label(String.valueOf(timeoutSeconds));
+        countdownLabel.getStyleClass().add("modal-countdown-label");
+        countdownLabel.setStyle("-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #ff6b6b;");
+        
+        VBox content = new VBox(12);
+        content.setAlignment(Pos.CENTER);
+        Label msgLabel = new Label(message);
+        msgLabel.setWrapText(true);
+        msgLabel.getStyleClass().add("modal-message-label");
+        
+        HBox countdownBox = new HBox(8);
+        countdownBox.setAlignment(Pos.CENTER);
+        Label countdownText = new Label("Ritorno a WELCOME tra: ");
+        countdownText.setStyle("-fx-font-size: 11;");
+        countdownBox.getChildren().addAll(countdownText, countdownLabel);
+        
+        content.getChildren().addAll(msgLabel, countdownBox);
+        
+        ModalDialog[] ref = new ModalDialog[1];
+        Timeline[] countdownTimeline = new Timeline[1];
+        
+        ref[0] = builder(parent)
+                .type(Type.WARNING)
+                .title(title)
+                .customContent(content)
+                .closeOnBackdrop(false)
+                .closeable(false)
+                .button(ModalButton.danger("Chiudi", () -> {
+                    if (countdownTimeline[0] != null) {
+                        countdownTimeline[0].stop();
+                    }
+                    if (onClose != null) onClose.run();
+                    ref[0].dismiss();
+                }))
+                .button(ModalButton.primary("Continua a ordinare", () -> {
+                    if (countdownTimeline[0] != null) {
+                        countdownTimeline[0].stop();
+                    }
+                    if (onContinue != null) onContinue.run();
+                    ref[0].dismiss();
+                }))
+                .show();
+        
+        // Countdown timeline
+        countdownTimeline[0] = new Timeline();
+        for (int i = timeoutSeconds; i >= 0; i--) {
+            final int sec = i;
+            countdownTimeline[0].getKeyFrames().add(
+                new KeyFrame(Duration.seconds(timeoutSeconds - sec),
+                    e -> countdownLabel.setText(String.valueOf(sec)))
+            );
+        }
+        countdownTimeline[0].setOnFinished(e -> {
+            if (onClose != null) onClose.run();
+            ref[0].dismiss();
+        });
+        countdownTimeline[0].play();
+        
+        return ref[0];
+    }
+
+    /**
      * Modal con campo di input testuale.
      * 
      * <pre>

@@ -14,6 +14,10 @@ public class OrdersService {
         return Api.apiGet(BASE + "/" + id);
     }
 
+    public static JsonObject startPayment(int id) throws Exception {
+        return Api.apiPatch(BASE + "/" + id + "/pagamento-avviato", new JsonObject());
+    }
+
     public static JsonObject confirmPayment(int id) throws Exception {
         return Api.apiPatch(BASE + "/" + id + "/pagato", new JsonObject());
     }

@@ -24,10 +24,11 @@ import com.app.components.ToastOverlay;
 import com.app.model.CartItem;
 import com.app.model.CartManager;
 import com.app.pojo.Ingredient;
-import com.api.services.IngredientService;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.api.repository.DataRepository;
+import com.api.repository.DataRepository;
 import com.util.Animations;
 import com.util.RemoteLogger;
 
@@ -77,11 +78,9 @@ public class ComposeKumpirController extends BaseController {
             System.getProperty("user.home"), ".kumpirapp", "ingredients_cache.json");
 
     private final ShopHeaderController headerController;
-    private final ExecutorService backgroundExecutor;
     private ScheduledExecutorService bgSync;
 
     private Button composeKumpirBtn;
-    private ToastOverlay toastOverlay;
     private StackPane kumpirOverlay;
     private VBox kumpirCard;
     private Label kumpirTotalLbl;
@@ -126,16 +125,10 @@ public class ComposeKumpirController extends BaseController {
             ShopHeaderController headerController) {
         this.rootStack = rootStack;
         this.headerController = headerController;
-        this.backgroundExecutor = Executors.newFixedThreadPool(
-                Math.max(2, Runtime.getRuntime().availableProcessors()));
     }
 
     public void init(Button composeKumpirBtn) {
         this.composeKumpirBtn = composeKumpirBtn;
-        if (rootStack != null) {
-            toastOverlay = new ToastOverlay();
-            rootStack.getChildren().add(toastOverlay);
-        }
         initComposeKumpirButton();
         prebuildIngredientNodes();
     }
@@ -145,13 +138,12 @@ public class ComposeKumpirController extends BaseController {
     // ────────────────────────────────────────────────────────────────────────
 
     private void prebuildIngredientNodes() {
-        backgroundExecutor.submit(() -> {
+        runAsync(() -> {
             List<Ingredient> cached = loadFromDiskCache();
             if (!cached.isEmpty())
                 buildNodesFromList(cached);
             try {
-                JsonArray fresh = IngredientService.getIngredients();
-                List<Ingredient> fl = Ingredient.listFromJsonArray(fresh);
+                List<Ingredient> fl = DataRepository.getIngredients();
                 saveToDiskCache(fl);
                 if (ingNodes.isEmpty())
                     buildNodesFromList(fl);
@@ -493,8 +485,7 @@ public class ComposeKumpirController extends BaseController {
         });
         bgSync.scheduleWithFixedDelay(() -> {
             try {
-                JsonArray fresh = IngredientService.getIngredients();
-                List<Ingredient> freshList = Ingredient.listFromJsonArray(fresh);
+                List<Ingredient> freshList = DataRepository.getIngredients();
                 saveToDiskCache(freshList);
                 applyDelta(freshList);
             } catch (Exception e) {
@@ -564,7 +555,10 @@ public class ComposeKumpirController extends BaseController {
             rootStack.getChildren().get(0).setEffect(new javafx.scene.effect.GaussianBlur(10));
         }
 
+        // FIX: Rendi kumpirOverlay managed=true per bloccare i click
+        kumpirOverlay.setManaged(true);
         kumpirOverlay.setVisible(true);
+        kumpirOverlay.toFront(); // Assicura che sia davanti
         new Timeline(
                 new KeyFrame(Duration.ZERO,
                         new KeyValue(kumpirCard.opacityProperty(), 0.0),
@@ -584,7 +578,7 @@ public class ComposeKumpirController extends BaseController {
         kumpirTotalLbl = new Label(PRICE_BASE_FMT);
         kumpirTotalLbl.getStyleClass().add("kumpir-total-label");
 
-        kumpirCountLbl = new Label("Nessun ingrediente selezionato");
+        kumpirCountLbl = new Label("NESSUN INGREDIENTE SELEZIONATO");
         kumpirCountLbl.getStyleClass().add("kumpir-count-label");
 
         kumpirOverlay = new StackPane();
@@ -618,11 +612,11 @@ public class ComposeKumpirController extends BaseController {
 
         VBox titleBlock = new VBox(4);
         HBox.setHgrow(titleBlock, Priority.ALWAYS);
-        Label titleLbl = new Label("Componi il tuo Kumpir");
+        Label titleLbl = new Label("COMPONI IL TUO KUMPIR");
         titleLbl.getStyleClass().add("kumpir-modal-title");
         Label subtitleLbl = new Label(
-                "Base patata: € " + String.format("%.2f", KUMPIR_BASE_PRICE).replace('.', ',')
-                        + "  •  Ingredienti con prezzo variabile");
+                "BASE PATATA: € " + String.format("%.2f", KUMPIR_BASE_PRICE).replace('.', ',')
+                        + "  •  INGREDIENTI CON PREZZO VARIABILE");
         subtitleLbl.getStyleClass().add("kumpir-modal-subtitle");
         titleBlock.getChildren().addAll(titleLbl, subtitleLbl);
 
@@ -693,7 +687,7 @@ public class ComposeKumpirController extends BaseController {
                 (obs, o, nw) -> syncGridGap(nw.doubleValue()));
 
         /* ── footer bar ── */
-        Button addBtn = new Button("🛒  Aggiungi al carrello");
+        Button addBtn = new Button("🛒  AGGIUNGI AL CARRELLO");
         addBtn.getStyleClass().add("kumpir-add-btn");
 
         Region spacer = new Region();
@@ -718,6 +712,7 @@ public class ComposeKumpirController extends BaseController {
             
             out.setOnFinished(ev -> {
                 kumpirOverlay.setVisible(false);
+                kumpirOverlay.setManaged(false); // FIX: Rilascia lo spazio quando nascosto
                 // Rimuovi l'effetto blur dal contenuto principale
                 if (!rootStack.getChildren().isEmpty() && rootStack.getChildren().get(0) != kumpirOverlay) {
                     rootStack.getChildren().get(0).setEffect(null);
@@ -759,10 +754,7 @@ public class ComposeKumpirController extends BaseController {
                 headerController.setCartCount(CartManager.get().totalItems());
                 headerController.bounceCart();
             }
-            if (toastOverlay != null)
-                toastOverlay.show("Kumpir aggiunto al carrello! 🥔");
-            else
-                showToast("Kumpir aggiunto al carrello! 🥔");
+            showToast("Kumpir aggiunto al carrello! 🥔");
         });
 
         kumpirCard.getChildren().addAll(modalHeader, filterBar, gridScroll, totalBar);
@@ -838,7 +830,7 @@ public class ComposeKumpirController extends BaseController {
         if (kumpirTotalLbl != null)
             kumpirTotalLbl.setText(PRICE_BASE_FMT);
         if (kumpirCountLbl != null)
-            kumpirCountLbl.setText("Nessun ingrediente selezionato");
+            kumpirCountLbl.setText("NESSUN INGREDIENTE SELEZIONATO");
     }
 
     private void updateKumpirTotals() {
@@ -847,11 +839,11 @@ public class ComposeKumpirController extends BaseController {
         double total = KUMPIR_BASE_PRICE + selectedIngredientsTotal;
         kumpirTotalLbl.setText(formatPrice(total));
         kumpirCountLbl.setText(selectedCount == 0
-                ? "Nessun ingrediente selezionato"
-                : selectedCount + " ingredient"
-                        + (selectedCount == 1 ? "e" : "i")
-                        + " selezionat"
-                        + (selectedCount == 1 ? "o" : "i"));
+                ? "NESSUN INGREDIENTE SELEZIONATO"
+                : selectedCount + " INGREDIENT"
+                        + (selectedCount == 1 ? "E" : "I")
+                        + " SELEZIONAT"
+                        + (selectedCount == 1 ? "O" : "I"));
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -861,7 +853,7 @@ public class ComposeKumpirController extends BaseController {
     private void initComposeKumpirButton() {
         if (composeKumpirBtn == null)
             return;
-        composeKumpirBtn.setText("Componi il tuo Kumpir");
+        composeKumpirBtn.setText("COMPONI IL TUO KUMPIR");
         composeKumpirBtn.setDisable(true);
         composeKumpirBtn.setOnAction(e -> openComposeKumpir());
 
@@ -911,20 +903,9 @@ public class ComposeKumpirController extends BaseController {
                 new KeyFrame(Duration.millis(275), new KeyValue(node.translateXProperty(), 0))).play();
     }
 
-    public void setOnline(boolean online) {
-        if (headerController != null)
-            headerController.setOnline(online);
-        if (toastOverlay != null)
-            showToast(online
-                    ? "Connessione internet ripristinata"
-                    : "Connessione internet persa: modalità offline");
-    }
-
     public void destroy() {
         if (bgSync != null && !bgSync.isShutdown())
             bgSync.shutdownNow();
-        if (backgroundExecutor != null && !backgroundExecutor.isShutdown())
-            backgroundExecutor.shutdownNow();
         if (kumpirBtnPulse != null)
             kumpirBtnPulse.stop();
         if (filterDebounce != null)

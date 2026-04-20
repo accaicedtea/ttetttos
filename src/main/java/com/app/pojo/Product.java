@@ -57,6 +57,22 @@ public final class Product {
         return imageUrl != null && !imageUrl.isBlank();
     }
 
+    public static Product fromPromotion(Promotion p) {
+        JsonObject obj = new JsonObject();
+        obj.addProperty("id", p.id);
+        obj.addProperty("nome", p.nome);
+        obj.addProperty("descrizione", p.descrizione != null ? p.descrizione : "");
+        obj.addProperty("prezzo", 0.0); // O magari parsare sconto se è una stringa numerica
+        if (p.sconto != null && p.sconto.matches("\\d+(\\.\\d+)?")) {
+           obj.addProperty("prezzo", Double.parseDouble(p.sconto));
+        }
+        obj.addProperty("categoria", "Promozioni");
+        if (p.imageUrl != null && !p.imageUrl.isEmpty()) {
+            obj.addProperty("immagine_url", p.imageUrl);
+        }
+        return Product.from(obj);
+    }
+
     @Override
     public String toString() {
         return "Product{id=" + id + ", nome='" + nome + "', prezzo=" + prezzo + "}";

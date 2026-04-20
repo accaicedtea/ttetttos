@@ -22,13 +22,13 @@
                 styleClass="check-icon" />
         </StackPane>
 
-        <Label fx:id="titleLabel" text="Conferma" styleClass="confirm-title" wrapText="true" />
+        <Label fx:id="titleLabel" text="CONFERMA" styleClass="confirm-title" wrapText="true" />
 
-        <Label fx:id="msgLabel" text="Sei sicuro?" styleClass="confirm-msg" wrapText="true" />
+        <Label fx:id="msgLabel" text="SEI SICURO?" styleClass="confirm-msg" wrapText="true" />
 
         <HBox spacing="16" alignment="CENTER">
-            <Button fx:id="cancelBtn" text="Annulla" styleClass="confirm-btn-secondary" />
-            <Button fx:id="confirmBtn" text="Conferma" styleClass="confirm-btn-primary" />
+            <Button fx:id="cancelBtn" text="ANNULLA" styleClass="confirm-btn-secondary" />
+            <Button fx:id="confirmBtn" text="CONFERMA" styleClass="confirm-btn-primary" />
         </HBox>
     </VBox>
 

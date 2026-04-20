@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
@@ -10,71 +11,93 @@
 <?import javafx.scene.layout.VBox?>
 <?import org.kordamp.ikonli.javafx.FontIcon?>
 
-<StackPane fx:id="rootStack"
-    xmlns="http://javafx.com/javafx/21"
+<!-- ROOT -->
+<StackPane fx:id="rootStack" xmlns="http://javafx.com/javafx/21"
     xmlns:fx="http://javafx.com/fxml/1"
     fx:controller="com.app.controllers.ShopPageController">
 
-    <BorderPane styleClass="main-pane">
+    <!-- LAYER 1: Content -->
+    <VBox spacing="0">
 
-        <!-- ══ TOP ══ -->
-        <top>
-            <fx:include fx:id="header" source="ShopHeader.fxml" />
-        </top>
+        <!-- TOP: Sistema Header [FISSO] -->
+        <fx:include fx:id="header" source="ShopHeader.fxml" />
 
-        <!-- ══ LEFT: Categorie + Componi Kumpir ══ -->
-        <left>
-            <VBox styleClass="sidebar-pane" prefWidth="220" spacing="0">
-
-                <!-- Categorie (cresce per riempire lo spazio disponibile) -->
-                <ScrollPane fx:id="categoriesScroll"
-                    fitToWidth="true"
-                    focusTraversable="false"
-                    hbarPolicy="NEVER"
-                    vbarPolicy="NEVER"
-                    styleClass="categories-scroll"
-                    VBox.vgrow="ALWAYS">
-                    <VBox fx:id="categoriesPane" spacing="2" styleClass="categories-pane" />
-                </ScrollPane>
-
-                <!-- Bottone kumpir: SOTTO le categorie, ben visibile, grande e touch-friendly -->
-                <VBox styleClass="compose-kumpir-container" alignment="CENTER" spacing="0">
-                    <Button fx:id="composeKumpirBtn"
-                        text="🥔  Componi il tuo Kumpir"
-                        styleClass="compose-kumpir-btn"
-                        maxWidth="Infinity"
-                        wrapText="true"
-                        focusTraversable="false" />
-                </VBox>
-
+        <!-- SHOP MENU HEADER [FISSO] -->
+        <HBox alignment="CENTER_LEFT" spacing="14" styleClass="shop-header" 
+            minHeight="70" prefHeight="70" maxHeight="70">
+            <FontIcon iconLiteral="mdi2f-food-fork-drink" iconSize="36" styleClass="shop-header-icon" />
+            <VBox spacing="2" alignment="CENTER_LEFT">
+                <Label fx:id="menuTitleLabel" text="IL NOSTRO MENU" styleClass="shop-header-title" />
+                <Label fx:id="categoryTitleLabel" styleClass="shop-header-hint" text="CARICAMENTO..." />
             </VBox>
-        </left>
+            <Region HBox.hgrow="ALWAYS" />
+        </HBox>
 
-        <!-- ══ CENTER: Prodotti ══ -->
-        <center>
-            <ScrollPane fx:id="productsScroll"
-                fitToWidth="true" focusTraversable="false"
-                hbarPolicy="NEVER" vbarPolicy="NEVER"
-                styleClass="products-scroll">
-                <FlowPane fx:id="productsPane" hgap="16" vgap="16"
-                    styleClass="products-pane" />
-            </ScrollPane>
-        </center>
+        <!-- CONTENUTO E TASTO FLOATING -->
+        <StackPane VBox.vgrow="ALWAYS">
+            <BorderPane styleClass="main-pane">
 
-    </BorderPane>
+                <!-- LEFT: Categorie + Componi Kumpir -->
+                <left>
+                    <VBox styleClass="sidebar-pane" prefWidth="220" spacing="0">
+                        <ScrollPane fx:id="categoriesScroll"
+                            fitToWidth="true" focusTraversable="false"
+                            hbarPolicy="NEVER" vbarPolicy="NEVER"
+                            styleClass="categories-scroll" VBox.vgrow="ALWAYS">
+                            <VBox fx:id="categoriesPane" spacing="2" styleClass="categories-pane" />
+                        </ScrollPane>
+                        <VBox styleClass="compose-kumpir-container" alignment="CENTER" spacing="0">
+                            <Button fx:id="composeKumpirBtn" text="🥔  COMPONI IL TUO KUMPIR"
+                                styleClass="compose-kumpir-btn" maxWidth="Infinity"
+                                minHeight="80" prefHeight="80"
+                                wrapText="true" focusTraversable="false" />
+                        </VBox>
+                    </VBox>
+                </left>
 
-    <!-- ══ MODAL PRODOTTO ══ -->
-    <StackPane fx:id="modalOverlay"
-        visible="false" managed="false"
+                <!-- CENTER: Prodotti -->
+                <center>
+                    <ScrollPane fx:id="productsScroll"
+                        fitToWidth="true" focusTraversable="false"
+                        hbarPolicy="NEVER" vbarPolicy="NEVER" styleClass="products-scroll">
+                        <FlowPane fx:id="productsPane" hgap="16" vgap="16"
+                            styleClass="products-pane" />
+                    </ScrollPane>
+                </center>
+
+            </BorderPane>
+
+            <!-- QUICK CART -->
+            <Button fx:id="quickCartBtn" text="" styleClass="quick-cart-btn"
+                visible="false" managed="false" onAction="#onQuickCartClick"
+                StackPane.alignment="BOTTOM_RIGHT">
+                <StackPane.margin>
+                    <Insets bottom="20" right="20" />
+                </StackPane.margin>
+                <graphic>
+                    <FontIcon iconLiteral="mdi2c-cart" iconSize="20"
+                        styleClass="quick-cart-icon" />
+                </graphic>
+            </Button>
+        </StackPane>
+
+        <!-- BOTTOM: Footer [FISSO] -->
+        <HBox alignment="CENTER" styleClass="global-footer" style="-fx-padding: 10;">
+            <Label text="Totem Kiosk v1.0 | © 2026 TOTTEM"
+                style="-fx-text-fill: #888888; -fx-font-size: 12px;"/>
+        </HBox>
+    </VBox>
+
+    <!-- LAYER 2: modalOverlay per product detail -->
+    <StackPane fx:id="modalOverlay" visible="false" managed="false"
         styleClass="modal-overlay" alignment="CENTER"
+        pickOnBounds="true" focusTraversable="true"
         onMouseClicked="#onModalOverlayClicked">
 
         <VBox fx:id="modalCard" spacing="0" styleClass="modal-card">
-
-            <!-- Header modal -->
             <HBox alignment="CENTER_LEFT" spacing="16" styleClass="modal-header">
                 <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label fx:id="modalTitle" styleClass="modal-title" text="Prodotto" />
+                    <Label fx:id="modalTitle" styleClass="modal-title" text="PRODOTTO" />
                     <Label fx:id="modalPrice" styleClass="modal-price" />
                 </VBox>
                 <Button fx:id="modalClose" onAction="#hideModal"
@@ -86,30 +109,27 @@
                 </Button>
             </HBox>
 
-            <!-- Body scrollabile -->
             <ScrollPane fitToWidth="true" styleClass="modal-body-scroll" VBox.vgrow="ALWAYS">
                 <VBox spacing="20" styleClass="modal-body">
                     <Label fx:id="modalDesc" styleClass="modal-desc" wrapText="true" />
 
-                    <!-- Allergeni -->
                     <VBox fx:id="modalAllergenSection" spacing="10"
                         managed="false" visible="false">
                         <HBox spacing="8" alignment="CENTER_LEFT">
-                            <FontIcon iconLiteral="mdi2a-alert-rhombus"
-                                iconSize="20" styleClass="allergen-icon" />
-                            <Label text="Allergeni" styleClass="modal-section-label" />
+                            <FontIcon iconLiteral="mdi2a-alert-rhombus" iconSize="20"
+                                styleClass="allergen-icon" />
+                            <Label text="ALLERGENI" styleClass="modal-section-label" />
                         </HBox>
                         <FlowPane fx:id="modalAllergenChips" hgap="10" vgap="10"
                             styleClass="allergen-chips-pane" />
                     </VBox>
 
-                    <!-- Ingredienti -->
                     <VBox fx:id="modalIngredientSection" spacing="10"
                         managed="false" visible="false">
                         <HBox spacing="8" alignment="CENTER_LEFT">
-                            <FontIcon iconLiteral="mdi2f-food-variant"
-                                iconSize="20" styleClass="ingredient-icon" />
-                            <Label text="Ingredienti" styleClass="modal-section-label" />
+                            <FontIcon iconLiteral="mdi2f-food-variant" iconSize="20"
+                                styleClass="ingredient-icon" />
+                            <Label text="INGREDIENTI" styleClass="modal-section-label" />
                         </HBox>
                         <FlowPane fx:id="modalIngredients" hgap="10" vgap="10"
                             styleClass="ingredients-pane" />
@@ -117,37 +137,26 @@
                 </VBox>
             </ScrollPane>
 
-            <!-- Aggiungi al carrello -->
             <Button fx:id="addToCartBtn" onAction="#onAddToCart"
-                styleClass="add-to-cart-btn"
-                text="Aggiungi al carrello" maxWidth="Infinity">
+                styleClass="add-to-cart-btn" text="AGGIUNGI AL CARRELLO" maxWidth="Infinity">
                 <graphic>
-                    <FontIcon iconLiteral="mdi2c-cart-plus"
-                        iconSize="26" styleClass="add-to-cart-icon" />
+                    <FontIcon iconLiteral="mdi2c-cart-plus" iconSize="26"
+                        styleClass="add-to-cart-icon" />
                 </graphic>
             </Button>
-
         </VBox>
     </StackPane>
 
-    <!-- ══ TOAST ══ -->
+    <!-- TOAST -->
     <HBox fx:id="toastBox" alignment="CENTER" spacing="10"
-        styleClass="toast-label"
-        visible="false" managed="false"
+        styleClass="toast-label" visible="false" managed="false"
         StackPane.alignment="BOTTOM_CENTER">
+        <StackPane.margin>
+            <Insets bottom="50" />
+        </StackPane.margin>
         <FontIcon iconLiteral="mdi2c-check-circle" iconSize="22"
             styleClass="toast-icon" />
-        <Label fx:id="toastLabel" text="Aggiunto!" styleClass="toast-text" />
+        <Label fx:id="toastLabel" text="AGGIUNTO!" styleClass="toast-text" />
     </HBox>
-
-    <!-- ══ QUICK CART ══ -->
-    <Button fx:id="quickCartBtn" text="" styleClass="quick-cart-btn"
-        visible="false" managed="false"
-        onAction="#onQuickCartClick"
-        StackPane.alignment="BOTTOM_RIGHT">
-        <graphic>
-            <FontIcon iconLiteral="mdi2c-cart" iconSize="20" styleClass="quick-cart-icon" />
-        </graphic>
-    </Button>
 
 </StackPane>

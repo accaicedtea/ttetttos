@@ -140,3 +140,8 @@
     -fx-padding:   80 40;
     -fx-alignment: center;
 }
+
+#proceedBtn {
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+}

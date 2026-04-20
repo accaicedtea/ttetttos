@@ -22,15 +22,15 @@
             iconSize="100"
             styleClass="splash-logo-icon" />
 
-        <Label text="Totem Ordini" styleClass="splash-app-name" />
-        <Label text="Sistema di ordinazione digitale" styleClass="splash-app-sub" />
+        <Label text="TOTEM ORDINI" styleClass="splash-app-name" />
+        <Label text="SISTEMA DI ORDINAZIONE DIGITALE" styleClass="splash-app-sub" />
 
         <Region prefHeight="60" />
 
         <!-- Step corrente -->
         <FontIcon fx:id="stepIconNode" iconLiteral="mdi2c-cog"
             iconSize="36" styleClass="splash-step-icon-node" />
-        <Label fx:id="stepLabel" text="Avvio in corso..."
+        <Label fx:id="stepLabel" text="AVVIO IN CORSO..."
             styleClass="splash-step-label" />
 
         <Region prefHeight="24" />

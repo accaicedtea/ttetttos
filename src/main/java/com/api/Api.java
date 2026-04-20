@@ -1,6 +1,7 @@
 package com.api;
 
 import com.util.SystemManager;
+import com.api.repository.DataCache;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -57,6 +58,7 @@ public class Api {
         if (status == 401 && "totem disattivato".equalsIgnoreCase(msg)) {
             SessionManager.clearToken();
             SystemManager.lockApp("Totem disattivato. Accesso disabilitato.\nContatta l'assistenza tecnica.");
+            DataCache.clearAllCaches();
         }
 
         throw new Exception("HTTP " + status + ": " + msg);
@@ -95,6 +97,7 @@ public class Api {
 
     public static JsonObject apiPostPublic(String endpoint, JsonObject data,
             Map<String, String> extra) throws Exception {
+        System.out.println("[Api] POST " + BASE_URL + endpoint);
         String body = data != null ? data.toString() : "{}";
         HttpRequest.Builder b = HttpRequest.newBuilder()
                 .uri(URI.create(BASE_URL + endpoint))
@@ -102,69 +105,89 @@ public class Api {
                 .POST(HttpRequest.BodyPublishers.ofString(body));
         if (extra != null)
             extra.forEach(b::header);
-        return handleResponse(send(b.build()));
+        JsonObject result = handleResponse(send(b.build()));
+        System.out.println("[Api]   ✓ POST " + endpoint + " completato");
+        return result;
     }
 
     public static JsonObject apiGetPublic(String endpoint) throws Exception {
+        System.out.println("[Api] GET " + BASE_URL + endpoint);
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(BASE_URL + endpoint))
                 .header("Content-Type", "application/json")
                 .GET().build();
-        return handleResponse(send(req));
+        JsonObject result = handleResponse(send(req));
+        System.out.println("[Api]   ✓ GET " + endpoint + " completato");
+        return result;
     }
 
     // ── Autenticati ───────────────────────────────────────────────────────────
 
     public static JsonObject apiGet(String endpoint) throws Exception {
         requireToken();
+        System.out.println("[Api] GET " + BASE_URL + endpoint);
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
                         .uri(URI.create(BASE_URL + endpoint))
                         .GET())
                 .build();
-        return handleResponse(send(req));
+        JsonObject result = handleResponse(send(req));
+        System.out.println("[Api]   ✓ GET " + endpoint + " completato");
+        return result;
     }
 
     public static JsonObject apiPost(String endpoint, JsonObject data) throws Exception {
         requireToken();
+        System.out.println("[Api] POST " + BASE_URL + endpoint);
         String body = data != null ? data.toString() : "{}";
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
                         .uri(URI.create(BASE_URL + endpoint))
                         .POST(HttpRequest.BodyPublishers.ofString(body)))
                 .build();
-        return handleResponse(send(req));
+        JsonObject result = handleResponse(send(req));
+        System.out.println("[Api]   ✓ POST " + endpoint + " completato");
+        return result;
     }
 
     public static JsonObject apiPut(String endpoint, JsonObject data) throws Exception {
         requireToken();
+        System.out.println("[Api] PUT " + BASE_URL + endpoint);
         String body = data != null ? data.toString() : "{}";
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
                         .uri(URI.create(BASE_URL + endpoint))
                         .PUT(HttpRequest.BodyPublishers.ofString(body)))
                 .build();
-        return handleResponse(send(req));
+        JsonObject result = handleResponse(send(req));
+        System.out.println("[Api]   ✓ PUT " + endpoint + " completato");
+        return result;
     }
 
     public static JsonObject apiPatch(String endpoint, JsonObject data) throws Exception {
         requireToken();
+        System.out.println("[Api] PATCH " + BASE_URL + endpoint);
         String body = data != null ? data.toString() : "{}";
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
                         .uri(URI.create(BASE_URL + endpoint))
                         .method("PATCH", HttpRequest.BodyPublishers.ofString(body)))
                 .build();
-        return handleResponse(send(req));
+        JsonObject result = handleResponse(send(req));
+        System.out.println("[Api]   ✓ PATCH " + endpoint + " completato");
+        return result;
     }
 
     public static JsonObject apiDelete(String endpoint) throws Exception {
         requireToken();
+        System.out.println("[Api] DELETE " + BASE_URL + endpoint);
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
                         .uri(URI.create(BASE_URL + endpoint))
                         .DELETE())
                 .build();
-        return handleResponse(send(req));
+        JsonObject result = handleResponse(send(req));
+        System.out.println("[Api]   ✓ DELETE " + endpoint + " completato");
+        return result;
     }
 }

@@ -8,10 +8,11 @@ import javafx.scene.layout.*;
 import javafx.util.Duration;
 
 import com.app.model.I18n;
-import com.app.model.MenuCache;
+import com.api.repository.DataRepository;
 import com.util.Animations;
 import com.util.FlagIcon;
 import com.util.Navigator;
+import com.util.RemoteLogger;
 
 import java.util.List;
 
@@ -22,7 +23,7 @@ import java.util.List;
  * - Estende BaseController (t(), setVisible())
  * - Resto invariato
  */
-public class WelcomeController extends BaseController implements Navigator.DataReceiver {
+public class WelcomeController extends BaseController implements Navigator.DataReceiver, Navigator.ScreenReturnable {
 
     @FXML
     private StackPane rootPane;
@@ -56,12 +57,34 @@ public class WelcomeController extends BaseController implements Navigator.DataR
         
         // Esegue il controllo aggiornamenti (scatterà una volta sola per l'intero ciclo di vita grazie alla flag interna)
         com.api.services.UpdateService.checkForUpdates();
+
+        // Ferma il monitoraggio dell'inattività in welcome screen
+        com.util.InactivityManager.stopMonitoring();
+    }
+
+    @Override
+    public void onReturn() {
+        // Ferma il monitoraggio quando si ritorna a welcome
+        com.util.InactivityManager.stopMonitoring();
     }
 
     @Override
     public void receiveData(Object data) {
-        if (data instanceof com.google.gson.JsonObject j)
+        if (data instanceof com.google.gson.JsonObject j) {
             preloadedMenu = j;
+        } else if (data instanceof com.app.pojo.MenuData m) {
+            // MenuData ricevuto da InitializationService - fallback a DataRepository
+            try {
+                com.app.pojo.MenuData cached = DataRepository.getMenu();
+                if (cached != null) {
+                    // Serialize MenuData - per ora non fare conversione
+                    preloadedMenu = null; // Will use DataRepository
+                }
+            } catch (Exception e) {
+                // Fallback
+                preloadedMenu = null;
+            }
+        }
     }
 
     private void buildLanguageButtons() {
@@ -102,8 +125,25 @@ public class WelcomeController extends BaseController implements Navigator.DataR
 
     @FXML
     private void onStart() {
-        com.google.gson.JsonObject menu = preloadedMenu != null ? preloadedMenu : MenuCache.loadFromCache();
-        Navigator.goTo(Navigator.Screen.MENU, menu);
+        // Carica menu dai dati precaricati o da DataRepository
+        if (preloadedMenu != null) {
+            // Usa menu precaricato da InitializationService
+            Navigator.goTo(Navigator.Screen.MENU, preloadedMenu);
+        } else {
+            // Carica da DataRepository e naviga
+            try {
+                com.app.pojo.MenuData menuData = DataRepository.getMenu();
+                if (menuData != null && !menuData.isEmpty()) {
+                    // Naviga con MenuData
+                    Navigator.goTo(Navigator.Screen.MENU, menuData);
+                } else {
+                    // Menu vuoto - nulla da fare
+                    System.err.println("[Welcome] Menu vuoto dal repository");
+                }
+            } catch (Exception e) {
+                RemoteLogger.error("Welcome", "onStart load menu", e);
+            }
+        }
     }
 
     private void animateEntrance() {

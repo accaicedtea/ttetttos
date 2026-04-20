@@ -40,7 +40,8 @@ public class ShopHeaderController extends BaseController {
     @FXML
     private void initialize() {
         startClock();
-        setOnline(false);
+        setOnline(com.util.NetworkWatchdog.onlineProperty.get());
+        com.util.NetworkWatchdog.onlineProperty.addListener((obs, oldVal, newVal) -> setOnline(newVal));
     }
 
     private void startClock() {
@@ -63,7 +64,7 @@ public class ShopHeaderController extends BaseController {
 
     public void setOnline(boolean online) {
         if (internetLabel != null)
-            internetLabel.setText(online ? "Online" : "Offline");
+            internetLabel.setText(online ? "ONLINE" : "OFFLINE");
         if (internetIcon != null) {
             internetIcon.getStyleClass().removeAll("status-icon-offline", "status-icon-online");
             internetIcon.getStyleClass().add(online ? "status-icon-online" : "status-icon-offline");
@@ -72,12 +73,12 @@ public class ShopHeaderController extends BaseController {
 
     public void setCategory(String cat) {
         if (categoryTitleLabel != null)
-            categoryTitleLabel.setText(cat);
+            categoryTitleLabel.setText(cat != null ? cat.toUpperCase() : "");
     }
 
     public void setMenuTitle(String title) {
         if (menuTitleLabel != null)
-            menuTitleLabel.setText(title);
+            menuTitleLabel.setText(title != null ? title.toUpperCase() : "");
     }
 
     public void setCartCount(int count) {

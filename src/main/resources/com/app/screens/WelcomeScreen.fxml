@@ -13,41 +13,51 @@
   fx:controller="com.app.controllers.WelcomeController"
   styleClass="welcome-root">
 
-  <VBox fx:id="welcomeContainer" alignment="CENTER" spacing="0"
-    styleClass="welcome-container">
+  <VBox spacing="0">
+      
+      <VBox fx:id="welcomeContainer" alignment="CENTER" spacing="0"
+        styleClass="welcome-container" VBox.vgrow="ALWAYS">
 
-    <!-- Logo -->
-    <FontIcon iconLiteral="mdi2f-food-fork-drink" iconSize="100"
-      styleClass="welcome-logo-icon" />
+        <!-- Logo -->
+        <FontIcon iconLiteral="mdi2f-food-fork-drink" iconSize="100"
+          styleClass="welcome-logo-icon" />
 
-    <Label fx:id="titleLabel" text="Benvenuto" styleClass="welcome-title" />
-    <Label fx:id="subtitleLabel" text="Tocca per iniziare" styleClass="welcome-subtitle" />
+        <Label fx:id="titleLabel" text="BENVENUTO" styleClass="welcome-title" />
+        <Label fx:id="subtitleLabel" text="TOCCA PER INIZIARE" styleClass="welcome-subtitle" />
 
-    <Region prefHeight="20" />
+        <Region prefHeight="20" />
 
-    <Label fx:id="chooseLangLabel" text="Scegli la tua lingua"
-      styleClass="welcome-choose-lang" />
+        <Label fx:id="chooseLangLabel" text="SCEGLI LA TUA LINGUA"
+          styleClass="welcome-choose-lang" />
 
-    <Region prefHeight="24" />
+        <Region prefHeight="24" />
 
-    <!-- Riga 1+2: pulsanti lingua generati dinamicamente da WelcomeController -->
-    <FlowPane fx:id="languagePane" hgap="24" vgap="24" alignment="CENTER" prefWrapLength="600" />
+        <!-- Riga 1+2: pulsanti lingua generati dinamicamente da WelcomeController -->
+        <FlowPane fx:id="languagePane" hgap="24" vgap="24" alignment="CENTER" prefWrapLength="600" />
 
-    <Region prefHeight="20" />
+        <Region prefHeight="20" />
 
-    <Region prefHeight="88" />
+        <Region prefHeight="88" />
 
-    <!-- Pulsante start -->
-    <Button fx:id="startBtn" onAction="#onStart"
-      styleClass="start-btn"
-      text="Inizia l'ordine  →"
-      minWidth="400" minHeight="80"
-      visible="false" managed="false">
-      <graphic>
-        <FontIcon iconLiteral="mdi2a-arrow-right-circle" iconSize="32"
-          styleClass="start-btn-icon" />
-      </graphic>
-    </Button>
+        <!-- Pulsante start -->
+        <Button fx:id="startBtn" onAction="#onStart"
+          styleClass="start-btn"
+          text="INIZIA L'ORDINE  →"
+          minWidth="400" minHeight="80"
+          visible="false" managed="false">
+          <graphic>
+            <FontIcon iconLiteral="mdi2a-arrow-right-circle" iconSize="32"
+              styleClass="start-btn-icon" />
+          </graphic>
+        </Button>
+
+      </VBox>
+
+      <!-- Global Footer -->
+      <HBox alignment="CENTER" styleClass="global-footer" style="-fx-padding: 10;" VBox.vgrow="NEVER">
+          <Label text="Totem Kiosk v1.0 | © 2026 TOTTEM" style="-fx-text-fill: #888888; -fx-font-size: 12px;"/>
+      </HBox>
 
   </VBox>
+
 </StackPane>

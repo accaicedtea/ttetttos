@@ -12,6 +12,8 @@
     -fx-background-color: -color-surface2;
     -fx-padding:          6 22;
     -fx-min-height:       38;
+    -fx-pref-height:      38;
+    -fx-max-height:       38;
     -fx-border-color:     transparent transparent -color-border transparent;
     -fx-border-width:     0 0 1 0;
 }
@@ -42,6 +44,8 @@
     -fx-background-color: -color-surface;
     -fx-padding:          16 24;
     -fx-min-height:       72;
+    -fx-pref-height:      72;
+    -fx-max-height:       72;
     -fx-border-color:     transparent transparent -color-border transparent;
     -fx-border-width:     0 0 1 0;
     -fx-effect:           dropshadow(gaussian, rgba(0,0,0,0.06), 4, 0, 0, 2);
@@ -122,6 +126,22 @@
     -fx-border-width:     0 3 0 0;
 }
 
+/* ── Tab Promozioni Speciale ── */
+.promo-tab {
+    -fx-text-fill:        #ff9800; /* arancione vivace */
+    -fx-effect:           dropshadow(three-pass-box, rgba(255, 152, 0, 0.3), 12, 0, 0, 0);
+}
+.promo-tab:hover {
+    -fx-background-color: rgba(255, 152, 0, 0.08);
+    -fx-effect:           dropshadow(three-pass-box, rgba(255, 152, 0, 0.5), 18, 0, 0, 0);
+}
+.category-tab-active.promo-tab {
+    -fx-background-color: rgba(255, 152, 0, 0.14);
+    -fx-text-fill:        #f57c00;
+    -fx-border-color:     transparent #f57c00 transparent transparent;
+    -fx-effect:           dropshadow(three-pass-box, rgba(255, 152, 0, 0.6), 25, 0, 0, 0);
+}
+
 /* ─────────────────────────────────────────────────────────────────────────────
  *  Griglia prodotti  (ShopPage)
  * ───────────────────────────────────────────────────────────────────────────── */
@@ -156,6 +176,17 @@
     -fx-border-color:      -color-accent;
     -fx-background-color:  -color-surface2;
     -fx-effect:            dropshadow(gaussian, rgba(91,156,245,0.28), 16, 0, 0, 4);
+}
+
+.prod-card.prod-card-promo {
+    -fx-border-color:      #ff9800;
+    -fx-border-width:      2;
+    -fx-effect:            dropshadow(three-pass-box, rgba(255, 152, 0, 0.4), 18, 0, 0, 0);
+}
+
+.prod-card.prod-card-promo:hover {
+    -fx-border-color:      #ff6d00;
+    -fx-effect:            dropshadow(three-pass-box, rgba(255, 152, 0, 0.65), 24, 0, 0, 0);
 }
 
 .prod-card-placeholder {
@@ -198,6 +229,8 @@
     -fx-background-color: -color-surface;
     -fx-padding:          14 24;
     -fx-min-height:       72;
+    -fx-pref-height:      72;
+    -fx-max-height:       72;
     -fx-border-color:     transparent transparent -color-border transparent;
     -fx-border-width:     0 0 1 0;
     -fx-effect:           dropshadow(gaussian, rgba(0,0,0,0.06), 4, 0, 0, 2);

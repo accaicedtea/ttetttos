@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<!--
+╔════════════════════════════════════════════════════════════════════╗
+║                   CART ITEM ROW COMPONENT                          ║
+╠════════════════════════════════════════════════════════════════════╣
+║ Riga carrello con:                                                 ║
+║ • Nome e prezzo unitario                                           ║
+║ • Quantity selector (-, qty, +)                                    ║
+║ • Totale riga                                                      ║
+║ • Ingredienti (collapsible)                                        ║
+║ • Pulsante rimuovi                                                 ║
+╚════════════════════════════════════════════════════════════════════╝
+-->
+
+<HBox xmlns="http://javafx.com/javafx/21"
+    xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="com.app.components.CartItemRowController"
+    spacing="12" styleClass="cart-row">
+
+    <!-- Sinistra: Nome + Prezzo -->
+    <VBox spacing="4" HBox.hgrow="ALWAYS">
+        <Label fx:id="itemName" styleClass="cart-item-name" />
+        <Label fx:id="itemPrice" styleClass="cart-item-price" />
+        
+        <!-- Ingredienti collapsible -->
+        <FlowPane fx:id="ingredientChips" hgap="6" vgap="4"
+            styleClass="cart-item-ingredients"
+            visible="false" managed="false" />
+    </VBox>
+
+    <!-- Centro: Quantity Selector -->
+    <HBox spacing="8" styleClass="quantity-selector" alignment="CENTER">
+        <Button fx:id="minusBtn" onAction="#onMinus" 
+            styleClass="qty-btn" text="-" prefWidth="40" />
+        <Label fx:id="qtyLabel" styleClass="qty-label" text="1" minWidth="30" />
+        <Button fx:id="plusBtn" onAction="#onPlus" 
+            styleClass="qty-btn" text="+" prefWidth="40" />
+    </HBox>
+
+    <!-- Destra: Totale riga -->
+    <VBox spacing="4" alignment="CENTER_RIGHT">
+        <Label fx:id="rowTotal" styleClass="cart-item-total" />
+    </VBox>
+
+</HBox>

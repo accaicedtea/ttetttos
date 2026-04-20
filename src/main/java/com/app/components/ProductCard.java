@@ -27,12 +27,18 @@ public class ProductCard extends VBox {
     private static final double CORNER_RADIUS = 16;
     private static final double CONTENT_PAD = 18;
 
+    private Product product;
+
+    public Product getProduct() { return product; }
+
     // ── Factory da POJO ──────────────────────────────────────────────
 
     /** Costruisce la card direttamente da un Product POJO. */
     public static ProductCard from(Product p) {
-        return new ProductCard(p.nome, p.prezzoFmt, p.descrizione, p.allergeni,
+        ProductCard card = new ProductCard(p.nome, p.prezzoFmt, p.descrizione, p.allergeni,
                 p.hasImage() ? p.imageUrl : null, null);
+        card.product = p;
+        return card;
     }
 
     // ── Costruttori pubblici ─────────────────────────────────────────
@@ -119,7 +125,7 @@ public class ProductCard extends VBox {
         content.setAlignment(Pos.TOP_LEFT);
         content.setMaxWidth(Double.MAX_VALUE);
 
-        Label nameLbl = new Label(name == null ? "" : name);
+        Label nameLbl = new Label(name == null ? "" : name.toUpperCase());
         nameLbl.getStyleClass().add("prod-name");
         nameLbl.setWrapText(true);
         nameLbl.setMaxWidth(Double.MAX_VALUE);

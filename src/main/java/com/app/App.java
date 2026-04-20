@@ -22,6 +22,7 @@ public class App extends Application {
 
     /** Pane radice condiviso — usato da ConfirmModal e BaseController. */
     public static StackPane rootPane;
+    public static com.app.components.ToastOverlay globalToast;
 
     private javafx.scene.control.Label memoryStatsLabel;
     private javafx.animation.Timeline memoryStatsTicker;
@@ -32,7 +33,12 @@ public class App extends Application {
         FXMLLoader loader = new FXMLLoader(App.class.getResource("/com/app/screens/SplashScreen.fxml"));
         rootPane = loader.load();
 
-        Scene scene = new Scene(rootPane);
+        StackPane mainRoot = new StackPane(rootPane);
+
+        globalToast = new com.app.components.ToastOverlay();
+        mainRoot.getChildren().add(globalToast);
+
+        Scene scene = new Scene(mainRoot);
         ThemeManager.init(scene);
 
         // Select theme
@@ -47,20 +53,20 @@ public class App extends Application {
 
         scene.getAccelerators().put(
                 new KeyCodeCombination(KeyCode.M, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN),
-                () -> toggleMemoryStatsOverlay(rootPane));
+                () -> toggleMemoryStatsOverlay(mainRoot));
 
         stage.setScene(scene);
         stage.setTitle("TotemOrder");
 
         // --- INIZIO OTTIMIZZAZIONI KIOSK LINUX ---
         stage.initStyle(StageStyle.UNDECORATED); 
-        stage.setAlwaysOnTop(true);
+        // stage.setAlwaysOnTop(true);
         stage.setMaximized(true);
         stage.setResizable(false);
         stage.setFullScreen(true);
         stage.setFullScreenExitHint("");
-        stage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
-        scene.setCursor(javafx.scene.Cursor.NONE); // Rimuovi commento per nascondere mouse su schermi touch se serve
+        // stage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
+        // scene.setCursor(javafx.scene.Cursor.NONE); // Rimuovi commento per nascondere mouse su schermi touch se serve
         // --- FINE OTTIMIZZAZIONI KIOSK LINUX ---
 
         stage.show();

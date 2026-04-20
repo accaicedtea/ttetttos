@@ -2,221 +2,199 @@ package com.app.controllers;
 
 import javafx.animation.*;
 import javafx.application.Platform;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.util.Duration;
 
 import java.util.*;
-import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
+import com.api.repository.DataRepository;
 import com.app.components.ChipFactory;
 import com.app.components.ProductCard;
-import com.app.components.ToastOverlay;
 import com.app.model.CartItem;
 import com.app.model.CartManager;
 import com.app.model.I18n;
-import com.app.model.MenuCache;
 import com.app.pojo.Category;
 import com.app.pojo.MenuData;
 import com.app.pojo.Product;
-import com.google.gson.JsonObject;
 import com.util.Animations;
 import com.util.Navigator;
 import com.util.NetworkWatchdog;
 import com.util.RemoteLogger;
 
 /**
- * ShopPageController — versione ottimizzata.
+ * ╔════════════════════════════════════════════════════════════════════════════╗
+ * ║                   SHOPAGE CONTROLLER — MENU E PRODOTTI                     ║
+ * ╚════════════════════════════════════════════════════════════════════════════╝
  *
- * ── Ottimizzazioni rispetto alla versione precedente ──────────────────────
+ * Responsabilità:
+ * • Caricamento menu e categorie da DataRepository
+ * • Visualizzazione prodotti con filtri per categoria
+ * • Gestione modal per dettagli prodotto
+ * • Integrazione header sistema (ShopHeaderController iniettato)
+ * • Gestione carrello con toast feedback
+ * • Sincronizzazione stato online/offline
  *
- * [BUG FIX] Creazione nodi JavaFX su FX thread
- * createIngNode() veniva chiamato da thread background: illegale in JavaFX.
- * Ora i dati vengono preparati in background, i nodi creati su
- * Platform.runLater.
- *
- * [PERF] Rimozione property binding per ingrediente
- * Ogni .bind() aggiunge un listener che sparava ad ogni layout pass.
- * Con N ingredienti → O(N) listener × ogni layout. Sostituiti con dimensioni
- * fisse via setMaxWidth/setPrefWidth diretti (calcolati una sola volta).
- *
- * [PERF] Pre-build dell'intero modal (non solo la grid)
- * Il vecchio codice costruiva VBox/HBox/ScrollPane al momento del click.
- * Ora buildKumpirModalStructure() viene chiamato subito dopo
- * enableKumpirButton(),
- * quindi il click apre il modal in <5 ms (solo setVisible + Timeline 180 ms).
- *
- * [PERF] Counter intero invece di stream su Map
- * selectedCount traccia il numero di selezioni attive come int.
- * updateKumpirTotals() è ora O(1) invece di O(N).
- *
- * [PERF] Reset tramite Set invece di iterazione completa
- * selectedIds traccia gli id selezionati → reset deseleziona solo quelli attivi
- * invece di scorrere tutti i nodi.
- *
- * [PERF] Rimozione ScaleTransition sul totale
- * Animazione inutile nell'hot path dei toggle (ogni click ingrediente).
- * Rimossa: il totale si aggiorna in testo senza costi di layout aggiuntivi.
- *
- * [PERF] Cache JavaFX sul modal card e sulla grid
- * kumpirCard e kumpirGrid usano setCache(true)/CacheHint.SPEED:
- * la GPU rasterizza il layer e lo riusa durante l'animazione di apertura.
- *
- * [PERF] Filtro con debounce 30 ms
- * Evita layout multipli se l'utente attiva più filtri rapidamente.
- *
- * [PERF] Preformattazione stringhe prezzo
- * PRICE_INGREDIENT_FMT e PRICE_BASE_FMT sono costanti: evitano String.format
- * nell'hot path della costruzione nodi.
- *
- * [PERF] Layout batch durante inserimento massiccio
- * Le aggiunte di nodi alla grid avvengono con kumpirGrid.setManaged(false),
- * poi il layout viene ricalcolato una sola volta alla fine con
- * setManaged(true).
+ * Pattern:
+ * • Extends BaseController per accesso a runAsync(), showToast()
+ * • Implements Navigator.DataReceiver per ricevere dati da altri controller
+ * • Implements Navigator.ScreenReturnable per callback onReturn()
+ * • ShopHeaderController iniettato da FXML automaticamente
+ * • ComposeKumpirController creato e gestito a runtime
  */
 public class ShopPageController extends BaseController
         implements Navigator.DataReceiver, Navigator.ScreenReturnable {
 
-    // ── FXML ─────────────────────────────────────────────────────────
-    @FXML
-    private VBox header;
-    @FXML
-    private ShopHeaderController headerController;
-    @FXML
-    private StackPane rootStack;
-    @FXML
-    private ScrollPane productsScroll;
-    @FXML
-    private FlowPane productsPane;
-    @FXML
-    private ScrollPane categoriesScroll;
-    @FXML
-    private VBox categoriesPane;
-    @FXML
-    private Button composeKumpirBtn;
-    @FXML
-    private StackPane modalOverlay;
-    @FXML
-    private VBox modalCard;
-    @FXML
-    private Label modalTitle, modalPrice, modalDesc;
-    @FXML
-    private VBox modalAllergenSection, modalIngredientSection;
-    @FXML
-    private FlowPane modalAllergenChips, modalIngredients;
-    @FXML
-    private Button modalClose;
-    @FXML
-    private Button addToCartBtn, quickCartBtn;
-    @FXML
-    private HBox toastBox;
-    @FXML
-    private Label toastLabel;
+    // Inactivity monitoring
+    private EventHandler<MouseEvent> inactivityResetMouseHandler;
+    private EventHandler<KeyEvent> inactivityResetKeyHandler;
 
-    // ── Stato ─────────────────────────────────────────────────────────
-    private ToastOverlay toastOverlay;
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FXML COMPONENTS
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    @FXML private StackPane rootStack;
+    @FXML private ScrollPane productsScroll;
+    @FXML private FlowPane productsPane;
+    @FXML private ScrollPane categoriesScroll;
+    @FXML private VBox categoriesPane;
+    @FXML private Button composeKumpirBtn;
+    @FXML private StackPane modalOverlay;
+    @FXML private VBox modalCard;
+    @FXML private Label modalTitle, modalPrice, modalDesc;
+    @FXML private VBox modalAllergenSection, modalIngredientSection;
+    @FXML private FlowPane modalAllergenChips, modalIngredients;
+    @FXML private Button modalClose, addToCartBtn, quickCartBtn;
+    @FXML private ShopHeaderController headerController;
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════════════════════════════════════
+    
     private Product currentProduct;
-    private Label activeCategory = null;
-    private boolean syncStarted = false;
+    private Label activeCategory;
     private ComposeKumpirController composeKumpirController;
-    private Boolean lastOnlineState = null;
-    private static boolean hasNotifiedOnlineReturn = false;
-    private ExecutorService backgroundExecutor;
-
-    // Cache rendering prodotti
     private final Map<String, List<ProductCard>> categoryProductCards = new HashMap<>();
-    private String activeCategoryName = null;
+    private String activeCategoryName;
+    private Timeline quickCartPulse;
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // LIFECYCLE
+    // ═══════════════════════════════════════════════════════════════════════════
 
     @FXML
     private void initialize() {
-        if (headerController != null) {
-            headerController.setOnline(false);
-            headerController.setCartCount(CartManager.get().totalItems());
-            headerController.setMenuTitle("Il Nostro Menu");
-        }
+        try {
+            // Setup header se disponibile
+            if (headerController != null) {
+                headerController.setOnline(false);
+                headerController.setCartCount(CartManager.get().totalItems());
+                headerController.setMenuTitle("Il Nostro Menu");
+            }
 
-        if (rootStack != null) {
-            toastOverlay = new ToastOverlay();
-            rootStack.getChildren().add(toastOverlay);
-        }
+            // Setup scroll inertia
+            if (productsScroll != null)
+                makeInertiaScrollable(productsScroll);
+            if (categoriesScroll != null)
+                makeInertiaScrollable(categoriesScroll);
 
-        Animations.inertiaScroll(productsScroll);
-        Animations.inertiaScroll(categoriesScroll);
-        initQuickCartButton();
+            // Setup quick cart
+            initQuickCartButton();
 
-        backgroundExecutor = Executors.newFixedThreadPool(
-                Math.max(2, Runtime.getRuntime().availableProcessors()));
+            // Setup componi kumpir button
+            if (composeKumpirBtn != null) {
+                composeKumpirController = new ComposeKumpirController(rootStack, headerController);
+                composeKumpirController.init(composeKumpirBtn);
+            }
 
-        composeKumpirController = new ComposeKumpirController(rootStack, headerController);
-        composeKumpirController.init(composeKumpirBtn);
+            // FIX: modalOverlay deve occupare tutto lo spazio di rootStack per bloccare i click
+            if (rootStack != null && modalOverlay != null) {
+                modalOverlay.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+                modalOverlay.prefWidthProperty().bind(rootStack.widthProperty());
+                modalOverlay.prefHeightProperty().bind(rootStack.heightProperty());
+            }
 
-        if (productsScroll != null && productsPane != null) {
-            productsScroll.viewportBoundsProperty()
-                    .addListener((obs, o, n) -> resizeCards(n.getWidth()));
-            productsScroll.sceneProperty().addListener((obs, oldScene, newScene) -> {
-                if (newScene != null) {
-                    newScene.widthProperty().addListener((o2, ow, nw) -> Platform
-                            .runLater(() -> resizeCards(productsScroll.getViewportBounds().getWidth())));
-                    Platform.runLater(() -> resizeCards(productsScroll.getViewportBounds().getWidth()));
-                }
-            });
-        }
+            // Setup product card resizing
+            setupProductCardResizing();
 
-        showInfo(I18n.t("loading_menu"));
-        NetworkWatchdog.setListener(this::setOnline);
-    }
+            // Load menu
+            showInfo(I18n.t("loading_menu"));
+            loadMenu();
 
-    // ═══════════════════════════════════════════════════════════════════
-    // MENU / PRODOTTI
-    // ═══════════════════════════════════════════════════════════════════
+            // Setup inactivity monitoring
+            setupInactivityMonitoring();
 
-    @Override
-    public void receiveData(Object data) {
-        if (data instanceof JsonObject json) {
-            MenuData menu = MenuData.from(json);
-            Platform.runLater(() -> {
-                if (!menu.isEmpty())
-                    buildUI(menu);
-                else
-                    loadMenu();
-                if (!syncStarted) {
-                    syncStarted = true;
-                    MenuCache.startBackgroundSync(
-                            fresh -> Platform.runLater(() -> buildUI(MenuData.from(fresh))));
-                }
-            });
-        } else {
-            Platform.runLater(this::loadMenu);
+        } catch (Exception e) {
+            RemoteLogger.error("ShopPageController", "initialize", e);
+            showInfo("Errore inizializzazione: " + e.getMessage());
         }
     }
 
-    public void loadMenu() {
-        backgroundExecutor.submit(() -> {
+    private void setupInactivityMonitoring() {
+        if (rootStack == null) return;
+
+        // Handler per mouse e tastiera che resetta il timer
+        inactivityResetMouseHandler = e -> com.util.InactivityManager.resetTimer();
+        inactivityResetKeyHandler = e -> com.util.InactivityManager.resetTimer();
+
+        // Aggiungi event filter al rootStack per catturare tutte le interazioni
+        rootStack.addEventFilter(MouseEvent.ANY, inactivityResetMouseHandler);
+        rootStack.addEventFilter(KeyEvent.ANY, inactivityResetKeyHandler);
+
+        // Avvia il monitoraggio con rootStack per il dialogo di conferma
+        com.util.InactivityManager.startMonitoring(Navigator.Screen.MENU, rootStack);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MENU LOADING & UI BUILD
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    private void loadMenu() {
+        runAsync(() -> {
             try {
-                JsonObject r = com.api.services.ViewsService.getMenu();
-                MenuData menu = MenuData.from(r);
-                if (menu.isEmpty()) {
-                    Platform.runLater(() -> showInfo("Menu vuoto."));
-                    return;
+                MenuData menu = DataRepository.getMenu();
+                List<com.app.pojo.Promotion> promos = null;
+                try {
+                    promos = DataRepository.getPromotions();
+                } catch (Exception e) {
+                    RemoteLogger.error("ShopPage", "loadPromos", e);
                 }
-                Platform.runLater(() -> buildUI(menu));
+                
+                final List<com.app.pojo.Promotion> finalPromos = promos;
+                runOnUI(() -> {
+                    if (menu == null || menu.isEmpty()) {
+                        showInfo("Menu vuoto.");
+                        return;
+                    }
+                    buildUI(menu, finalPromos);
+                });
             } catch (Exception e) {
                 RemoteLogger.error("ShopPage", "loadMenu", e);
-                Platform.runLater(() -> showInfo("Errore: " + e.getMessage()));
+                runOnUI(() -> showInfo("Errore: " + e.getMessage()));
             }
         });
     }
 
-    private void buildUI(MenuData menu) {
+    @Override
+    public void receiveData(Object data) {
+        // Fallback if data is received from navigator
+        loadMenu();
+    }
+
+    private void buildUI(MenuData menu, List<com.app.pojo.Promotion> promos) {
         categoriesPane.getChildren().clear();
         productsPane.getChildren().clear();
         categoryProductCards.clear();
 
+        // 1. Aggiungi Categorie normali
         for (Category cat : menu.categorie) {
-            Label tab = new Label(cat.nome);
+            Label tab = new Label(cat.nome != null ? cat.nome.toUpperCase() : "");
             tab.getStyleClass().add("category-tab");
             tab.setMaxWidth(Double.MAX_VALUE);
             Animations.touchFeedback(tab);
@@ -226,29 +204,53 @@ public class ShopPageController extends BaseController
                     .collect(Collectors.toList());
             categoryProductCards.put(cat.nome, cards);
 
-            tab.setOnMouseClicked(ev -> selectCategory(tab, cat));
+            tab.setOnMouseClicked(ev -> selectCategory(tab, cat.nome));
             categoriesPane.getChildren().add(tab);
         }
 
-        if (!menu.isEmpty()) {
-            Category first = menu.categorie.get(0);
-            selectCategory((Label) categoriesPane.getChildren().get(0), first);
+        // 2. Aggiungi Promozioni in fondo se ci sono
+        if (promos != null && !promos.isEmpty()) {
+            Label tab = new Label("PROMOZIONI");
+            tab.getStyleClass().add("category-tab");
+            tab.getStyleClass().add("promo-tab"); // Classe spec per UI distinct
+            tab.setMaxWidth(Double.MAX_VALUE);
+            Animations.touchFeedback(tab);
+
+            List<ProductCard> promoCards = promos.stream()
+                    .map(p -> {
+                        ProductCard card = ProductCard.from(com.app.pojo.Product.fromPromotion(p));
+                        card.getStyleClass().add("prod-card-promo");
+                        return card;
+                    })
+                    .collect(Collectors.toList());
+            categoryProductCards.put("Promozioni", promoCards);
+
+            tab.setOnMouseClicked(ev -> selectCategory(tab, "Promozioni"));
+            categoriesPane.getChildren().add(tab);
+        }
+
+        // 3. Seleziona il primo tab utile (ora prima la categoria normale)
+        if (!categoriesPane.getChildren().isEmpty()) {
+            String firstName = (!menu.categorie.isEmpty()) ? menu.categorie.get(0).nome : "Promozioni";
+            selectCategory((Label) categoriesPane.getChildren().get(0), firstName);
         }
     }
 
-    private void selectCategory(Label tab, Category cat) {
+    private void selectCategory(Label tab, String catName) {
         if (activeCategory != null)
             activeCategory.getStyleClass().remove("category-tab-active");
         activeCategory = tab;
-        activeCategoryName = cat.nome;
+        activeCategoryName = catName;
         tab.getStyleClass().add("category-tab-active");
         if (headerController != null)
-            headerController.setCategory(cat.nome);
-        showProducts(cat.prodotti);
+            headerController.setCategory(catName);
+        
+        List<ProductCard> cards = categoryProductCards.get(catName);
+        showProducts(cards);
     }
 
-    private void showProducts(List<Product> prodotti) {
-        if (prodotti == null || prodotti.isEmpty()) {
+    private void showProducts(List<ProductCard> cards) {
+        if (cards == null || cards.isEmpty()) {
             productsPane.getChildren().clear();
             showInfo("Nessun prodotto.");
             return;
@@ -257,21 +259,15 @@ public class ShopPageController extends BaseController
         productsPane.setOpacity(0);
         productsPane.getChildren().clear();
 
-        List<ProductCard> cards = categoryProductCards.getOrDefault(activeCategoryName, null);
-        if (cards == null) {
-            cards = prodotti.stream().map(ProductCard::from).collect(Collectors.toList());
-            categoryProductCards.put(activeCategoryName != null ? activeCategoryName : "", cards);
-        }
-
         for (int i = 0; i < cards.size(); i++) {
             ProductCard card = cards.get(i);
-            Product p = prodotti.size() > i ? prodotti.get(i) : null;
-            if (p != null)
-                card.setOnMouseClicked(ev -> showModal(p));
+            Product p = card.getProduct();
+            card.setOnMouseClicked(ev -> showModal(p));
         }
 
         productsPane.getChildren().addAll(cards);
         productsScroll.setVvalue(0);
+        
         double w0 = productsScroll.getViewportBounds().getWidth();
         if (w0 > 0)
             resizeCards(w0);
@@ -282,6 +278,20 @@ public class ShopPageController extends BaseController
         fadeIn.setToValue(1);
         fadeIn.setInterpolator(Interpolator.EASE_OUT);
         fadeIn.play();
+    }
+
+    private void setupProductCardResizing() {
+        if (productsScroll == null || productsPane == null)
+            return;
+        productsScroll.viewportBoundsProperty()
+                .addListener((obs, o, n) -> resizeCards(n.getWidth()));
+        productsScroll.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null) {
+                newScene.widthProperty().addListener((o2, ow, nw) ->
+                        Platform.runLater(() -> resizeCards(productsScroll.getViewportBounds().getWidth())));
+                Platform.runLater(() -> resizeCards(productsScroll.getViewportBounds().getWidth()));
+            }
+        });
     }
 
     private void resizeCards(double vw) {
@@ -297,9 +307,9 @@ public class ShopPageController extends BaseController
         productsPane.getChildren().forEach(n -> n.setStyle(style));
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // MODAL PRODOTTO
-    // ═══════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MODAL
+    // ═══════════════════════════════════════════════════════════════════════════
 
     private void showModal(Product p) {
         if (modalOverlay == null)
@@ -322,25 +332,43 @@ public class ShopPageController extends BaseController
             modalCard.setPrefWidth(w);
             modalCard.setMaxHeight(h);
         }
-        setVisible(modalOverlay, true);
+        // FIX: Rendi modalOverlay managed=true quando visible per bloccare i click
+        if (modalOverlay != null) {
+            modalOverlay.setManaged(true);
+            modalOverlay.setVisible(true);
+            modalOverlay.toFront(); // Assicura che sia davanti
+            
+            // Applica blur effect al contenuto dietro (Layer 1 content)
+            if (!rootStack.getChildren().isEmpty()) {
+                rootStack.getChildren().get(0).setEffect(new javafx.scene.effect.GaussianBlur(8));
+            }
+        }
         if (modalClose != null)
             modalClose.requestFocus();
     }
 
     @FXML
     private void hideModal() {
-        setVisible(modalOverlay, false);
+        if (modalOverlay != null) {
+            modalOverlay.setVisible(false);
+            modalOverlay.setManaged(false); // FIX: Rilascia lo spazio quando nascosto
+            
+            // Rimuovi blur effect dal contenuto (Layer 1 content)
+            if (!rootStack.getChildren().isEmpty()) {
+                rootStack.getChildren().get(0).setEffect(null);
+            }
+        }
     }
 
     @FXML
-    private void onModalOverlayClicked(javafx.scene.input.MouseEvent e) {
+    private void onModalOverlayClicked(MouseEvent e) {
         if (e.getTarget() == modalOverlay)
             hideModal();
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // CARRELLO / TOAST / QUICK CART
-    // ═══════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CART & TOAST
+    // ═══════════════════════════════════════════════════════════════════════════
 
     @FXML
     private void onAddToCart() {
@@ -353,36 +381,8 @@ public class ShopPageController extends BaseController
             headerController.bounceCart();
         }
         updateQuickCartButton();
-        if (toastOverlay != null)
-            toastOverlay.show(I18n.t("added"));
-        else
-            showToastFxml(I18n.t("added"));
+        showToast(I18n.t("added"));
     }
-
-    private void showToastFxml(String msg) {
-        if (toastBox == null)
-            return;
-        if (toastLabel != null)
-            toastLabel.setText(msg);
-        toastBox.setOpacity(0);
-        toastBox.setTranslateY(20);
-        setVisible(toastBox, true);
-        Timeline tl = new Timeline(
-                new KeyFrame(Duration.millis(0),
-                        new KeyValue(toastBox.opacityProperty(), 0),
-                        new KeyValue(toastBox.translateYProperty(), 20)),
-                new KeyFrame(Duration.millis(250),
-                        new KeyValue(toastBox.opacityProperty(), 1),
-                        new KeyValue(toastBox.translateYProperty(), 0)),
-                new KeyFrame(Duration.millis(1650),
-                        new KeyValue(toastBox.opacityProperty(), 1)),
-                new KeyFrame(Duration.millis(1900),
-                        new KeyValue(toastBox.opacityProperty(), 0)));
-        tl.setOnFinished(e -> setVisible(toastBox, false));
-        tl.play();
-    }
-
-    private Timeline quickCartPulse;
 
     private void initQuickCartButton() {
         if (quickCartBtn == null)
@@ -426,33 +426,16 @@ public class ShopPageController extends BaseController
         Navigator.goTo(Navigator.Screen.CART);
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // HELPERS
-    // ═══════════════════════════════════════════════════════════════════
-
-    public void setOnline(boolean online) {
-        if (headerController != null)
-            headerController.setOnline(online);
-
-        if (composeKumpirController != null)
-            composeKumpirController.setOnline(online);
-
-        if (toastOverlay != null) {
-            if (lastOnlineState == null) {
-                lastOnlineState = online;
-                return;
-            }
-            if (!lastOnlineState && online) {
-                if (!hasNotifiedOnlineReturn) {
-                    toastOverlay.show("Connessione internet ripristinata");
-                    hasNotifiedOnlineReturn = true;
-                }
-            } else if (lastOnlineState && !online) {
-                toastOverlay.show("Connessione internet persa: modalità offline");
-            }
-            lastOnlineState = online;
-        }
+    @FXML
+    private void onCartClick() {
+        Navigator.goTo(Navigator.Screen.CART);
     }
+
+
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // NETWORK & LIFECYCLE
+    // ═══════════════════════════════════════════════════════════════════════════
 
     private void showInfo(String msg) {
         if (productsPane == null)
@@ -468,14 +451,14 @@ public class ShopPageController extends BaseController
     public void onReturn() {
         if (headerController != null)
             headerController.setCartCount(CartManager.get().totalItems());
-        NetworkWatchdog.setListener(this::setOnline);
+        
+        // Avvia il monitoraggio dell'inattività quando si ritorna a questo schermo
+        com.util.InactivityManager.startMonitoring(Navigator.Screen.MENU, rootStack);
     }
 
     public void destroy() {
         if (composeKumpirController != null)
             composeKumpirController.destroy();
-        if (backgroundExecutor != null && !backgroundExecutor.isShutdown())
-            backgroundExecutor.shutdownNow();
         if (quickCartPulse != null)
             quickCartPulse.stop();
     }

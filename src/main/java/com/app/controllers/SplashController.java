@@ -9,21 +9,20 @@ import javafx.util.Duration;
 import org.kordamp.ikonli.javafx.FontIcon;
 
 import com.api.services.AuthService;
-import com.app.model.MenuCache;
-import com.app.model.OrderQueue;
-import com.app.model.TranslationManager;
 import com.util.Navigator;
 import com.util.NetworkWatchdog;
 import com.util.SystemManager;
 
 /**
- * SplashController — schermata di avvio con sequenza di loading.
+ * SplashController — schermata di avvio con sequenza ottimizzata.
  *
- * Rispetto all'originale:
- * - Estende BaseController
- * - sleep() estratto come metodo privato statico
- * - setStep() estratto per eliminare ripetizione
- * - Usa RemoteLogger dal package corretto (non duplicato)
+ * FLUSSO SEMPLIFICATO (4 step):
+ * 1) Login + salva token
+ * 2) Check online
+ * 3) Carica TUTTI i dati (menu+categorie+ingredienti) in UNA sola passata
+ * 4) Naviga a Welcome
+ *
+ * (Eliminati i passi frammentati di traduzioni, aggiornamenti, build, ecc.)
  */
 public class SplashController extends BaseController {
 
@@ -39,7 +38,7 @@ public class SplashController extends BaseController {
     private ProgressBar progressBar;
 
     private static final String API_KEY = System.getProperty("totem.api.key",
-            System.getenv().getOrDefault("TOTEM_API_KEY", "api_key_totem_2_per_sviluppo_locale"));
+            System.getenv().getOrDefault("TOTEM_API_KEY", "api_key_totem_1"));
 
     @FXML
     private void initialize() {
@@ -69,93 +68,51 @@ public class SplashController extends BaseController {
     private void runSetupSequence() {
         new Thread(() -> {
 
-            // ── Step 0: Login PRIMA di NetworkWatchdog ────────────────
-            setStep("mdi2l-lock", "Connessione al server...", "", 0.05);
-            String loginError = null;
-            try {
-                AuthService.loginTotem(API_KEY);
-                setStep("mdi2l-lock", "Connesso", "Login completato", 0.35);
-                OrderQueue.startQueueSync();
-                sleep(300);
-            } catch (Exception e) {
-                loginError = e.getMessage();
-                setStep("mdi2a-alert", "Connessione fallita", "Uso modalità offline", 0.35);
-                System.err.println("[Splash] Login fallito: " + loginError);
-                sleep(800);
+            // ──────────────────────────────────────────────────────────────
+            // SEMPLIFICATO: 4 STEP SOLI (era 10+)
+            // ──────────────────────────────────────────────────────────────
 
-                // Se il sistema e' stato bloccato (es. API key non valida), interrompi setup e navigazione.
-                if (SystemManager.isAppLocked()) {
+            // ── STEP 1: Login + salva token ───────────────────────────────
+            setStep("mdi2l-lock", "Connessione al server...", "", 0.25);
+            com.api.services.InitializationService.InitData init = 
+                com.api.services.InitializationService.initializeApp(API_KEY);
+            
+            if (init.error != null && init.menu == null) {
+                // Errore critico — app bloccata
+                setStep("mdi2a-alert-circle", "Errore critico", init.error, 1.0);
+                System.err.println("[Splash] ERRORE: " + init.error);
+                sleep(1500);
+                if (com.util.SystemManager.isAppLocked()) {
                     return;
                 }
             }
 
-            // ── Step 1: Avvia NetworkWatchdog DOPO il login ────────────
-            sleep(500); // Aspetta che il token sia veramente salvato
-            NetworkWatchdog.start(online -> {
-                System.out.println("[Net] " + (online ? "Online" : "Offline"));
-                Platform.runLater(() -> {
-                    if (!online)
-                        setStep("mdi2a-alert", "Offline", "Rete non disponibile", 0.05);
-                });
-            });
-
-            // ── Step 1.5: Esiti aggiornamenti pendenti e controllo ─────
-            setStep("mdi2c-cloud-sync", "Verifica aggiornamenti...", "", 0.38);
-            com.api.services.UpdateService.checkPendingStates();
-
-            // ── Step 2: Menu ──────────────────────────────────────────
-            setStep("mdi2c-clipboard-list", "Caricamento menu...", "", 0.40);
-            com.google.gson.JsonObject menuData = MenuCache.loadFromCache();
-            if (menuData != null) {
-                setStep("mdi2c-clipboard-list", "Menu caricato", "Da cache locale", 0.55);
-                sleep(200);
-            }
-
-            if (com.api.SessionManager.isLoggedIn()) {
-                setStep("mdi2c-clipboard-list", "Aggiornamento menu...", "Sincronizzazione server", 0.55);
-                try {
-                    com.google.gson.JsonObject fresh = com.api.services.ViewsService.getMenu();
-                    MenuCache.save(fresh, "");
-                    menuData = fresh;
-                    setStep("mdi2c-clipboard-list", "Menu aggiornato", "Dati sincronizzati", 0.65);
-                    sleep(300);
-                } catch (Exception e) {
-                    setStep(menuData != null ? "mdi2c-clipboard-list" : "mdi2a-alert-circle",
-                            menuData != null ? "Menu da cache" : "Menu non disponibile",
-                            menuData != null ? "Server non raggiungibile" : e.getMessage(), 0.65);
-                    sleep(600);
-                }
-            } else {
-                setStep("mdi2c-clipboard-list",
-                        menuData != null ? "Menu da cache" : "Menu non disponibile",
-                        loginError != null ? "Modalità offline" : "", 0.65);
-                sleep(400);
-            }
-
-            // ── Step 3: Traduzioni ────────────────────────────────────
-            setStep("mdi2e-earth", "Caricamento traduzioni...", "", 0.68);
-            if (TranslationManager.isCached()) {
-                TranslationManager.loadFromCache();
-                setStep("mdi2e-earth", "Traduzioni caricate", "Da cache locale", 0.85);
-                sleep(200);
-                new Thread(TranslationManager::fetchAndSave, "trans-refresh").start();
-            } else {
-                TranslationManager.fetchAndSave();
-                setStep("mdi2e-earth", "Traduzioni pronte", "", 0.85);
-                sleep(300);
-            }
-
-            // ── Step 4: UI pronta ─────────────────────────────────────
-            setStep("mdi2c-check-circle", "Pronto!", "", 1.0);
-            sleep(400);
-
-            // ── Step 5: BUILD Menù compose ─────────────────────────────────────
-            build();
+            // ── STEP 2: Check online ──────────────────────────────────────
+            setStep("mdi2w-wifi" + (init.isOnline ? "" : "-off"), 
+                    init.isOnline ? "Online" : "Offline", 
+                    init.isOnline ? "" : "Modalità cache", 
+                    0.50);
             sleep(300);
 
-            // Naviga al WelcomeScreen passando il menu precaricato
-            final com.google.gson.JsonObject finalMenu = menuData;
-            Platform.runLater(() -> Navigator.goTo(Navigator.Screen.WELCOME, finalMenu));
+            // ── STEP 2.5: Avvia NetworkWatchdog per monitorare continuamente ─
+            NetworkWatchdog.start(online -> {
+                System.out.println("[Net] Stato: " + (online ? "Online" : "Offline"));
+                // Show global toast
+                if (com.app.App.globalToast != null) {
+                    com.app.App.globalToast.show(online ? "Connessione internet ripristinata" : "Connessione internet persa: modalità offline");
+                }
+            });
+
+            // ── STEP 3: Dati carificati ───────────────────────────────────
+            setStep("mdi2c-check-circle", "Dati caricati", "Pronto!", 0.75);
+            sleep(200);
+
+            // ── STEP 4: Naviga a WELCOME ──────────────────────────────────
+            setStep("mdi2c-check-circle", "Pronto!", "", 1.0);
+            sleep(300);
+
+            final Object finalMenu = init.menu;
+            Platform.runLater(() -> Navigator.goTo(Navigator.Screen.PRESENTATION, finalMenu));
 
         }, "splash-setup").start();
     }
@@ -196,10 +153,6 @@ public class SplashController extends BaseController {
             rt.setCycleCount(Animation.INDEFINITE);
             rt.play();
         }
-    }
-
-    private void build() {
-
     }
     // ── Animation helpers ─────────────────────────────────────────────
 

@@ -25,7 +25,7 @@ import java.util.Map;
 public class Navigator {
 
     public enum Screen {
-        SPLASH, WELCOME, MENU, CART, PAYMENT, CONFIRM
+        SPLASH, PRESENTATION, WELCOME, MENU, CART, PAYMENT, CONFIRM
     }
 
     // Schermate che vengono tenute in cache (riutilizzate senza ricaricare)
@@ -33,7 +33,7 @@ public class Navigator {
             Screen.WELCOME, Screen.MENU);
 
     private static final Screen[] ORDER = {
-            Screen.SPLASH, Screen.WELCOME, Screen.MENU,
+            Screen.SPLASH, Screen.PRESENTATION, Screen.WELCOME, Screen.MENU,
             Screen.CART, Screen.PAYMENT, Screen.CONFIRM
     };
 
@@ -95,6 +95,7 @@ public class Navigator {
                 // ── Prima visita: carica l'FXML ───────────────────────────
                 String fxml = switch (screen) {
                     case SPLASH -> "/com/app/screens/SplashScreen.fxml";
+                    case PRESENTATION -> "/com/app/screens/PresentationScreen.fxml";
                     case WELCOME -> "/com/app/screens/WelcomeScreen.fxml";
                     case MENU -> "/com/app/ShopPage.fxml";
                     case CART -> "/com/app/screens/CartScreen.fxml";

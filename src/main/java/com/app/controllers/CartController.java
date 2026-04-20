@@ -3,32 +3,53 @@ package com.app.controllers;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
+import javafx.event.EventHandler;
 
 import com.app.components.ChipFactory;
+import com.app.components.CartItemRowController;
 import com.app.model.CartItem;
 import com.app.model.CartManager;
-import com.util.Animations;
+import com.app.model.OrderQueue;
 import com.util.Navigator;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * CartController — refactored.
+ * ============================================================================
+ * CartController (Refactored)
+ * ============================================================================
  *
- * Fix rispetto alla versione precedente:
- * - allergenWarningBox / allergenWarningTitle / allergenWarningChips legati
- * direttamente via @FXML (niente componente esterno che non si agganciava)
- * - Mostra gli ingredienti nella riga carrello
- * - Banner allergeni in fondo visibile/nascosto in modo reattivo
+ * Gestisce la logica del carrello. Alimenta i propri dati tramite CartManager.
+ * Utilizza utilità di BaseController per animazioni e avvisi UI.
+ *
+ * +-----------------------------------------------------------+
+ * |                     Cart Screen                           |
+ * |-----------------------------------------------------------|
+ * | [ Header (System Info) ] <-- fx:include ShopHeader        |
+ * | [ Top Bar (Titolo, Totale, Back Btn) ]                    |
+ * |                                                           |
+ * | [ Prodotto 1 (nome, qty, ingredienti, prezzo, bottoni) ]  |
+ * | [ Prodotto 2 ... ]                                        |
+ * |                                                           |
+ * | [ Allergen Warning Banner ]                               |
+ * | [ Totale: € XX,XX ]                                       |
+ * | [ Btn Pagamento ]                                         |
+ * | [ Footer (brand/info) ]                                   |
+ * +-----------------------------------------------------------+
+ * ============================================================================
  */
-public class CartController extends BaseController {
+public class CartController extends BaseController implements Navigator.ScreenReturnable {
+
+    // Inactivity monitoring
+    private EventHandler<MouseEvent> inactivityResetMouseHandler;
+    private EventHandler<KeyEvent> inactivityResetKeyHandler;
 
     @FXML
     private Label titleLabel;
-    @FXML
-    private Label totalBadge;
     @FXML
     private ScrollPane cartScroll;
     @FXML
@@ -59,14 +80,44 @@ public class CartController extends BaseController {
         if (proceedBtn != null)
             proceedBtn.setText(t("proceed") + " →");
 
-        Animations.inertiaScroll(cartScroll);
-        Animations.touchFeedback(proceedBtn);
+        makeInertiaScrollable(cartScroll);
+        applyTouchFeedback(proceedBtn);
 
         // Ascolta le modifiche al carrello per aggiornare il banner in tempo reale
         CartManager.get().getItems().addListener(
-                (javafx.collections.ListChangeListener<CartItem>) c -> buildCartList());
+                (javafx.collections.ListChangeListener<CartItem>) c -> {
+                    if (CartManager.get().isEmpty()) {
+                        Navigator.goTo(Navigator.Screen.MENU);
+                    } else {
+                        buildCartList();
+                    }
+                });
 
         buildCartList();
+
+        // Setup inactivity monitoring
+        setupInactivityMonitoring();
+    }
+
+    @Override
+    public void onReturn() {
+        // Avvia il monitoraggio dell'inattività quando si ritorna a questo schermo
+        com.util.InactivityManager.startMonitoring(Navigator.Screen.CART, rootStack);
+    }
+
+    private void setupInactivityMonitoring() {
+        if (rootStack == null) return;
+
+        // Handler per mouse e tastiera che resetta il timer
+        inactivityResetMouseHandler = event -> com.util.InactivityManager.resetTimer();
+        inactivityResetKeyHandler = event -> com.util.InactivityManager.resetTimer();
+
+        // Aggiungi event filter al rootStack per catturare tutte le interazioni
+        rootStack.addEventFilter(MouseEvent.ANY, inactivityResetMouseHandler);
+        rootStack.addEventFilter(KeyEvent.ANY, inactivityResetKeyHandler);
+
+        // Avvia il monitoraggio con rootStack per il dialogo di conferma
+        com.util.InactivityManager.startMonitoring(Navigator.Screen.CART, rootStack);
     }
 
     // ── Lista carrello ────────────────────────────────────────────────
@@ -82,114 +133,14 @@ public class CartController extends BaseController {
             setVisible(proceedBtn, false);
             hideAllergenBanner();
         } else {
-            cart.getItems().forEach(item -> cartList.getChildren().add(buildRow(item)));
+            cart.getItems().forEach(item -> 
+                cartList.getChildren().add(CartItemRowController.create(item))
+            );
             setVisible(proceedBtn, true);
             updateAllergenBanner(cart.getItems());
         }
 
         updateTotals();
-    }
-
-    // ── Riga carrello ─────────────────────────────────────────────────
-
-    private HBox buildRow(CartItem item) {
-        VBox info = new VBox(8);
-        HBox.setHgrow(info, Priority.ALWAYS);
-
-        // Nome prodotto
-        Label name = new Label(item.getName());
-        name.getStyleClass().add("cart-item-name");
-        name.setWrapText(true);
-        info.getChildren().add(name);
-        
-        // Prezzo unitario
-        Label price = new Label(item.getPrice());
-        price.getStyleClass().add("cart-item-price");
-        info.getChildren().add(price);
-
-        // Ingredienti (se presenti) resi più eleganti
-        List<String> ingredienti = item.getIngredienti(); 
-        if (ingredienti != null && !ingredienti.isEmpty()) {
-            FlowPane ingPane = new FlowPane();
-            ingPane.setHgap(6);
-            ingPane.setVgap(6);
-            for (String ing : ingredienti) {
-                Label lbl = new Label(ing);
-                lbl.getStyleClass().add("cart-ingredient-chip");
-                ingPane.getChildren().add(lbl);
-            }
-            info.getChildren().add(ingPane);
-        }
-
-        // Chip allergeni per singola voce
-        if (item.getAllergens() != null && !item.getAllergens().isEmpty()) {
-            FlowPane chips = new FlowPane();
-            chips.setHgap(6);
-            chips.setVgap(6);
-            ChipFactory.fillAllergens(chips, item.getAllergens(), ChipFactory.ChipType.CART);
-            info.getChildren().add(chips);
-        }
-
-        // Controlli quantità
-        Button minus = new Button();
-        Label qty = new Label(String.valueOf(item.getQty()));
-        Button plus = new Button("+");
-        minus.getStyleClass().add("qty-btn");
-        qty.getStyleClass().add("qty-label");
-        plus.getStyleClass().add("qty-btn");
-        Animations.touchFeedback(minus);
-        Animations.touchFeedback(plus);
-
-        Runnable syncMinusIcon = () -> {
-            boolean isTrash = item.getQty() <= 1;
-            minus.setText(isTrash ? "🗑" : "−");
-            if (isTrash) {
-                if (!minus.getStyleClass().contains("trash-btn")) {
-                    minus.getStyleClass().add("trash-btn");
-                }
-            } else {
-                minus.getStyleClass().remove("trash-btn");
-            }
-        };
-        syncMinusIcon.run();
-
-        Label rowTotal = new Label(item.totalFormatted());
-        rowTotal.getStyleClass().add("cart-item-total");
-
-        item.qtyProperty().addListener((obs, o, n) -> {
-            qty.setText(String.valueOf(n));
-            rowTotal.setText(item.totalFormatted());
-            syncMinusIcon.run();
-        });
-
-        minus.setOnAction(e -> {
-            if (item.getQty() > 1) {
-                item.setQty(item.getQty() - 1);
-                updateTotals();
-                return;
-            }
-            com.app.components.ModalDialog.builder(rootPane)
-                    .type(com.app.components.ModalDialog.Type.WARNING)
-                    .title(t("remove_item"))
-                    .message(t("remove_item_confirm"))
-                    .width(700)
-                    .button(com.app.components.ModalButton.cancel(t("cancel")))
-                    .button(com.app.components.ModalButton.danger(t("confirm"), () -> {
-                        CartManager.get().removeItem(item);
-                        buildCartList();
-                    }))
-                    .show();
-        });
-
-        plus.setOnAction(e -> {
-            item.setQty(item.getQty() + 1);
-            updateTotals();
-        });
-
-        HBox row = new HBox(14, info, minus, qty, plus, rowTotal);
-        row.getStyleClass().add("cart-row");
-        row.setAlignment(Pos.CENTER_LEFT);
-        return row;
     }
 
     // ── Banner allergeni in fondo ─────────────────────────────────────
@@ -245,8 +196,6 @@ public class CartController extends BaseController {
         String total = CartManager.get().totalPriceFormatted();
         if (totalAmount != null)
             totalAmount.setText(total);
-        if (totalBadge != null)
-            totalBadge.setText(total);
     }
 
     // ── Navigazione ───────────────────────────────────────────────────
@@ -259,7 +208,7 @@ public class CartController extends BaseController {
     @FXML
     private void onProceed() {
         if (!CartManager.get().isEmpty()) {
-            Navigator.goTo(Navigator.Screen.PAYMENT);
+            OrderQueue.createOrderAsync(CartManager.get(), () -> Navigator.goTo(Navigator.Screen.PAYMENT), err -> { System.err.println("Errore crezione ordine " + err); Navigator.goTo(Navigator.Screen.PAYMENT); });
         }
     }
 }

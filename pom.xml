@@ -41,6 +41,12 @@
       <version>${javafx.version}</version>
     </dependency>
 
+    <dependency>
+      <groupId>org.openjfx</groupId>
+      <artifactId>javafx-web</artifactId>
+      <version>${javafx.version}</version>
+    </dependency>
+
     <!-- Gson -->
     <dependency>
       <groupId>com.google.code.gson</groupId>
@@ -94,6 +100,10 @@
             <jvmArg>-Xms1g</jvmArg>
             <jvmArg>-Xmx1g</jvmArg>
             <jvmArg>-XX:ParallelGCThreads=4</jvmArg>
+            <jvmArg>--add-modules</jvmArg>
+            <jvmArg>javafx.controls,javafx.fxml,javafx.web</jvmArg>
+            <jvmArg>--add-opens</jvmArg>
+            <jvmArg>javafx.graphics/com.sun.javafx.application=ALL-UNNAMED</jvmArg>
             <jvmArg>${jvm.args}</jvmArg>
           </jvmArgs>
         </configuration>
@@ -175,5 +185,31 @@
 
     </plugins>
   </build>
+
+  <profiles>
+    <!-- Profilo per avviare SOLO PowerPointWebViewExample -->
+    <profile>
+      <id>powerpoint</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.1.0</version>
+            <configuration>
+              <mainClass>com.app.examples.PowerPointWebViewExample</mainClass>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>java</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 </project>

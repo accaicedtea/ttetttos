@@ -2,19 +2,29 @@ package com.app.controllers;
 
 import com.app.components.ToastOverlay;
 import com.app.model.I18n;
+import com.util.TaskExecutor;
+import javafx.application.Platform;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 
 /**
+ * ============================================================================
+ * BaseController (Abstract)
+ * ============================================================================
+ *
  * Controller base con funzionalità condivise tra tutti i controller dell'app.
+ * I controller concreti estendono questa classe e chiamano i metodi helper.
  *
- * Problema originale: ogni controller re-implementava:
- * - Binding testi I18n
- * - Toast (showToast) — duplicato in ShopPageController e CartController
- * - Pattern di show/hide elementi
- *
- * I controller concreti estendono questa classe e chiamano i metodi
- * helper anziché duplicare il codice.
+ * +-----------------------------------------------------------+
+ * |                     BaseController                        |
+ * |-----------------------------------------------------------|
+ * | => I18n translation helpers (t)                           |
+ * | => Async/Thread helpers (runAsync, runOnUI)               |
+ * | => Animation/Touch helpers (touchFeedback, inertiaScroll) |
+ * | => UI Notifications (showToast)                           |
+ * | => Component Show/Hide Toggle (setVisible)                |
+ * +-----------------------------------------------------------+
+ * ============================================================================
  */
 public abstract class BaseController {
 
@@ -68,5 +78,30 @@ public abstract class BaseController {
             return;
         node.setVisible(visible);
         node.setManaged(visible);
+    }
+
+    // ── Interazioni e Animazioni UI ──────────────────────────────────
+    
+    /** Applica un feedback al tocco standard (animazione fade/scale introdotta come helper). */
+    protected void applyTouchFeedback(javafx.scene.Node node) {
+        // Implementazione wrapper comune (riutilizza com.util.Animations o simili)
+        com.util.Animations.touchFeedback(node);
+    }
+    
+    /** Avvia la modalità "scroll inerziale" sul node specificato. */
+    protected void makeInertiaScrollable(javafx.scene.control.ScrollPane node) {
+        com.util.Animations.inertiaScroll(node);
+    }
+
+    // ── Thread Helpers ──────────────────────────────────────────────
+    
+    /** Esegue un task asincrono in background. */
+    protected void runAsync(Runnable task) {
+        TaskExecutor.execute(task);
+    }
+
+    /** Assicura che un blocco di codice giri nel thread UI JavaFX. */
+    protected void runOnUI(Runnable task) {
+        TaskExecutor.runOnUI(task);
     }
 }

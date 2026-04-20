@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Rectangle?>
+
+<!--
+╔════════════════════════════════════════════════════════════════════╗
+║                      PRODUCT CARD COMPONENT                        ║
+╠════════════════════════════════════════════════════════════════════╣
+║ Visualizza un prodotto con:                                        ║
+║ • Immagine opzionale                                               ║
+║ • Nome, prezzo, descrizione                                        ║
+║ • Chip allergeni                                                   ║
+╚════════════════════════════════════════════════════════════════════╝
+-->
+
+<VBox xmlns="http://javafx.com/javafx/21"
+    xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="com.app.components.ProductCardController"
+    spacing="0" styleClass="product-card">
+
+    <!-- Immagine prodotto (opzionale) -->
+    <ImageView fx:id="productImage" 
+        fitHeight="180" fitWidth="240" preserveRatio="false"
+        styleClass="product-card-image" />
+
+    <!-- Contenuto -->
+    <VBox spacing="12" styleClass="product-card-content" VBox.vgrow="ALWAYS">
+        
+        <!-- Nome + Prezzo -->
+        <VBox spacing="4">
+            <Label fx:id="productName" 
+                styleClass="product-card-name" wrapText="true" />
+            <Label fx:id="productPrice" 
+                styleClass="product-card-price" />
+        </VBox>
+
+        <!-- Descrizione -->
+        <Label fx:id="productDesc" 
+            styleClass="product-card-desc" wrapText="true"
+            VBox.vgrow="ALWAYS" />
+
+        <!-- Allergeni -->
+        <FlowPane fx:id="allergenChips" 
+            hgap="6" vgap="6" styleClass="product-card-allergens"
+            managed="false" visible="false" />
+
+    </VBox>
+
+</VBox>

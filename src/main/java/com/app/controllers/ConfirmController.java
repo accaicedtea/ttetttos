@@ -3,7 +3,9 @@ package com.app.controllers;
 import javafx.animation.*;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.Cursor;
 import javafx.scene.control.Label;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
@@ -19,7 +21,7 @@ import java.util.Random;
  * Rispetto all'originale: estende BaseController per t() e setVisible().
  * La logica animazioni rimane identica.
  */
-public class ConfirmController extends BaseController implements Navigator.DataReceiver {
+public class ConfirmController extends BaseController implements Navigator.DataReceiver, Navigator.ScreenReturnable {
 
     @FXML
     private StackPane confirmRoot;
@@ -44,6 +46,7 @@ public class ConfirmController extends BaseController implements Navigator.DataR
 
     private static final int AUTO_RETURN = 10;
     private Timeline countdown;
+    private final int[] remainingSeconds = { AUTO_RETURN };
 
     @FXML
     private void initialize() {
@@ -74,6 +77,35 @@ public class ConfirmController extends BaseController implements Navigator.DataR
         bgCircle3.setScaleY(0);
 
         Platform.runLater(this::playAnimations);
+
+        // Ferma il monitoraggio dell'inattività in confirm screen
+        com.util.InactivityManager.stopMonitoring();
+
+        // Aggiungi click listener al numero ordine per diminuire il countdown
+        if (orderNumber != null) {
+            orderNumber.setOnMouseClicked(e -> onOrderNumberClicked());
+            orderNumber.setCursor(javafx.scene.Cursor.HAND);
+        }
+
+        // Aggiungi click listener su tutta la pagina per diminuire il countdown
+        if (confirmRoot != null) {
+            confirmRoot.setOnMouseClicked(e -> onPageClicked(e));
+        }
+    }
+
+    private void onPageClicked(javafx.scene.input.MouseEvent e) {
+        // Ignora i click sul numero ordine (sono già gestiti separatamente)
+        if (e.getSource() == orderNumber) {
+            return;
+        }
+        // Diminuisci il countdown di 3 secondi per qualsiasi click sulla pagina
+        onOrderNumberClicked();
+    }
+
+    @Override
+    public void onReturn() {
+        // Ferma il monitoraggio quando si ritorna a confirm
+        com.util.InactivityManager.stopMonitoring();
     }
 
     @Override
@@ -149,13 +181,56 @@ public class ConfirmController extends BaseController implements Navigator.DataR
                 .play();
     }
 
+    private void onOrderNumberClicked() {
+        // Diminuisci il countdown di 3 secondi
+        remainingSeconds[0] -= 3;
+        if (remainingSeconds[0] < 0) {
+            remainingSeconds[0] = 0;
+        }
+
+        // Aggiorna il label del countdown
+        if (countdownLabel != null) {
+            countdownLabel.setText(remainingSeconds[0] + "s");
+        }
+
+        // Effetto visivo: pulse + scale dell'orderNumber
+        playOrderNumberClickEffect();
+
+        // Se il countdown raggiunge 0, ritorna subito a WELCOME
+        if (remainingSeconds[0] <= 0) {
+            if (countdown != null) {
+                countdown.stop();
+            }
+            Navigator.goTo(Navigator.Screen.WELCOME);
+        }
+    }
+
+    private void playOrderNumberClickEffect() {
+        if (orderNumber == null) return;
+
+        // Shake + pulse effect
+        SequentialTransition effect = new SequentialTransition(
+                // Shake: movimenti laterali
+                translate(orderNumber, 0, -8, 60),
+                translate(orderNumber, -8, 8, 60),
+                translate(orderNumber, 8, -4, 60),
+                translate(orderNumber, -4, 0, 60),
+                // Pulse finale
+                parallel(
+                        scale(orderNumber, 1.0, 1.15, 150, Interpolator.EASE_OUT),
+                        fade(orderNumber, 1.0, 0.8, 150)
+                ),
+                scale(orderNumber, 1.15, 1.0, 150, Interpolator.EASE_IN)
+        );
+        effect.play();
+    }
+
     private void startCountdown() {
-        final int[] remaining = { AUTO_RETURN };
         countdown = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
-            remaining[0]--;
+            remainingSeconds[0]--;
             if (countdownLabel != null)
-                countdownLabel.setText(remaining[0] + "s");
-            if (remaining[0] <= 0) {
+                countdownLabel.setText(remainingSeconds[0] + "s");
+            if (remainingSeconds[0] <= 0) {
                 countdown.stop();
                 Navigator.goTo(Navigator.Screen.WELCOME);
             }

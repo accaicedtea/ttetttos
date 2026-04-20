@@ -52,6 +52,8 @@ public class ToastOverlay extends HBox {
         if (timeline != null)
             timeline.stop();
 
+        this.toFront();
+
         label.setText(message);
         setOpacity(0);
         setTranslateY(20);

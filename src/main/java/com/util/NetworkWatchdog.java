@@ -52,7 +52,9 @@ public class NetworkWatchdog {
     private static Thread thread = null;
     private static volatile boolean running = false;
     private static volatile boolean online = false;
-    private static Consumer<Boolean> listener = null;
+    
+    // Sostituito Consumer con BooleanProperty per permettere binding multipli
+    public static final javafx.beans.property.BooleanProperty onlineProperty = new javafx.beans.property.SimpleBooleanProperty(true);
 
     // -- API pubblica --
 
@@ -60,15 +62,16 @@ public class NetworkWatchdog {
         if (running)
             return;
         running = true;
-        listener = onStatusChange;
+
+        if (onStatusChange != null) {
+            onlineProperty.addListener((obs, oldV, newV) -> onStatusChange.accept(newV));
+        }
 
         // Esegui un primo ping subito, così lo stato è aggiornato all'avvio.
         online = sendPing();
+        Platform.runLater(() -> onlineProperty.set(online));
+        
         System.out.println("[Watchdog] Avviato. Stato iniziale: " + (online ? "ONLINE" : "OFFLINE"));
-        if (listener != null) {
-            final boolean onlineFinal = online;
-            Platform.runLater(() -> listener.accept(onlineFinal));
-        }
 
         thread = new Thread(() -> {
             while (running) {
@@ -78,10 +81,8 @@ public class NetworkWatchdog {
 
                 if (isOnline != wasOnline) {
                     System.out.println("[Watchdog] -> " + (isOnline ? "ONLINE" : "OFFLINE"));
-                    if (listener != null) {
-                        final boolean onlineFinal = isOnline;
-                        Platform.runLater(() -> listener.accept(onlineFinal));
-                    }
+                    final boolean onlineFinal = isOnline;
+                    Platform.runLater(() -> onlineProperty.set(onlineFinal));
                 }
 
                 try {
@@ -106,14 +107,8 @@ public class NetworkWatchdog {
         }
     }
 
-    public static void setListener(Consumer<Boolean> cb) {
-        listener = cb;
-        if (cb != null)
-            Platform.runLater(() -> cb.accept(online));
-    }
-
     public static boolean isOnline() {
-        return online;
+        return onlineProperty.get();
     }
 
     // -- Ping + heartbeat --
@@ -124,12 +119,6 @@ public class NetworkWatchdog {
      */
     private static boolean sendPing() {
         if (DEBUG_SIMULATE_OFFLINE) {
-            checkOfflineLock(false, null);
-            return false;
-        }
-
-        // Prova un ping HTTP semplice prima di tentare il codice business
-        if (!rawPing() && !isNetworkReachable()) {
             checkOfflineLock(false, null);
             return false;
         }
@@ -152,7 +141,7 @@ public class NetworkWatchdog {
             }
             
             // Invia dati al server con Authorization: Bearer (non public)
-            JsonObject response = Api.apiPost("auth/ping", payload);
+            JsonObject response = com.api.Api.apiPost("auth/ping", payload);
             
             // Aggiorna e resetta il timer del blocco offline
             checkOfflineLock(true, response);
@@ -161,9 +150,8 @@ public class NetworkWatchdog {
             return true;
         } catch (Exception e) {
             System.err.println("[Watchdog] Errore API: " + e.getMessage());
-            boolean networkOk = isNetworkReachable();
-            checkOfflineLock(networkOk, null);
-            return networkOk;
+            checkOfflineLock(false, null);
+            return false;
         }
     }
 

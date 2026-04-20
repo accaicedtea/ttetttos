@@ -2,7 +2,6 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
-<?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
@@ -10,89 +9,130 @@
 <?import javafx.scene.layout.VBox?>
 <?import org.kordamp.ikonli.javafx.FontIcon?>
 
-<StackPane fx:id="rootPane"
-    xmlns="http://javafx.com/javafx/21"
+<!--
+╔════════════════════════════════════════════════════════════════════╗
+║                      CART SCREEN (FIXED LAYOUT)                    ║
+╠════════════════════════════════════════════════════════════════════╣
+║                                                                    ║
+║ ┌──────────────────────────────────────────────────────────────┐  ║
+║ │ [System Info: Clock, Network, Battery]   ← ShopHeader fixed  │  ║
+║ ├──────────────────────────────────────────────────────────────┤  ║
+║ │ [← Cart Icon Title               Totale: €XX,XX] ← screen hdr │  ║
+║ ├──────────────────────────────────────────────────────────────┤  ║
+║ │                                               ↑ scrollable    │  ║
+║ │ [Prodotto 1: Nome, qty, totale riga, [-] 1 [+] [🗑]]        │  ║
+║ │ [Prodotto 2: ...]                            │               │  ║
+║ │ [Prodotto N: ...]                            ↓               │  ║
+║ ├──────────────────────────────────────────────────────────────┤  ║
+║ │ ⚠️  Allergen Banner (se allergeni)         ← fixed bottom    │  ║
+║ ├──────────────────────────────────────────────────────────────┤  ║
+║ │ Totale: € 25,50                                              │  ║
+║ │ [Procedi al Pagamento →]                                     │  ║
+║ └──────────────────────────────────────────────────────────────┘  ║
+║                                                                    ║
+╚════════════════════════════════════════════════════════════════════╝
+
+Pattern: VBox (root) > [fixed header] > [scrollable center] > [fixed footer]
+NOT: StackPane > BorderPane (which scrolls footer with content)
+
+Controllers:
+- ShopHeaderController (injected via fx:include)
+- CartController (this screen's main controller)
+- CartItemRowController (for each row, created dynamically)
+
+IMPORTANT: rootPane (StackPane) is ROOT so modals layer on top
+-->
+
+<StackPane fx:id="rootPane" xmlns="http://javafx.com/javafx/21"
     xmlns:fx="http://javafx.com/fxml/1"
     fx:controller="com.app.controllers.CartController"
-    styleClass="screen-root">
+    styleClass="screen-root cart-screen">
 
-    <BorderPane>
+    <!-- ════════════════════════════════════════════════════════════════
+         LAYER 1: Content (VBox - behind)
+         ════════════════════════════════════════════════════════════════ -->
+    <VBox spacing="0">
 
-        <!-- ══ TOP: Header ══ -->
-        <top>
-            <HBox alignment="CENTER_LEFT" spacing="16" styleClass="screen-header">
-                <Button onAction="#onBack" styleClass="back-btn" focusTraversable="false">
-                    <graphic>
-                        <FontIcon iconLiteral="mdi2a-arrow-left" iconSize="26"
-                            styleClass="back-icon" />
-                    </graphic>
-                </Button>
-                <FontIcon iconLiteral="mdi2c-cart" iconSize="28"
-                    styleClass="screen-header-icon" />
-                <Label fx:id="titleLabel" text="Carrello" styleClass="screen-title" />
-                <Region HBox.hgrow="ALWAYS" />
-                <Label fx:id="totalBadge" styleClass="cart-total-badge" text="€ 0,00" />
+        <!-- TOP: Fixed Header (System Info) -->
+        <fx:include source="../ShopHeader.fxml" />
+
+        <!-- SCREEN HEADER: Back, Title, Totale Badge -->
+        <HBox alignment="CENTER_LEFT" spacing="16" styleClass="screen-header">
+            <Button onAction="#onBack" styleClass="back-btn" focusTraversable="false">
+                <graphic>
+                    <FontIcon iconLiteral="mdi2a-arrow-left" iconSize="26"
+                        styleClass="back-icon" />
+                </graphic>
+            </Button>
+            <FontIcon iconLiteral="mdi2c-cart" iconSize="28"
+                styleClass="screen-header-icon" />
+            <Label fx:id="titleLabel" text="CARRELLO" styleClass="screen-title" />
+            <Region HBox.hgrow="ALWAYS" />
+        </HBox>
+
+        <!-- CENTER: Scrollable Cart Items List -->
+        <ScrollPane fx:id="cartScroll"
+            fitToWidth="true"
+            hbarPolicy="NEVER" vbarPolicy="NEVER"
+            styleClass="cart-scroll"
+            VBox.vgrow="ALWAYS">
+            <VBox fx:id="cartList" spacing="14" styleClass="cart-list" />
+        </ScrollPane>
+
+        <!-- BOTTOM: Fixed Footer (Allergen Banner + Totale + CTA) -->
+        <VBox spacing="12" styleClass="cart-footer" VBox.vgrow="NEVER">
+
+            <!-- Allergen Warning Banner (visible=false if no allergens) -->
+            <HBox fx:id="allergenWarningBox"
+                spacing="12" alignment="CENTER_LEFT"
+                styleClass="cart-allergen-warning"
+                visible="false" managed="false">
+
+                <FontIcon iconLiteral="mdi2a-alert-rhombus" iconSize="28"
+                    styleClass="cart-allergen-icon" />
+
+                <VBox spacing="6" HBox.hgrow="ALWAYS">
+                    <Label fx:id="allergenWarningTitle"
+                        text="ATTENZIONE: ALLERGENI NEL TUO ORDINE"
+                        styleClass="cart-allergen-title" />
+                    <FlowPane fx:id="allergenWarningChips"
+                        hgap="8" vgap="6"
+                        styleClass="allergen-chips-pane" />
+                </VBox>
+
             </HBox>
-        </top>
 
-        <!-- ══ CENTER: Lista prodotti ══ -->
-        <center>
-            <ScrollPane fx:id="cartScroll"
-                fitToWidth="true"
-                hbarPolicy="NEVER" vbarPolicy="NEVER"
-                styleClass="cart-scroll">
-                <VBox fx:id="cartList" spacing="14" styleClass="cart-list" />
-            </ScrollPane>
-        </center>
+            <!-- Total Row -->
+            <HBox alignment="CENTER_LEFT" spacing="12" styleClass="cart-total-row">
+                <Label fx:id="totalLabel" text="Totale" styleClass="cart-total-label" />
+                <Region HBox.hgrow="ALWAYS" />
+                <Label fx:id="totalAmount" text="€ 0,00" styleClass="cart-total-amount" />
+            </HBox>
 
-        <!-- ══ BOTTOM: Banner allergeni + Totale + CTA ══ -->
-        <bottom>
-            <VBox spacing="0" styleClass="cart-footer">
+            <!-- CTA Button: Proceed to Payment -->
+            <Button fx:id="proceedBtn"
+                onAction="#onProceed"
+                styleClass="cta-btn"
+                text="Procedi al pagamento"
+                maxWidth="Infinity">
+                <graphic>
+                    <FontIcon iconLiteral="mdi2a-arrow-right-circle"
+                        iconSize="28" styleClass="cta-icon" />
+                </graphic>
+            </Button>
 
-                <!-- ── Banner allergeni ── -->
-                <!-- visible=false / managed=false: nascosto se non ci sono allergeni -->
-                <HBox fx:id="allergenWarningBox"
-                    spacing="12" alignment="CENTER_LEFT"
-                    styleClass="cart-allergen-warning"
-                    visible="false" managed="false">
+        </VBox>
 
-                    <FontIcon iconLiteral="mdi2a-alert-rhombus" iconSize="28"
-                        styleClass="cart-allergen-icon" />
+        <!-- Global Footer -->
+        <HBox alignment="CENTER" styleClass="global-footer" style="-fx-padding: 10;">
+            <Label text="Totem Kiosk v1.0 | © 2026 TOTTEM" style="-fx-text-fill: #888888; -fx-font-size: 12px;"/>
+        </HBox>
 
-                    <VBox spacing="6" HBox.hgrow="ALWAYS">
-                        <Label fx:id="allergenWarningTitle"
-                            text="Attenzione: allergeni nel tuo ordine"
-                            styleClass="cart-allergen-title" />
-                        <!-- Chip allergeni — popolati dal controller -->
-                        <FlowPane fx:id="allergenWarningChips"
-                            hgap="8" vgap="6"
-                            styleClass="allergen-chips-pane" />
-                    </VBox>
+    </VBox>
 
-                </HBox>
-
-                <!-- ── Totale ── -->
-                <HBox alignment="CENTER_LEFT" spacing="12" styleClass="cart-total-row">
-                    <Label fx:id="totalLabel" text="Totale" styleClass="cart-total-label" />
-                    <Region HBox.hgrow="ALWAYS" />
-                    <Label fx:id="totalAmount" text="€ 0,00" styleClass="cart-total-amount" />
-                </HBox>
-
-                <!-- ── CTA ── -->
-                <Button fx:id="proceedBtn"
-                    onAction="#onProceed"
-                    styleClass="cta-btn"
-                    text="Procedi al pagamento"
-                    maxWidth="Infinity">
-                    <graphic>
-                        <FontIcon iconLiteral="mdi2a-arrow-right-circle"
-                            iconSize="28" styleClass="cta-icon" />
-                    </graphic>
-                </Button>
-
-            </VBox>
-        </bottom>
-
-    </BorderPane>
+    <!-- ════════════════════════════════════════════════════════════════
+         LAYER 2: Overlays / Modals (added at runtime by CartController)
+         ════════════════════════════════════════════════════════════════ -->
+    <!-- Children will be added by ModalDialog.builder(rootPane) -->
 
 </StackPane>

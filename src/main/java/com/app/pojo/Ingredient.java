@@ -26,7 +26,7 @@ public class Ingredient {
     }
 
     public static Ingredient fromJson(JsonObject j) {
-        System.out.println("[Ingredient] fromJson: loading ingredient from JSON: ");
+        // System.out.println("[Ingredient] fromJson: loading ingredient from JSON: ");
         if (j == null)
             return null;
         int id = JsonHelper.intVal(j, "id", 0);
@@ -49,6 +49,8 @@ public class Ingredient {
         if (arr == null)
             return List.of();
         List<Ingredient> ret = new ArrayList<>();
+        System.out.println("[Ingrediendts] listFromJsonArray: processing ingredient JSON object");
+        
         for (JsonElement e : arr) {
             if (e.isJsonObject()) {
                 Ingredient ing = fromJson(e.getAsJsonObject());

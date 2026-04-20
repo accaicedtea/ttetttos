@@ -19,7 +19,7 @@ public class InfoModal {
         msgLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #444;");
         msgLabel.setWrapText(true);
 
-        Button confirmBtn = new Button("Conferma");
+        Button confirmBtn = new Button("CONFERMA");
         confirmBtn.setStyle(
                 "-fx-font-size: 16px; -fx-background-color: #5b9cf5; -fx-text-fill: white; -fx-background-radius: 8;");
         confirmBtn.setOnAction(e -> {
@@ -28,7 +28,7 @@ public class InfoModal {
                 onConfirm.run();
         });
 
-        Button closeBtn = new Button("Annulla");
+        Button closeBtn = new Button("ANNULLA");
         closeBtn.setStyle(
                 "-fx-font-size: 16px; -fx-background-color: #e05555; -fx-text-fill: white; -fx-background-radius: 8;");
         closeBtn.setOnAction(e -> parent.getChildren().remove(modalBox));

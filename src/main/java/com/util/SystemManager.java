@@ -83,13 +83,13 @@ public class SystemManager {
             
             com.app.components.ModalDialog.builder(App.rootPane)
                 .type(com.app.components.ModalDialog.Type.INFO)
-                .title("Aggiornamento Disponibile")
-                .message("È disponibile la versione " + version + " del sistema.\nVuoi aggiornare il totem adesso?")
+                .title("AGGIORNAMENTO DISPONIBILE")
+                .message("È DISPONIBILE LA VERSIONE " + version + " DEL SISTEMA.\nVUOI AGGIORNARE IL TOTEM ADESSO?")
                 .width(800) // Aumentato rispetto al default per renderlo bello grande
                 .closeOnBackdrop(false)
                 .closeOnEscape(false)
-                .button(com.app.components.ModalButton.cancel("Chiudi"))
-                .button(com.app.components.ModalButton.primary("Aggiorna adesso", () -> {
+                .button(com.app.components.ModalButton.cancel("CHIUDI"))
+                .button(com.app.components.ModalButton.primary("AGGIORNA ADESSO", () -> {
                     com.api.services.UpdateService.startUpdate(version, updateId);
                 }))
                 .show();
@@ -111,7 +111,7 @@ public class SystemManager {
             Label title = new Label("AGGIORNAMENTO IN CORSO");
             title.setStyle("-fx-text-fill: white; -fx-font-size: 48px; -fx-font-weight: bold;");
 
-            Label msgLabel = new Label("Scaricamento aggiornamento v" + version + "...");
+            Label msgLabel = new Label("SCARICAMENTO AGGIORNAMENTO V" + version + "...");
             msgLabel.setStyle("-fx-text-fill: white; -fx-font-size: 24px;");
 
             updateScreen.getChildren().addAll(title, msgLabel);

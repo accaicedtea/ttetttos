@@ -26,17 +26,17 @@
                 styleClass="check-icon" />
         </StackPane>
 
-        <Label fx:id="titleLabel" text="Ordine confermato!"
+        <Label fx:id="titleLabel" text="ORDINE CONFERMATO!"
             styleClass="confirm-title" wrapText="true" />
 
         <VBox alignment="CENTER" spacing="6">
-            <Label fx:id="numberSubLabel" text="Il tuo numero è"
+            <Label fx:id="numberSubLabel" text="IL TUO NUMERO È"
                 styleClass="confirm-number-sub" />
             <Label fx:id="orderNumber" text="42" styleClass="confirm-number" />
         </VBox>
 
         <Label fx:id="msgLabel"
-            text="Ritira il tuo ordine alla cassa.&#10;Grazie!"
+            text="RITIRA IL TUO ORDINE ALLA CASSA.&#10;GRAZIE!"
             styleClass="confirm-msg" wrapText="true" />
 
         <Region prefHeight="30" />
@@ -44,8 +44,8 @@
         <Label fx:id="countdownLabel" text="" styleClass="confirm-countdown" />
 
         <HBox spacing="16" alignment="CENTER">
-            <Button fx:id="cancelBtn" text="Annulla" styleClass="confirm-btn-secondary" />
-            <Button fx:id="confirmBtn" text="Conferma" styleClass="confirm-btn-primary" />
+            <Button fx:id="cancelBtn" text="ANNULLA" styleClass="confirm-btn-secondary" />
+            <Button fx:id="confirmBtn" text="CONFERMA" styleClass="confirm-btn-primary" />
         </HBox>
 
     </VBox>
