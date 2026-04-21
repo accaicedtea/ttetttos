@@ -128,8 +128,27 @@ public class PaymentController extends BaseController implements Navigator.Scree
         setVisible(cardCard, true);
         cardCard.setDisable(true);
 
-        final int orderId = com.app.model.OrderStateManager.get().getCurrentOrderId(); java.util.concurrent.Executors.newSingleThreadExecutor().submit(() -> { try { com.api.services.OrdersService.startPayment(orderId); javafx.application.Platform.runLater(() -> { com.app.model.OrderStateManager.get().transitionToPaymentStarted(); Navigator.goTo(Navigator.Screen.CONFIRM, String.valueOf(orderId)); }); } catch(Exception e) { e.printStackTrace(); javafx.application.Platform.runLater(() -> Navigator.goTo(Navigator.Screen.CONFIRM, String.valueOf(orderId))); } });
-                
+        com.app.model.OrderStateManager.get().setPaymentMethod(method);
+
+        com.app.components.ModalDialog saving = com.app.components.ModalDialog.loading(rootPane, "Elaborazione...");
+        
+        com.app.model.OrderQueue.createOrderAsync(
+            CartManager.get(),
+            method,
+            () -> {
+                saving.dismiss();
+                int orderId = com.app.model.OrderStateManager.get().getCurrentOrderId();
+                Navigator.goTo(Navigator.Screen.CONFIRM, String.valueOf(orderId));
+            },
+            err -> {
+                saving.dismiss();
+                System.err.println("[PaymentController] Errore creazione ordine: " + err);
+                cashCard.setDisable(false);
+                cardCard.setDisable(false);
+                if (chosen != null) chosen.getStyleClass().remove("payment-card-selected");
+                com.app.components.ModalDialog.error(rootPane, "Errore", "Impossibile inviare l'ordine");
+            }
+        );
     }
 
     private void animateCards() {

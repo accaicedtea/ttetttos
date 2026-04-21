@@ -14,6 +14,7 @@ public class OrderStateManager {
     
     private int currentOrderId = -1;
     private String currentOrderState = null; // IN_ATTESA, PAGAMENTO_AVVIATO, PAGATO, STAMPATO
+    private String paymentMethod = null; // Metodo di pagamento selezionato
     
     private OrderStateManager() {}
     
@@ -93,5 +94,13 @@ public class OrderStateManager {
     
     public boolean hasActiveOrder() {
         return currentOrderId >= 0;
+    }
+    
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+    
+    public void setPaymentMethod(String method) {
+        this.paymentMethod = method;
     }
 }

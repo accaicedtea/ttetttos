@@ -73,15 +73,15 @@ public class SplashController extends BaseController {
             // ──────────────────────────────────────────────────────────────
 
             // ── STEP 1: Login + salva token ───────────────────────────────
-            setStep("mdi2l-lock", "Connessione al server...", "", 0.25);
+            setStep("mdi2l-lock", "Avvio del Totem in corso...", "Verifica credenziali di sicurezza", 0.25);
             com.api.services.InitializationService.InitData init = 
                 com.api.services.InitializationService.initializeApp(API_KEY);
             
             if (init.error != null && init.menu == null) {
                 // Errore critico — app bloccata
-                setStep("mdi2a-alert-circle", "Errore critico", init.error, 1.0);
+                setStep("mdi2a-alert-circle", "Servizio momentaneamente non disponibile", "Riscontrato un problema hardware o di server: " + init.error, 1.0);
                 System.err.println("[Splash] ERRORE: " + init.error);
-                sleep(1500);
+                sleep(2500);
                 if (com.util.SystemManager.isAppLocked()) {
                     return;
                 }
@@ -89,27 +89,27 @@ public class SplashController extends BaseController {
 
             // ── STEP 2: Check online ──────────────────────────────────────
             setStep("mdi2w-wifi" + (init.isOnline ? "" : "-off"), 
-                    init.isOnline ? "Online" : "Offline", 
-                    init.isOnline ? "" : "Modalità cache", 
+                    init.isOnline ? "Connessione internet stabilita" : "Connettività assente", 
+                    init.isOnline ? "Sincronizzazione del Cloud..." : "Avvio in modalità emergenza / locale", 
                     0.50);
-            sleep(300);
+            sleep(600);
 
             // ── STEP 2.5: Avvia NetworkWatchdog per monitorare continuamente ─
             NetworkWatchdog.start(online -> {
                 System.out.println("[Net] Stato: " + (online ? "Online" : "Offline"));
                 // Show global toast
                 if (com.app.App.globalToast != null) {
-                    com.app.App.globalToast.show(online ? "Connessione internet ripristinata" : "Connessione internet persa: modalità offline");
+                    com.app.App.globalToast.show(online ? "Rete internet recuperata." : "Rete internet persa. Il Totem continua a funzionare in locale.");
                 }
             });
 
             // ── STEP 3: Dati carificati ───────────────────────────────────
-            setStep("mdi2c-check-circle", "Dati caricati", "Pronto!", 0.75);
-            sleep(200);
+            setStep("mdi2f-food", "Menu ristorante aggiornato", "Lettura promozioni e categorie in corso...", 0.75);
+            sleep(600);
 
             // ── STEP 4: Naviga a WELCOME ──────────────────────────────────
-            setStep("mdi2c-check-circle", "Pronto!", "", 1.0);
-            sleep(300);
+            setStep("mdi2c-check-circle", "Tutto pronto!", "Il Totem è pronto per ricevere gli ordini.", 1.0);
+            sleep(400);
 
             final Object finalMenu = init.menu;
             Platform.runLater(() -> Navigator.goTo(Navigator.Screen.PRESENTATION, finalMenu));

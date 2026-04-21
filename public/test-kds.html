@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KDS Android Test - Totem Wi-Fi</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #eee; text-align: center; }
+        #orders-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 20px; }
+        .order-card { 
+            background: white; border-radius: 8px; padding: 20px; width: 300px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: left;
+            transition: transform 0.2s;
+        }
+        .order-card:hover { transform: scale(1.02); }
+        .btn-take { 
+            background: #28a745; color: white; border: none; padding: 10px; width: 100%;
+            border-radius: 4px; font-size: 16px; cursor: pointer; margin-top: 15px; 
+        }
+        .btn-take:hover { background: #218838; }
+        .header { background: #333; color: white; padding: 20px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>KDS Test Cucine / Bar (WebSocket)</h1>
+        <p id="status">Connessione in corso...</p>
+    </div>
+
+    <div id="orders-container">
+        <!-- Ordini popoleranno qui -->
+    </div>
+
+<script>
+    const statusEl = document.getElementById('status');
+    const container = document.getElementById('orders-container');
+    
+    // Cambia qui con l'IP della macchina che fa da Totem (o localhost se sei sullo stesso pc)
+    const host = window.location.hostname || "127.0.0.1";
+    const port = "7070";
+    
+    let ws;
+
+    function connectWebSocket() {
+        // Ignorando la auth JWT per semplificare il test, oppure supponendo permessi validi
+        ws = new WebSocket(`ws://${host}:${port}/api/ws/orders`);
+        
+        ws.onopen = () => {
+            statusEl.innerText = "🟢 Connesso al Totem via Wi-Fi!";
+            statusEl.style.color = "#4CAF50";
+            
+            // Heartbeat per prevenire timeout
+            if (window.pingInterval) clearInterval(window.pingInterval);
+            window.pingInterval = setInterval(() => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ action: "ping" }));
+                }
+            }, 10000);
+        };
+        
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                // Ignora il pong di heartbeat
+                if (data.action === "pong") return;
+                renderOrders(data);
+            } catch(e) {
+                console.error(e);
+            }
+        };
+        
+        ws.onclose = () => {
+            statusEl.innerText = "🔴 Disconnesso. Tentativo di ricollegamento...";
+            statusEl.style.color = "red";
+            if (window.pingInterval) clearInterval(window.pingInterval);
+            setTimeout(connectWebSocket, 3000);
+        };
+    }
+
+    function takeOrder(tabletOrderId) {
+        if(ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ action: "take_order", orderId: tabletOrderId }));
+        }
+    }
+
+    function renderOrders(ordersArray) {
+        container.innerHTML = ""; // reset
+        if (ordersArray.length === 0) {
+            container.innerHTML = "<h3>Nessun ordine in coda.</h3>";
+            return;
+        }
+
+        ordersArray.forEach(order => {
+            console.log(order);
+            // Sostituiamo coi dati dal tuo cart payload Java
+            let orderTotal = order.totale || 0;
+            let displayId = order.tablet_order_id;
+            
+            let cardObj = document.createElement("div");
+            cardObj.className = "order-card";
+            
+            let itemsHtml = "<ul>";
+            if(order.dettaglio) { 
+                order.dettaglio.forEach(d=> {
+                    itemsHtml += `<li><b>${d.qta}x</b> ${d.id_prodotto}</li>`;
+                });
+            }
+            itemsHtml += "</ul>";
+
+            cardObj.innerHTML = `
+                <h2>ID Ordine: ${displayId}</h2>
+                <hr>
+                ${itemsHtml}
+                <h3>Totale: € ${orderTotal}</h3>
+                <button class="btn-take" onclick="takeOrder('${displayId}')">Completato / Prendi in carico</button>
+            `;
+            container.appendChild(cardObj);
+        });
+    }
+
+    // Esegui la connessione
+    connectWebSocket();
+
+</script>
+</body>
+</html>

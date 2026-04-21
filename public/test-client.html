@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KDS Tablet Test Client</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        #orders { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+        .card { border: 1px solid #ccc; padding: 15px; border-radius: 8px; background: #f9f9f9; }
+        .btn-take { background: #28a745; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 5px; width: 100%; margin-top: 10px; }
+        .btn-take:hover { background: #218838; }
+        #status { font-weight: bold; margin-bottom: 20px; }
+        .status-connected { color: green; }
+        .status-disconnected { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Tablet Order Queue (Port 7070)</h1>
+    <div id="status" class="status-disconnected">Connecting...</div>
+    <div id="orders"></div>
+
+    <script>
+        // Adjust IP to match your server if not localhost
+        const ws = new WebSocket('ws://localhost:7070/api/ws/orders');
+        
+        ws.onopen = () => {
+            document.getElementById('status').innerText = 'Connected via WebSocket';
+            document.getElementById('status').className = 'status-connected';
+        };
+
+        ws.onclose = () => {
+            document.getElementById('status').innerText = 'Disconnected';
+            document.getElementById('status').className = 'status-disconnected';
+        };
+
+        ws.error = () => {
+            document.getElementById('status').innerText = 'Connection Error';
+            document.getElementById('status').className = 'status-disconnected';
+        }
+
+        ws.onmessage = (event) => {
+            console.log('Received update:', event.data);
+            const orders = JSON.parse(event.data);
+            renderOrders(orders);
+        };
+
+        function renderOrders(orders) {
+            const container = document.getElementById('orders');
+            container.innerHTML = '';
+            
+            if (orders.length === 0) {
+                container.innerHTML = '<p>No pending orders.</p>';
+                return;
+            }
+
+            orders.forEach(order => {
+                const orderId = order.tablet_order_id || order.id || order.num || 'Unknown';
+                const el = document.createElement('div');
+                el.className = 'card';
+                el.innerHTML = `
+                    <h3>Order #${orderId}</h3>
+                    <p>Total: €${order.totale !== undefined ? order.totale : '0.00'}</p>
+                    <p>Items: ${order.prodotti ? order.prodotti.length : 0}</p>
+                    <button class="btn-take" onclick="takeOrder('${orderId}')">Take Order</button>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function takeOrder(orderId) {
+            console.log("Taking order:", orderId);
+            ws.send(JSON.stringify({
+                action: 'take_order',
+                orderId: orderId
+            }));
+        }
+    </script>
+</body>
+</html>

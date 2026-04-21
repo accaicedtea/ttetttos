@@ -72,10 +72,20 @@ public class App extends Application {
         stage.show();
 
         Navigator.init(rootPane);
+        
+        // Avvia il server API locale per Android
+        new Thread(() -> {
+            try {
+                com.api.services.LocalServerManager.startLocalServer();
+            } catch (Exception e) {
+                System.err.println("Errore avvio server Javalin: " + e.getMessage());
+            }
+        }).start();
     }
 
     @Override
     public void stop() {
+        com.api.services.LocalServerManager.stopServer();
         Platform.exit();
         System.exit(0);
     }

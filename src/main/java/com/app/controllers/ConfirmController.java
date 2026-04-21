@@ -56,9 +56,7 @@ public class ConfirmController extends BaseController implements Navigator.DataR
         t(numberSubLabel, "confirm_sub");
         t(msgLabel, "confirm_msg");
         if (orderNumber != null)
-            orderNumber.setText(String.valueOf(new Random().nextInt(99) + 1));
-
-        CartManager.get().clear();
+            orderNumber.setText("");
 
         countdownLabel.setText(AUTO_RETURN + "s");
         if (countdown != null) {
@@ -104,12 +102,15 @@ public class ConfirmController extends BaseController implements Navigator.DataR
 
     @Override
     public void onReturn() {
-        // Ferma il monitoraggio quando si ritorna a confirm
-        com.util.InactivityManager.stopMonitoring();
+        // Obsoleto - ordine gestito da PaymentController
     }
 
     @Override
     public void receiveData(Object data) {
+        // Ferma il monitoraggio in confirm screen
+        com.util.InactivityManager.stopMonitoring();
+        CartManager.get().clear(); // Svuota il carrello dopo il successo
+
         if (data != null && orderNumber != null) {
             String numStr = data.toString();
             if (numStr.contains("-")) {
@@ -119,6 +120,20 @@ public class ConfirmController extends BaseController implements Navigator.DataR
                     numStr = "0";
             }
             orderNumber.setText(numStr);
+            
+            // Avvia il pagamento su server
+            final int orderId = com.app.model.OrderStateManager.get().getCurrentOrderId();
+            System.out.println("[ConfirmController] Avvio pagamento per ordine in DB: " + orderId);
+            java.util.concurrent.Executors.newSingleThreadExecutor().submit(() -> {
+                try {
+                    com.api.services.OrdersService.confirmPayment(orderId);
+                    javafx.application.Platform.runLater(() -> {
+                        com.app.model.OrderStateManager.get().transitionToPaid();
+                    });
+                } catch (Exception e) {
+                    System.err.println("[ConfirmController] Errore confirmPayment: " + e.getMessage());
+                }
+            });
         }
     }
 

@@ -21,18 +21,16 @@ import java.util.ArrayList;
  * Refactoring rispetto all'originale:
  * - buildServerPayload() usa CartItem.getPriceVal() / CartItem.getIva()
  * (invariato funzionalmente, ora usa getter tipizzati)
- * - Aggiunta persistenza coda tablet su file
+ * - Tutto il resto invariato
  *
  * File locali:
  * /opt/kiosk/current-order.json → ordine corrente (crash recovery)
  * /opt/kiosk/order-queue.json → coda ordini offline
- * /opt/kiosk/tablet-orders-queue.json → coda ordini per tablet KDS (persistente)
  */
 public final class OrderQueue {
 
     private static final Path CURRENT_ORDER_FILE = resolvePath("current-order.json");
     private static final Path QUEUE_FILE = resolvePath("order-queue.json");
-    private static final Path TABLET_QUEUE_FILE = resolvePath("tablet-orders-queue.json");
     private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
     private static final Duration MAX_QUEUE_AGE = Duration.ofMinutes(30);
 
@@ -51,51 +49,6 @@ public final class OrderQueue {
     // --- TABLET QUEUE (MUTUALLY EXCLUSIVE) ---
     private static final List<JsonObject> tabletOrders = Collections.synchronizedList(new ArrayList<>());
 
-    static {
-        // Carica gli ordini persistenti all'avvio
-        loadTabletOrders();
-    }
-
-    /**
-     * Carica la coda di ordini da file persistente
-     */
-    private static void loadTabletOrders() {
-        if (!Files.exists(TABLET_QUEUE_FILE)) {
-            System.out.println("[OrderQueue] Tablet orders file not found, starting with empty queue");
-            return;
-        }
-        try {
-            String content = Files.readString(TABLET_QUEUE_FILE);
-            JsonArray arr = JsonParser.parseString(content).getAsJsonArray();
-            synchronized(tabletOrders) {
-                tabletOrders.clear();
-                for (int i = 0; i < arr.size(); i++) {
-                    tabletOrders.add(arr.get(i).getAsJsonObject());
-                }
-            }
-            System.out.println("[OrderQueue] Loaded " + tabletOrders.size() + " pending orders from file");
-        } catch (Exception e) {
-            System.err.println("[OrderQueue] Error loading tablet orders from file: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Salva la coda di ordini su file persistente
-     */
-    private static void saveTabletOrders() {
-        try {
-            synchronized(tabletOrders) {
-                JsonArray arr = new JsonArray();
-                for (JsonObject order : tabletOrders) {
-                    arr.add(order);
-                }
-                Files.writeString(TABLET_QUEUE_FILE, new GsonBuilder().setPrettyPrinting().create().toJson(arr));
-            }
-        } catch (Exception e) {
-            System.err.println("[OrderQueue] Error saving tablet orders to file: " + e.getMessage());
-        }
-    }
-
     /**
      * Enqueue a new order for the Android tablets and notify all connected WebSockets.
      */
@@ -104,7 +57,6 @@ public final class OrderQueue {
         tabletOrder.addProperty("tablet_order_id", generatedId);
         
         tabletOrders.add(tabletOrder);
-        saveTabletOrders(); // ✅ Salva su file
         System.out.println("[OrderQueue] Added to tablet queue: " + generatedId);
         
         // Broadcast the updated queue to all connected websockets
@@ -121,7 +73,6 @@ public final class OrderQueue {
                 JsonObject order = tabletOrders.get(i);
                 if (order.has("tablet_order_id") && order.get("tablet_order_id").getAsString().equals(tabletOrderId)) {
                     tabletOrders.remove(i);
-                    saveTabletOrders(); // ✅ Salva su file dopo rimozione
                     return true;
                 }
             }
@@ -202,14 +153,8 @@ public final class OrderQueue {
         }
     }
 
-    public static void createOrderAsync(CartManager cart, String method, Runnable onSuccess, java.util.function.Consumer<String> onError) {
-        String pagamento = "contanti";
-        if ("card".equals(method) || "bancomat".equals(method)) {
-            pagamento = "pos_esterno";
-        } else if ("test".equals(method)) {
-            pagamento = "test";
-        }
-        
+    public static void createOrderAsync(CartManager cart, Runnable onSuccess, java.util.function.Consumer<String> onError) {
+        String pagamento = "N/A"; // Il pagamento effettivo verrà gestito dopo
         JsonObject payload = buildServerPayload(cart, pagamento);
         System.err.println("[OrderQueue] createOrderAsync payload: " + payload.toString());
         
@@ -394,34 +339,15 @@ public final class OrderQueue {
 
     private static String extractNumeroOrdine(JsonObject resp) {
         try {
-            // Cerca nel root della risposta prima di cercare in 'data'
-            if (resp.has("ordine_id")) {
-                int id = resp.get("ordine_id").getAsInt();
-                System.out.println("[OrderQueue] Extracted ordine_id from root: " + id);
-                return String.valueOf(id);
-            }
-            
-            // Cerca in resp.data
             if (resp.has("data")) {
                 JsonObject data = resp.getAsJsonObject("data");
-                if (data.has("ordine_id")) {
-                    int id = data.get("ordine_id").getAsInt();
-                    System.out.println("[OrderQueue] Extracted ordine_id from data: " + id);
-                    return String.valueOf(id);
-                }
-                if (data.has("numero_ordine")) {
-                    String num = data.get("numero_ordine").getAsString();
-                    System.out.println("[OrderQueue] Extracted numero_ordine: " + num);
-                    return num;
-                }
+                if (data.has("numero_ordine"))
+                    return data.get("numero_ordine").getAsString();
+                if (data.has("ordine_id"))
+                    return "#" + data.get("ordine_id").getAsInt();
             }
-        } catch (Exception e) {
-            System.err.println("[OrderQueue] Error extracting ordine_id: " + e.getMessage());
+        } catch (Exception ignored) {
         }
-        
-        // Fallback: genera ID dummy solo se completamente fallisce
-        String fallback = String.valueOf(localSeq.incrementAndGet());
-        System.out.println("[OrderQueue] Using fallback ID: " + fallback);
-        return fallback;
+        return "#" + localSeq.incrementAndGet();
     }
 }

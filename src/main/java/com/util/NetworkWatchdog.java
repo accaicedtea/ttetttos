@@ -169,6 +169,12 @@ public class NetworkWatchdog {
             
             // Reagisce attivamente in base al database remoto
             boolean lockedByDb = serverResponse != null && serverResponse.has("is_locked") && serverResponse.get("is_locked").getAsBoolean();
+            
+            // Salva dispositivi KDS per l'App Android
+            if (serverResponse != null && serverResponse.has("kds_devices")) {
+                com.api.SessionManager.setKdsDevices(serverResponse.getAsJsonArray("kds_devices"));
+            }
+
             if (lockedByDb) {
                 String lockMessage = serverResponse.has("lock_message") ? serverResponse.get("lock_message").getAsString() : "Totem sospeso dal server.";
                 Platform.runLater(() -> SystemManager.lockApp(lockMessage));

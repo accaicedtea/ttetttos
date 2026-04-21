@@ -208,7 +208,7 @@ public class CartController extends BaseController implements Navigator.ScreenRe
     @FXML
     private void onProceed() {
         if (!CartManager.get().isEmpty()) {
-            OrderQueue.createOrderAsync(CartManager.get(), () -> Navigator.goTo(Navigator.Screen.PAYMENT), err -> { System.err.println("Errore crezione ordine " + err); Navigator.goTo(Navigator.Screen.PAYMENT); });
+            Navigator.goTo(Navigator.Screen.PAYMENT);
         }
     }
 }

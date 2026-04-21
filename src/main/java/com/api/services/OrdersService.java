@@ -29,4 +29,11 @@ public class OrdersService {
     public static JsonObject confirmPrint(int id) throws Exception {
         return Api.apiPatch(BASE + "/" + id + "/stampato", new JsonObject());
     }
+
+    public static JsonObject kdsLogin(String pin) throws Exception {
+        com.google.gson.JsonObject body = new com.google.gson.JsonObject();
+        body.addProperty("pin", pin);
+        // Usa apiPost bypassando BASE che era relativo agli ordini
+        return com.api.Api.apiPost("kds/login", body);
+    }
 }
