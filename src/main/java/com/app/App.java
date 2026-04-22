@@ -11,6 +11,14 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.OperatingSystemMXBean;
+import java.lang.reflect.Method;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.util.Enumeration;
+
 import com.util.Navigator;
 import com.util.ThemeManager;
 
@@ -59,20 +67,21 @@ public class App extends Application {
         stage.setTitle("TotemOrder");
 
         // --- INIZIO OTTIMIZZAZIONI KIOSK LINUX ---
-        stage.initStyle(StageStyle.UNDECORATED); 
+        stage.initStyle(StageStyle.UNDECORATED);
         // stage.setAlwaysOnTop(true);
         stage.setMaximized(true);
         stage.setResizable(false);
         stage.setFullScreen(true);
         stage.setFullScreenExitHint("");
         // stage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
-        // scene.setCursor(javafx.scene.Cursor.NONE); // Rimuovi commento per nascondere mouse su schermi touch se serve
+        // scene.setCursor(javafx.scene.Cursor.NONE); // Rimuovi commento per nascondere
+        // mouse su schermi touch se serve
         // --- FINE OTTIMIZZAZIONI KIOSK LINUX ---
 
         stage.show();
 
         Navigator.init(rootPane);
-        
+
         // Avvia il server API locale per Android
         new Thread(() -> {
             try {
@@ -161,20 +170,78 @@ public class App extends Application {
             int threadCount = java.lang.management.ManagementFactory.getThreadMXBean().getThreadCount();
             int daemonCount = java.lang.management.ManagementFactory.getThreadMXBean().getDaemonThreadCount();
 
+            java.io.File diskRoot = new java.io.File("/");
+            long diskTotal = diskRoot.getTotalSpace();
+            long diskFree = diskRoot.getFreeSpace();
+            String osName = System.getProperty("os.name") + " " + System.getProperty("os.arch");
+            String javaVer = System.getProperty("java.version");
+            long uptimeMs = ManagementFactory.getRuntimeMXBean().getUptime();
+
             String text = String.format(
-                    "APP JVM: usata %s / %s (max %s)\n" +
+                    "OS: %s | Java: %s | Uptime: %d min\n" +
+                            "APP JVM: usata %s / %s (max %s)\n" +
                             "SISTEMA: %s / %s liberi\n" +
-                            "THREAD: tot %d, daemon %d",
+                            "DISCO (/): %s / %s liberi\n" +
+                            "CPU LOAD: %s%% | TEMP: %s\n" +
+                            "IP: %s\n" +
+                            "THREAD: tot %d, daemon %d\n" +
+                            "KDS CONNECTED: %d",
+                    osName, javaVer, (uptimeMs / 60000),
                     humanReadableBytes(jvmUsed), humanReadableBytes(jvmTotal), humanReadableBytes(jvmMax),
                     sysFree >= 0 ? humanReadableBytes(sysFree) : "n/a",
                     sysTotal >= 0 ? humanReadableBytes(sysTotal) : "n/a",
-                    threadCount, daemonCount);
+                    humanReadableBytes(diskFree), humanReadableBytes(diskTotal),
+                    getCpuLoad() != null ? String.format("%.1f", getCpuLoad() * 100) : "n/a",
+                    getCpuTemperature(),
+                    getLocalIpAddress().replace("\n", ", "),
+                    threadCount, daemonCount, com.api.services.LocalServerManager.getDevicesConnected());
 
             memoryStatsLabel.setText(text);
 
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+    }
+
+    private Double getCpuLoad() {
+        OperatingSystemMXBean operatingSystemMXBean = ManagementFactory.getOperatingSystemMXBean();
+        return operatingSystemMXBean.getSystemLoadAverage() / operatingSystemMXBean.getAvailableProcessors();
+
+    }
+
+    private String getCpuTemperature() {
+        try {
+            java.nio.file.Path tempPath = java.nio.file.Path.of("/sys/class/thermal/thermal_zone0/temp");
+            if (java.nio.file.Files.exists(tempPath)) {
+                String textTemp = java.nio.file.Files.readString(tempPath).trim();
+                double tempC = Double.parseDouble(textTemp) / 1000.0;
+                return String.format("%.1f °C", tempC);
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return "n/a";
+    }
+
+    private String getLocalIpAddress() {
+        String ret = "";
+        Enumeration e = null;
+        try {
+            e = NetworkInterface.getNetworkInterfaces();
+        } catch (SocketException e1) {
+            e1.printStackTrace();
+        }
+        while (e.hasMoreElements()) {
+            NetworkInterface n = (NetworkInterface) e.nextElement();
+            Enumeration ee = n.getInetAddresses();
+            while (ee.hasMoreElements()) {
+                InetAddress i = (InetAddress) ee.nextElement();
+                if (!i.isLoopbackAddress() && i instanceof java.net.Inet4Address) {
+                    ret += i.getHostAddress() + "\n";
+                }
+            }
+        }
+        return ret.trim();
     }
 
     private String humanReadableBytes(long bytes) {

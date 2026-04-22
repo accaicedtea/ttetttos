@@ -93,7 +93,7 @@ public class ShopPageController extends BaseController
         try {
             // Setup header se disponibile
             if (headerController != null) {
-                headerController.setOnline(false);
+                headerController.setOnline(NetworkWatchdog.isOnline());
                 headerController.setCartCount(CartManager.get().totalItems());
                 headerController.setMenuTitle("Il Nostro Menu");
             }

@@ -132,15 +132,62 @@ public final class OrderQueue {
     /**
      * Retrieve the current state of tablet orders.
      */
-    public static String getTabletOrdersJson() {
+    public static void autoAssignOrders(java.util.Set<String> activeIds) {
+        synchronized(tabletOrders) {
+            if (activeIds.isEmpty()) return;
+            java.util.List<String> list = new java.util.ArrayList<>(activeIds);
+            
+            java.util.Map<String, Integer> counts = new java.util.HashMap<>();
+            for (String id : list) counts.put(id, 0);
+            
+            // First Pass: count existing assignments and clear disconnected/unassigned
+            for (JsonObject order : tabletOrders) {
+                if (order.has("assigned_to") && !order.get("assigned_to").isJsonNull()) {
+                    String assignedId = order.get("assigned_to").getAsString();
+                    if (list.contains(assignedId)) {
+                        counts.put(assignedId, counts.get(assignedId) + 1);
+                    } else {
+                        order.remove("assigned_to"); // Tablet no longer active
+                    }
+                }
+            }
+            
+            // Second Pass: Assign to least busy tablet
+            for (JsonObject order : tabletOrders) {
+                if (!order.has("assigned_to") || order.get("assigned_to").isJsonNull()) {
+                    String best = list.get(0);
+                    for (String id : list) {
+                        if (counts.get(id) < counts.get(best)) best = id;
+                    }
+                    order.addProperty("assigned_to", best);
+                    counts.put(best, counts.get(best) + 1);
+                }
+            }
+            saveTabletOrders();
+        }
+    }
+
+    public static String getTabletOrdersJson(String sessionId) {
         synchronized(tabletOrders) {
             JsonArray arr = new JsonArray();
             for (JsonObject order : tabletOrders) {
-                arr.add(order);
+                if (order.has("assigned_to") && !order.get("assigned_to").isJsonNull()) {
+                    if (order.get("assigned_to").getAsString().equals(sessionId)) {
+                        arr.add(order);
+                    }
+                } else if (sessionId == null) {
+                    arr.add(order);
+                }
             }
             return arr.toString();
         }
     }
+    
+    public static String getTabletOrdersJson() {
+        return getTabletOrdersJson(null);
+    }
+
+
 
     private OrderQueue() {
     }

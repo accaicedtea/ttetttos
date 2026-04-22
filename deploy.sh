@@ -153,12 +153,20 @@ FX_DIR="${FX_DIR}"
 APP_DIR="${APP_DIR}"
 LIB_DIR="${LIB_DIR}"
 JAR_NAME="${JAR_NAME}"
+CONFIG="\${HOME}/.totem-kiosk/config/app.properties"
+
+API_KEY_VAL=""
+if [ -f "\$CONFIG" ]; then
+    API_KEY_VAL=\$(grep '^api\.key=' "\$CONFIG" | cut -d'=' -f2- 2>/dev/null)
+fi
 
 cp="\${APP_DIR}/\${JAR_NAME}"
 while IFS= read -r lib; do cp="\${cp}:\${lib}"; done \
     < <(find "\${LIB_DIR}" -name "*.jar" | sort)
 
-"\${JAVA_BIN}" \\
+"\${JAVA_BIN}" \
+    -Dtotem.api.key="\${API_KEY_VAL}" \
+    -Dtotem.api.key="\${API_KEY_VAL}" \\
     --module-path "\${FX_DIR}/lib" \\
     --add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.base \\
     --add-opens javafx.graphics/com.sun.javafx.application=ALL-UNNAMED \\

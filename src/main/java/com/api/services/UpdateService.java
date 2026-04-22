@@ -103,7 +103,7 @@ public class UpdateService {
                 Files.createDirectories(CURRENT_JAR.getParent());
 
                 // Download da GitHub (URL pubblico delle release)
-                String downloadUrl = "https://github.com/accaicedtea/ttetttos/releases/download/v" + targetVersion + "/demo-1.jar";
+                String downloadUrl = "https://github.com/user/repository/releases/download/v" + targetVersion + "/demo-1.jar";
                 System.out.println("[UpdateService] Download da: " + downloadUrl);
                 
                 HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build();

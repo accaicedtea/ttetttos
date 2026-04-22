@@ -18,16 +18,36 @@ import java.util.concurrent.ConcurrentHashMap;
 public class LocalServerManager {
 
     private static Javalin app;
+    private static int port = 7070;
+    private static int devicesConnected = 0;
+
 
     // Connessioni WebSocket attive (per i tablet)
+    public static final Map<WsContext, String> authenticatedTablets = new ConcurrentHashMap<>();
     private static final Map<WsContext, String> tabletWebSockets = new ConcurrentHashMap<>();
 
     // Helper per inviare messaggi push a tutti i websocket attivi
-    public static void broadcastTabletOrders() {
-        String jsonQueue = com.app.model.OrderQueue.getTabletOrdersJson();
-        tabletWebSockets.keySet().stream().filter(ctx -> ctx.session.isOpen()).forEach(session -> {
-            session.send(jsonQueue);
+        public static void broadcastTabletOrders() {
+        // Riassegna gli ordini ai tablet attualmente connessi
+        java.util.HashSet<String> activeIds = new java.util.HashSet<>(authenticatedTablets.values());
+        com.app.model.OrderQueue.autoAssignOrders(activeIds);
+        
+        setDevicesConnected(activeIds.size());
+
+        authenticatedTablets.keySet().stream().filter(ctx -> ctx.session.isOpen()).forEach(ctx -> {
+            String sessionId = authenticatedTablets.get(ctx);
+            String jsonQueue = com.app.model.OrderQueue.getTabletOrdersJson(sessionId);
+            ctx.send(jsonQueue);
         });
+    }
+
+    private static void setDevicesConnected(int count) {
+        LocalServerManager.devicesConnected = count;
+        System.out.println("[LocalServerManager] Connected tablets: " + count);
+    }
+    
+    public static int getDevicesConnected() {
+        return devicesConnected;
     }
 
     public static void startLocalServer() {
@@ -35,12 +55,12 @@ public class LocalServerManager {
             return;
         }
         
-        System.out.println("[LocalServerManager] Starting local Wi-Fi API Server for Android on port 7070...");
+        System.out.println("[LocalServerManager] Starting local Wi-Fi API Server for Android on port " + port + "...");
 
         // Initializza il server - ascolta su tutti gli indirizzi IPv4
         app = Javalin.create(config -> {
             config.showJavalinBanner = false;
-        }).start("0.0.0.0", 7070);
+        }).start("0.0.0.0", port);
 
         // --- AUTH ENDPOINT ---
         app.post("/auth", ctx -> {
@@ -171,12 +191,15 @@ public class LocalServerManager {
                 tabletWebSockets.put(ctx, ctx.sessionId());
                 
                 // Invia la coda attuale appena il tablet si connette
-                ctx.send(com.app.model.OrderQueue.getTabletOrdersJson());
+                // Only send after login now.
             });
             
             ws.onClose(ctx -> {
                 System.out.println("[LocalServerManager] Tablet disconnected: " + ctx.sessionId());
                 tabletWebSockets.remove(ctx);
+                if (authenticatedTablets.remove(ctx) != null) {
+                    broadcastTabletOrders(); // Reassign remaining orders
+                }
             });
             
             ws.onError(ctx -> tabletWebSockets.remove(ctx));
@@ -195,10 +218,10 @@ public class LocalServerManager {
                         try {
                             com.google.gson.JsonObject authResponse = OrdersService.kdsLogin(pin);
                             if (authResponse != null) {
-                                System.out.println("[LocalServerManager] KDS Logged in successfully");
+                                System.out.println("[LocalServerManager] KDS Logged in successfully, session: " + ctx.sessionId());
+                                authenticatedTablets.put(ctx, ctx.sessionId());
                                 ctx.send("{\"action\":\"login_response\", \"success\":true}");
-                                // Opzionale: inviare subito lo stato ordini attuale al KDS appena loggato
-                                ctx.send(com.app.model.OrderQueue.getTabletOrdersJson());
+                                broadcastTabletOrders(); // Trigger assign and sync
                             } else {
                                 ctx.send("{\"action\":\"login_response\", \"success\":false, \"message\":\"PIN errato o totem non associato\"}");
                             }

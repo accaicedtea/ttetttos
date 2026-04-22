@@ -21,6 +21,7 @@ NOTIFY_EMAIL="giaccabugata@gmail.com"        # ← dove ricevi la notifica
 GMAIL_USER="giaccabugata@gmail.com"        # ← account Gmail mittente
 GMAIL_APP_PASSWORD="zytg gsty ifvn wlrn"  # ← App Password Gmail (vedi istruzioni)
 
+
 # ── Colori ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 BLUE='\033[0;34m'; CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
@@ -74,6 +75,54 @@ setup_kiosk_user() {
         && chown "${KIOSK_USER}:${KIOSK_USER}" "$DEPLOY_SCRIPT"
     ok "Utente kiosk configurato."
 }
+
+# ==============================================================================
+# ==============================================================================
+# STEP 2b — Configurazione API Key
+# ==============================================================================
+setup_api_config() {
+    title "Configurazione API Key"
+    CONFIG_DIR="${KIOSK_HOME}/.totem-kiosk/config"
+    CONFIG_FILE="${CONFIG_DIR}/app.properties"
+    mkdir -p "$CONFIG_DIR"
+    chown "${KIOSK_USER}:${KIOSK_USER}" "$CONFIG_DIR"
+    chmod 700 "$CONFIG_DIR"
+
+    if [ ! -f "$CONFIG_FILE" ]; then
+        read -rsp "Inserisci la API key: " API_KEY
+        echo ""
+        echo "api.key=${API_KEY}" > "$CONFIG_FILE"
+        chown "${KIOSK_USER}:${KIOSK_USER}" "$CONFIG_FILE"
+        chmod 600 "$CONFIG_FILE"
+        ok "API key salvata in ${CONFIG_FILE}"
+    else
+        ok "Configurazione API Key trovata in ${CONFIG_FILE}"
+    fi
+}
+
+# ==============================================================================
+# STEP 2b — Configurazione API Key
+# ==============================================================================
+setup_api_config() {
+    title "Configurazione API Key"
+    CONFIG_DIR="${KIOSK_HOME}/.totem-kiosk/config"
+    CONFIG_FILE="${CONFIG_DIR}/app.properties"
+    mkdir -p "$CONFIG_DIR"
+    chown "${KIOSK_USER}:${KIOSK_USER}" "$CONFIG_DIR"
+    chmod 700 "$CONFIG_DIR"
+
+    if [ ! -f "$CONFIG_FILE" ]; then
+        read -rsp "Inserisci la API key: " API_KEY
+        echo ""
+        echo "api.key=${API_KEY}" > "$CONFIG_FILE"
+        chown "${KIOSK_USER}:${KIOSK_USER}" "$CONFIG_FILE"
+        chmod 600 "$CONFIG_FILE"
+        ok "API key salvata in ${CONFIG_FILE}"
+    else
+        ok "Configurazione API Key trovata in ${CONFIG_FILE}"
+    fi
+}
+
 
 # ==============================================================================
 # STEP 3 — SSH
@@ -521,6 +570,7 @@ run_setup() {
 
     install_packages
     setup_kiosk_user
+    setup_api_config
     setup_ssh
     setup_email
     setup_email_notifier

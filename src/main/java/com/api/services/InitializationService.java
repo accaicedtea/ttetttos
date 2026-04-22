@@ -35,7 +35,7 @@ public class InitializationService {
      * Ritorna InitData con menu, stato online, e errore se present.
      */
     public static InitData initializeApp(String apiKey) {
-        boolean isOnline = false;
+        boolean isOnline = true;
         String error = null;
         MenuData menuData = null;
 

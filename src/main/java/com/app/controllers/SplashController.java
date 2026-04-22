@@ -68,10 +68,6 @@ public class SplashController extends BaseController {
     private void runSetupSequence() {
         new Thread(() -> {
 
-            // ──────────────────────────────────────────────────────────────
-            // SEMPLIFICATO: 4 STEP SOLI (era 10+)
-            // ──────────────────────────────────────────────────────────────
-
             // ── STEP 1: Login + salva token ───────────────────────────────
             setStep("mdi2l-lock", "Avvio del Totem in corso...", "Verifica credenziali di sicurezza", 0.25);
             com.api.services.InitializationService.InitData init = 
