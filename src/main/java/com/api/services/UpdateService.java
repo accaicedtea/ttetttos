@@ -13,7 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-
+// TODO: Implement update service and rollback mechanism.
 public class UpdateService {
 
     private static final String APP_DIR = System.getProperty("user.home") + "/.totem-kiosk/app";

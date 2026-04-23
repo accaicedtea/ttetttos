@@ -70,7 +70,7 @@ public class Navigator {
 
     public static void goTo(Screen screen, Object data) {
         if (SystemManager.isAppLocked()) {
-            System.out.println("[Nav] Navigazione bloccata: applicazione in lock");
+            ConsoleColors.printWarn("[Nav] Navigazione bloccata: applicazione in lock");
             return;
         }
 
@@ -90,7 +90,7 @@ public class Navigator {
                 newNode = nodeCache.get(screen);
                 controller = controllerCache.get(screen);
                 fromCache = true;
-                System.out.println("[Nav] → " + screen + " (da cache)");
+                ConsoleColors.printInfo("[Nav] → " + screen + " (da cache)");
             } else {
                 // ── Prima visita: carica l'FXML ───────────────────────────
                 String fxml = switch (screen) {
@@ -121,7 +121,7 @@ public class Navigator {
                     nodeCache.put(screen, newNode);
                     controllerCache.put(screen, controller);
                 }
-                System.out.println("[Nav] → " + screen + " (nuovo)");
+                ConsoleColors.printPurple("[Nav] → " + screen + " (nuovo)");
             }
 
             // Passa dati al controller
@@ -139,7 +139,7 @@ public class Navigator {
             doTransition(newNode, forward);
 
         } catch (Exception e) {
-            System.err.println("[Nav] Errore → " + screen + ": " + e.getMessage());
+            ConsoleColors.printErr("[Nav] Errore → " + screen + ": " + e.getMessage());
             e.printStackTrace();
         }
     }

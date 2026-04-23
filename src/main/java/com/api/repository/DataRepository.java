@@ -7,6 +7,7 @@ import com.app.pojo.Category;
 import com.app.pojo.Ingredient;
 import com.app.pojo.Promotion;
 import com.google.gson.JsonObject;
+import com.util.ConsoleColors;
 import com.google.gson.JsonArray;
 
 import java.util.List;
@@ -31,10 +32,10 @@ import java.util.concurrent.TimeUnit;
  * - Transparent to controllers
  * 
  * Usage:
- *   MenuData menu = DataRepository.getMenu();
- *   List<Ingredient> ing = DataRepository.getIngredients();
- *   List<Promotion> promos = DataRepository.getPromotions();
- *   DataRepository.startBackgroundSync();
+ * MenuData menu = DataRepository.getMenu();
+ * List<Ingredient> ing = DataRepository.getIngredients();
+ * List<Promotion> promos = DataRepository.getPromotions();
+ * DataRepository.startBackgroundSync();
  */
 public final class DataRepository {
 
@@ -55,16 +56,17 @@ public final class DataRepository {
         // STEP 1: Try cache
         MenuData cachedMenu = DataCache.loadMenuFromCache();
         if (cachedMenu != null && !cachedMenu.isEmpty()) {
-            System.out.println("[DataRepo] ✓ Menu da cache");
+            ConsoleColors.printSuccess("[DataRepo] Menu da cache");
             return cachedMenu;
         }
 
         // STEP 2: If cache empty, call API
-        System.out.println("[DataRepo] → GET /menu");
+        ConsoleColors.printInfo("[DataRepo] GET menu");
         JsonObject resp = Api.apiGet("menu");
 
         MenuData menu = MenuData.from(resp);
         if (menu == null || menu.isEmpty()) {
+
             throw new Exception("Impossibile parsare menu dal server");
         }
 
@@ -90,12 +92,12 @@ public final class DataRepository {
         // STEP 1: Try cache
         List<Ingredient> cachedIng = DataCache.loadIngredientsFromCache();
         if (cachedIng != null && !cachedIng.isEmpty()) {
-            System.out.println("[DataRepo] ✓ Ingredienti da cache (" + cachedIng.size() + ")");
+            ConsoleColors.printSuccess("[DataRepo] Ingredienti da cache (" + cachedIng.size() + ")");
             return cachedIng;
         }
 
         // STEP 2: If cache empty, call API
-        System.out.println("[DataRepo] → GET /prodotti/ingredienti");
+        ConsoleColors.printInfo("[DataRepo] GET prodotti/ingredienti");
         JsonObject resp = Api.apiGet("prodotti/ingredienti");
 
         JsonArray ingredientiJson = new JsonArray();
@@ -121,7 +123,7 @@ public final class DataRepository {
             throw new Exception("Nessun ingrediente ricevuto dal server");
         }
 
-        System.out.println("[DataRepo]   ✓ Ingredienti ricevuti (" + ingredients.size() + ")");
+        ConsoleColors.printSuccess("[DataRepo] Ingredienti ricevuti (" + ingredients.size() + ")");
 
         // STEP 3: Save to cache
         DataCache.saveIngredients(ingredients, ingredientiJson);
@@ -137,12 +139,12 @@ public final class DataRepository {
         // STEP 1: Try cache
         List<Promotion> cachedPromos = DataCache.loadPromotionsFromCache();
         if (cachedPromos != null && !cachedPromos.isEmpty()) {
-            System.out.println("[DataRepo] ✓ Promozioni da cache (" + cachedPromos.size() + ")");
+            ConsoleColors.printSuccess("[DataRepo] Promozioni da cache (" + cachedPromos.size() + ")");
             return cachedPromos;
         }
 
         // STEP 2: If cache empty, call API
-        System.out.println("[DataRepo] → GET /promozioni/attive");
+        ConsoleColors.printInfo("[DataRepo] GET promozioni/attive");
         JsonObject resp = Api.apiGet("promozioni/attive");
 
         JsonArray promozionJson = new JsonArray();
@@ -165,11 +167,11 @@ public final class DataRepository {
         List<Promotion> promos = Promotion.listFromJsonArray(promozionJson);
 
         if (promos == null || promos.isEmpty()) {
-            System.out.println("[DataRepo] ⚠ Nessuna promozione dal server");
+            ConsoleColors.printWarn("[DataRepo] Nessuna promozione dal server");
             return List.of();
         }
 
-        System.out.println("[DataRepo]   ✓ Promozioni ricevute (" + promos.size() + ")");
+        ConsoleColors.printSuccess("[DataRepo] Promozioni ricevute (" + promos.size() + ")");
 
         // STEP 3: Save to cache
         DataCache.savePromotions(promos, promozionJson);
@@ -181,38 +183,38 @@ public final class DataRepository {
      * Force refresh all data from server (ignores cache)
      */
     public static void forceRefresh() throws Exception {
-        System.out.println("[DataRepo] ▶ Aggiornamento forzato da server...");
+        ConsoleColors.printInfo("[DataRepo] Aggiornamento forzato da server...");
 
         // Menu
-        System.out.println("[DataRepo]   → Menu");
+        ConsoleColors.printInfo("[DataRepo] Menu");
         JsonObject menuResp = Api.apiGet("menu");
         MenuData menu = MenuData.from(menuResp);
         if (menu != null && !menu.isEmpty()) {
             DataCache.saveMenu(menu, menuResp);
-            System.out.println("[DataRepo]     ✓ Menu aggiornato");
+            ConsoleColors.printSuccess("[DataRepo] Menu aggiornato");
         }
 
         // Ingredients
-        System.out.println("[DataRepo]   → Ingredienti");
+        ConsoleColors.printInfo("[DataRepo] Ingredienti");
         JsonObject ingResp = Api.apiGet("prodotti/ingredienti");
         JsonArray ingJson = extractJsonArray(ingResp);
         List<Ingredient> ing = Ingredient.listFromJsonArray(ingJson);
         if (ing != null && !ing.isEmpty()) {
             DataCache.saveIngredients(ing, ingJson);
-            System.out.println("[DataRepo]     ✓ Ingredienti aggiornati");
+            ConsoleColors.printSuccess("[DataRepo] Ingredienti aggiornati");
         }
 
         // Promotions
-        System.out.println("[DataRepo]   → Promozioni");
+        ConsoleColors.printInfo("[DataRepo] Promozioni");
         JsonObject promoResp = Api.apiGet("promozioni/attive");
         JsonArray promoJson = extractJsonArray(promoResp);
         List<Promotion> promos = Promotion.listFromJsonArray(promoJson);
         if (promos != null && !promos.isEmpty()) {
             DataCache.savePromotions(promos, promoJson);
-            System.out.println("[DataRepo]     ✓ Promozioni aggiornate");
+            ConsoleColors.printSuccess("[DataRepo] Promozioni aggiornate");
         }
 
-        System.out.println("[DataRepo] ▼ Aggiornamento completato");
+        ConsoleColors.printInfo("[DataRepo] Aggiornamento completato");
     }
 
     // ── Background Sync ────────────────────────────────────────────────────────
@@ -222,12 +224,12 @@ public final class DataRepository {
      */
     public static void startBackgroundSync() {
         if (isRunning) {
-            System.out.println("[DataRepo] ⚠ Background sync già in esecuzione");
+            ConsoleColors.printWarn("[DataRepo] Background sync già in esecuzione");
             return;
         }
 
         if (!SessionManager.isLoggedIn()) {
-            System.out.println("[DataRepo] ⚠ Non loggato — background sync non avviato");
+            ConsoleColors.printWarn("[DataRepo] Non loggato — background sync non avviato");
             return;
         }
 
@@ -238,7 +240,8 @@ public final class DataRepository {
             return t;
         });
 
-        System.out.println("[DataRepo] ▶ Background sync avviato (intervallo: " + SYNC_INTERVAL_MINUTES + " min)");
+        ConsoleColors
+                .printSuccess("[DataRepo] Background sync avviato (intervallo: " + SYNC_INTERVAL_MINUTES + " min)");
 
         // First check IMMEDIATELY, then every SYNC_INTERVAL_MINUTES
         syncExecutor.scheduleAtFixedRate(
@@ -254,7 +257,7 @@ public final class DataRepository {
         if (syncExecutor != null && !syncExecutor.isShutdown()) {
             syncExecutor.shutdown();
             isRunning = false;
-            System.out.println("[DataRepo] ■ Background sync fermato");
+            ConsoleColors.printInfo("[DataRepo] Background sync fermato");
         }
     }
 
@@ -264,23 +267,24 @@ public final class DataRepository {
      * Perform background sync (check for changes on server)
      */
     private static void performSync() {
+        ConsoleColors.sectionStart("[DataRepo] PERIODIC SYNC");
         try {
-            System.out.println("\n[DataRepo] ▲ Sync periodico avviato...");
-
             syncMenuIfChanged();
             syncIngredientsIfChanged();
             syncPromotionsIfChanged();
 
-            System.out.println("[DataRepo] ▼ Sync periodico completato\n");
+            ConsoleColors.printSuccess("[DataRepo] Sync periodico completato\n");
         } catch (Exception e) {
-            System.err.println("[DataRepo] ✗ Errore durante sync: " + e.getMessage());
+            ConsoleColors.printErr("[DataRepo] Errore durante sync: " + e.getMessage());
         }
+        ConsoleColors.sectionEnd();
     }
 
     /**
      * Sync Menu: check if server has changes
      */
     private static void syncMenuIfChanged() {
+        ConsoleColors.sectionStart("[DataRepo] MENU SYNC");
         try {
             String localHash = DataCache.getFileHash(java.nio.file.Paths.get("./menu-cache.json"));
             JsonObject remoteResp = Api.apiGet("menu");
@@ -289,21 +293,24 @@ public final class DataRepository {
             String remoteHash = DataCache.calculateHash(remoteResp.toString());
 
             if (!remoteHash.equals(localHash)) {
-                System.out.println("[DataRepo] 📥 Menu modificato sul server, aggiornamento locale...");
+                ConsoleColors.printInfo("[DataRepo] Menu modificato sul server, aggiornamento locale...");
                 DataCache.saveMenu(remoteMenu, remoteResp);
-                System.out.println("[DataRepo]   ✓ Menu cache aggiornato");
+                ConsoleColors.printSuccess("[DataRepo] Menu cache aggiornato");
             } else {
-                System.out.println("[DataRepo] ✓ Menu unchanged");
+                ConsoleColors.printInfo("[DataRepo] Menu unchanged");
             }
         } catch (Exception e) {
-            System.err.println("[DataRepo] ✗ Errore sync menu: " + e.getMessage());
+            ConsoleColors.printErr("[DataRepo] Errore sync menu: " + e.getMessage());
         }
+        ConsoleColors.sectionEnd();
     }
 
     /**
      * Sync Ingredients: check if server has changes
      */
     private static void syncIngredientsIfChanged() {
+
+        ConsoleColors.sectionStart("[DataRepository] INGREDIENTS SYNC");
         try {
             String localHash = DataCache.getFileHash(java.nio.file.Paths.get("./ingredients-cache.json"));
             JsonObject remoteResp = Api.apiGet("prodotti/ingredienti");
@@ -313,21 +320,23 @@ public final class DataRepository {
             String remoteHash = DataCache.calculateHash(remoteResp.toString());
 
             if (!remoteHash.equals(localHash)) {
-                System.out.println("[DataRepo] 📥 Ingredienti modificati sul server, aggiornamento locale...");
+                ConsoleColors.printInfo("[DataRepo] Ingredienti modificati sul server, aggiornamento locale...");
                 DataCache.saveIngredients(remoteIng, ingJson);
-                System.out.println("[DataRepo]   ✓ Ingredienti cache aggiornato");
+                ConsoleColors.printSuccess("[DataRepo] Ingredienti cache aggiornato");
             } else {
-                System.out.println("[DataRepo] ✓ Ingredienti unchanged");
+                ConsoleColors.printInfo("[DataRepo] Ingredienti unchanged");
             }
         } catch (Exception e) {
-            System.err.println("[DataRepo] ✗ Errore sync ingredienti: " + e.getMessage());
+            ConsoleColors.printErr("[DataRepo] Errore sync ingredienti: " + e.getMessage());
         }
+        ConsoleColors.sectionEnd();
     }
 
     /**
      * Sync Promotions: check if server has changes
      */
     private static void syncPromotionsIfChanged() {
+        ConsoleColors.sectionStart("[DataRepository] PROMOTIONS SYNC");
         try {
             String localHash = DataCache.getFileHash(java.nio.file.Paths.get("./promotions-cache.json"));
             JsonObject remoteResp = Api.apiGet("promozioni/attive");
@@ -337,15 +346,16 @@ public final class DataRepository {
             String remoteHash = DataCache.calculateHash(remoteResp.toString());
 
             if (!remoteHash.equals(localHash)) {
-                System.out.println("[DataRepo] 📥 Promozioni modificate sul server, aggiornamento locale...");
+                ConsoleColors.printInfo("[DataRepo] Promozioni modificate sul server, aggiornamento locale...");
                 DataCache.savePromotions(remotePromos, promoJson);
-                System.out.println("[DataRepo]   ✓ Promozioni cache aggiornato");
+                ConsoleColors.printSuccess("[DataRepo] Promozioni cache aggiornato");
             } else {
-                System.out.println("[DataRepo] ✓ Promozioni unchanged");
+                ConsoleColors.printInfo("[DataRepo] Promozioni unchanged");
             }
         } catch (Exception e) {
-            System.err.println("[DataRepo] ✗ Errore sync promozioni: " + e.getMessage());
+            ConsoleColors.printErr("[DataRepo] Errore sync promozioni: " + e.getMessage());
         }
+        ConsoleColors.sectionEnd();
     }
 
     // ── Helper methods ─────────────────────────────────────────────────────────

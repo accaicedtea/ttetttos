@@ -11,7 +11,8 @@ import com.google.gson.JsonObject;
 import java.util.Date;
 
 public class JwtService {
-    // In un sistema di produzione, usa un Secret memorizzato su file / configurazione
+    // In un sistema di produzione, usa un Secret memorizzato su file /
+    // configurazione
     private static final String SECRET_KEY = "TOTEM_LOCAL_SECURE_KEY";
     private static final Algorithm ALGORITHM = Algorithm.HMAC256(SECRET_KEY);
     private static final String ISSUER = "TotemKiosk";
@@ -43,7 +44,7 @@ public class JwtService {
     private static String generateTokenForRole(String role) {
         // Scade tra 24 ore
         Date expirationDate = new Date(System.currentTimeMillis() + 86400000L);
-
+        System.out.println("[JwtService] Generazione token per ruolo: " + role);
         return JWT.create()
                 .withIssuer(ISSUER)
                 .withClaim("role", role)

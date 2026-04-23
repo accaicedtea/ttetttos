@@ -19,6 +19,7 @@ public class SystemManager {
      */
     public static void lockApp(String message) {
         appLocked = true;
+        ConsoleColors.printWarn("[SystemManager] Applicazione bloccata: " + message);
         Platform.runLater(() -> {
             // Rimuoviamo eventuale blocco precedente prima di metterne uno nuovo aggiornato
             if (activeLockScreen != null && App.rootPane != null) {
@@ -53,6 +54,7 @@ public class SystemManager {
      * Sblocca l'applicazione rimuovendo il pannello di blocco, ripristinando il normale uso.
      */
     public static void unlockApp() {
+        ConsoleColors.printSuccess("[SystemManager] Applicazione sbloccata");
         appLocked = false;
         Platform.runLater(() -> {
             if (activeLockScreen != null && App.rootPane != null) {

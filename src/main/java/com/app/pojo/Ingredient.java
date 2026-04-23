@@ -3,6 +3,7 @@ package com.app.pojo;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.util.ConsoleColors;
 import com.util.JsonHelper;
 import com.util.RemoteLogger;
 
@@ -49,7 +50,7 @@ public class Ingredient {
         if (arr == null)
             return List.of();
         List<Ingredient> ret = new ArrayList<>();
-        System.out.println("[Ingrediendts] listFromJsonArray: processing ingredient JSON object");
+        ConsoleColors.printInfo("[Ingredient] listFromJsonArray: processing ingredient JSON object");
         
         for (JsonElement e : arr) {
             if (e.isJsonObject()) {

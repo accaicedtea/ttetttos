@@ -1,10 +1,14 @@
 package com.api.services;
 
+import java.io.Console;
+
 import com.api.Api;
 import com.api.SessionManager;
 import com.api.repository.DataRepository;
 import com.app.pojo.MenuData;
+import com.app.pojo.Promotion;
 import com.google.gson.JsonObject;
+import com.util.ConsoleColors;
 
 /**
  * InitializationService — Consolida TUTTO l'init in una sola sequenza.
@@ -19,7 +23,8 @@ import com.google.gson.JsonObject;
 public class InitializationService {
 
     public static class InitData {
-        public Object menu;                // Menu: può essere MenuData o JsonObject
+        public Object menu; // Menu: può essere MenuData o JsonObject
+        public Object promotions; // Promozioni: può essere Promotion o JsonObject
         public boolean isOnline;
         public String error;
 
@@ -39,25 +44,23 @@ public class InitializationService {
         String error = null;
         MenuData menuData = null;
 
-        System.out.println("\n╔════════════════════════════════════════════════════════════╗");
-        System.out.println("║           INIZIO INIZIALIZZAZIONE APP                     ║");
-        System.out.println("╚════════════════════════════════════════════════════════════╝\n");
-
+        ConsoleColors.sectionStart("INIZIO INIZIALIZZAZIONE APP");
         // ── STEP 1: Login + Token ─────────────────────────────
-        System.out.println("[Init] STEP 1: Autenticazione...");
+        ConsoleColors.section();
+        ConsoleColors.printInfo("[Init] STEP 1: Autenticazione...");
         try {
             AuthService.loginTotem(apiKey);
-            System.out.println("[Init] ✓ Login completato");
-            System.out.println("[Init] ✓ Token salvato in SessionManager\n");
-            
+            ConsoleColors.printSuccess("[Init] Login completato");
+            ConsoleColors.printSuccess("[Init] Token salvato in SessionManager\n");
+
             // ── Avvia background sync dopo login ──────────────────
             DataRepository.startBackgroundSync();
-            
+
         } catch (Exception e) {
             error = e.getMessage();
-            System.err.println("[Init] ✗ Login fallito: " + error);
-            System.err.println("[Init] → Fallback a modalità OFFLINE\n");
-            
+            ConsoleColors.printErr("[Init] Login fallito: " + error);
+            ConsoleColors.printErr("[Init] Fallback a modalità OFFLINE\n");
+
             // Tenta di usare dati in cache
             try {
                 menuData = DataRepository.getMenu();
@@ -67,41 +70,44 @@ public class InitializationService {
         }
 
         // ── STEP 2: Check online ──────────────────────────────
-        System.out.println("[Init] STEP 2: Verifica connessione...");
+        ConsoleColors.section();
+        ConsoleColors.printInfo("[Init] STEP 2: Verifica connessione...");
         try {
             AuthService.ping();
             isOnline = true;
-            System.out.println("[Init] ✓ Server raggiungibile (ONLINE)\n");
+            ConsoleColors.printSuccess("[Init] Server raggiungibile (ONLINE)\n");
         } catch (Exception e) {
             isOnline = false;
-            System.out.println("[Init] ✗ Server non raggiungibile (OFFLINE)");
-            System.out.println("[Init] → Reason: " + e.getMessage() + "\n");
+            ConsoleColors.printErr("[Init] Server 'rraggiungibile (OFFLINE)");
+            ConsoleColors.printErr("[Init] Reason: " + e.getMessage() + "\n");
         }
 
         // ── STEP 3: Carica TUTTI i dati via DataRepository ────
-        System.out.println("[Init] STEP 3: Caricamento dati dal server/cache...");
+        ConsoleColors.section();
+        ConsoleColors.printInfo("[Init] STEP 3: Caricamento dati dal server/cache...");
         if (SessionManager.isLoggedIn()) {
             try {
-                System.out.println("[Init]   → Pre-caricamento Menu...");
+                ConsoleColors.printInfo("[Init] Pre-caricamento Menu...");
                 MenuData menu = DataRepository.getMenu();
-                
-                System.out.println("[Init]   → Pre-caricamento Promozioni...");
+
+                ConsoleColors.printInfo("[Init] Pre-caricamento Promozioni...");
                 DataRepository.getPromotions();
-                
+
                 if (menu != null && !menu.isEmpty()) {
-                    System.out.println("[Init]   ✓ Menu & Promozioni ricevuti");
-                    System.out.println("[Init] ✓ Dati salvati in cache locale (DataRepository)\n");
-                    
+                    ConsoleColors.printSuccess("[Init] Menu & Promozioni ricevuti");
+                    ConsoleColors.printSuccess("[Init] Dati salvati in cache locale (DataRepository)\n");
+
                     return new InitData(menu, isOnline, null);
                 } else {
-                    System.err.println("[Init] ✗ Menu vuoto dal server\n");
+                    ConsoleColors.printErr("[Init] Menu vuoto dal server\n");
                     return new InitData(null, isOnline, "Menu vuoto dal server");
                 }
+
             } catch (Exception e) {
                 error = e.getMessage();
-                System.err.println("[Init] ✗ Errore caricamento dati: " + error);
-                System.err.println("[Init] → Fallback a cache locale\n");
-                
+                ConsoleColors.printErr("[Init] Errore caricamento dati: " + error);
+                ConsoleColors.printErr("[Init] Fallback a cache locale\n");
+
                 // Fallback a cache
                 try {
                     MenuData cachedMenu = DataRepository.getMenu();
@@ -113,7 +119,7 @@ public class InitializationService {
         }
 
         // Se non loggato, usa cache
-        System.out.println("[Init] ⚠ Non loggato — usando cache\n");
+        ConsoleColors.printWarn("[Init] Non loggato — usando cache\n");
         try {
             MenuData cachedMenu = DataRepository.getMenu();
             return new InitData(cachedMenu, isOnline, "Non autenticato");

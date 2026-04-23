@@ -1,7 +1,6 @@
 package com.api.repository;
 
 import com.app.pojo.MenuData;
-import com.app.pojo.Category;
 import com.app.pojo.Ingredient;
 import com.app.pojo.Promotion;
 import com.google.gson.JsonObject;
@@ -14,7 +13,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.List;
-
+import com.util.ConsoleColors;
 /**
  * DataCache — File-based persistence layer for DataRepository
  * 
@@ -53,19 +52,19 @@ public final class DataCache {
     public static MenuData loadMenuFromCache() {
         try {
             if (!Files.exists(MENU_CACHE_PATH)) {
-                System.out.println("[DataCache] ⚠ Menu cache non trovato: " + MENU_CACHE_PATH);
+                ConsoleColors.printErr("[DataCache] Menu cache non trovato: " + MENU_CACHE_PATH);
                 return null;
             }
 
             String txt = Files.readString(MENU_CACHE_PATH, StandardCharsets.UTF_8);
             if (txt.isBlank()) {
-                System.out.println("[DataCache] ⚠ Menu cache vuoto");
+                ConsoleColors.printErr("[DataCache] Menu cache vuoto");
                 return null;
             }
 
             JsonObject obj = JsonParser.parseString(txt).getAsJsonObject();
             if (!obj.has("menu") || !obj.has("ts")) {
-                System.out.println("[DataCache] ⚠ Menu cache malformato");
+                ConsoleColors.printErr("[DataCache] Menu cache malformato");
                 return null;
             }
 
@@ -73,18 +72,18 @@ public final class DataCache {
             long ts = obj.get("ts").getAsLong();
             long ageSeconds = (System.currentTimeMillis() - ts) / 1000;
             if (ageSeconds > CACHE_TTL_SECONDS) {
-                System.out.println("[DataCache] ⚠ Menu cache scaduto (age: " + ageSeconds + "s, TTL: " + CACHE_TTL_SECONDS + "s)");
+                ConsoleColors.printErr("[DataCache] Menu cache scaduto (age: " + ageSeconds + "s, TTL: " + CACHE_TTL_SECONDS + "s)");
                 return null;
             }
 
             JsonObject menuJson = obj.get("menu").getAsJsonObject();
             MenuData menu = MenuData.from(menuJson);
-            System.out.println("[DataCache] ✓ Menu caricato da cache (age: " + ageSeconds + "s)");
-            System.out.println("[DataCache]   └─ Percorso: " + MENU_CACHE_PATH);
+            ConsoleColors.printInfo("[DataCache] Menu caricato da cache (age: " + ageSeconds + "s)");
+            ConsoleColors.printInfo("[DataCache]   └─ Percorso: " + MENU_CACHE_PATH);
             return menu;
 
         } catch (Exception e) {
-            System.err.println("[DataCache] ✗ Errore caricamento menu cache: " + e.getMessage());
+            ConsoleColors.printErr("[DataCache] Errore caricamento menu cache: " + e.getMessage());
             RemoteLogger.error("DataCache", "loadMenuFromCache error", e);
             return null;
         }
@@ -106,10 +105,10 @@ public final class DataCache {
             Files.writeString(MENU_CACHE_PATH, out.toString(), StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
-            System.out.println("[DataCache] ✓ Menu salvato in cache");
-            System.out.println("[DataCache]   └─ Percorso: " + MENU_CACHE_PATH);
+            ConsoleColors.printInfo("[DataCache] ✓ Menu salvato in cache");
+            ConsoleColors.printInfo("[DataCache]   └─ Percorso: " + MENU_CACHE_PATH);
         } catch (IOException e) {
-            System.err.println("[DataCache] ✗ Errore salvataggio menu: " + e.getMessage());
+            ConsoleColors.printErr("[DataCache] ✗ Errore salvataggio menu: " + e.getMessage());
             RemoteLogger.error("DataCache", "saveMenu error", e);
         }
     }
@@ -122,19 +121,19 @@ public final class DataCache {
     public static List<Ingredient> loadIngredientsFromCache() {
         try {
             if (!Files.exists(INGREDIENTS_CACHE_PATH)) {
-                System.out.println("[DataCache] ⚠ Ingredienti cache non trovato");
+                ConsoleColors.printWarn("[DataCache] Ingredienti cache non trovato");
                 return null;
             }
 
             String txt = Files.readString(INGREDIENTS_CACHE_PATH, StandardCharsets.UTF_8);
             if (txt.isBlank()) {
-                System.out.println("[DataCache] ⚠ Ingredienti cache vuoto");
+                ConsoleColors.printWarn("[DataCache] Ingredienti cache vuoto");
                 return null;
             }
 
             JsonObject obj = JsonParser.parseString(txt).getAsJsonObject();
             if (!obj.has("ingredienti") || !obj.has("ts")) {
-                System.out.println("[DataCache] ⚠ Ingredienti cache malformato");
+                ConsoleColors.printWarn("[DataCache] Ingredienti cache malformato");
                 return null;
             }
 
@@ -142,18 +141,18 @@ public final class DataCache {
             long ts = obj.get("ts").getAsLong();
             long ageSeconds = (System.currentTimeMillis() - ts) / 1000;
             if (ageSeconds > CACHE_TTL_SECONDS) {
-                System.out.println("[DataCache] ⚠ Ingredienti cache scaduto");
+                ConsoleColors.printWarn("[DataCache] Ingredienti cache scaduto");
                 return null;
             }
 
             JsonArray ingredientiJson = obj.get("ingredienti").getAsJsonArray();
             List<Ingredient> ingredients = Ingredient.listFromJsonArray(ingredientiJson);
 
-            System.out.println("[DataCache] ✓ Ingredienti caricati da cache (" + ingredients.size() + ")");
+            ConsoleColors.printInfo("[DataCache] Ingredienti caricati da cache (" + ingredients.size() + ")");
             return ingredients;
 
         } catch (Exception e) {
-            System.err.println("[DataCache] ✗ Errore caricamento ingredienti: " + e.getMessage());
+            ConsoleColors.printErr("[DataCache] Errore caricamento ingredienti: " + e.getMessage());
             RemoteLogger.error("DataCache", "loadIngredientsFromCache error", e);
             return null;
         }
@@ -175,9 +174,9 @@ public final class DataCache {
             Files.writeString(INGREDIENTS_CACHE_PATH, out.toString(), StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
-            System.out.println("[DataCache] ✓ Ingredienti salvati in cache (" + ingredients.size() + ")");
+            ConsoleColors.printInfo("[DataCache] Ingredienti salvati in cache (" + ingredients.size() + ")");
         } catch (IOException e) {
-            System.err.println("[DataCache] ✗ Errore salvataggio ingredienti: " + e.getMessage());
+            ConsoleColors.printErr("[DataCache] Errore salvataggio ingredienti: " + e.getMessage());
             RemoteLogger.error("DataCache", "saveIngredients error", e);
         }
     }
@@ -190,19 +189,19 @@ public final class DataCache {
     public static List<Promotion> loadPromotionsFromCache() {
         try {
             if (!Files.exists(PROMOTIONS_CACHE_PATH)) {
-                System.out.println("[DataCache] ⚠ Promozioni cache non trovato");
+                ConsoleColors.printWarn("[DataCache] Promozioni cache non trovato");
                 return null;
             }
 
             String txt = Files.readString(PROMOTIONS_CACHE_PATH, StandardCharsets.UTF_8);
             if (txt.isBlank()) {
-                System.out.println("[DataCache] ⚠ Promozioni cache vuoto");
+                ConsoleColors.printErr("[DataCache] Promozioni cache vuoto");
                 return null;
             }
 
             JsonObject obj = JsonParser.parseString(txt).getAsJsonObject();
             if (!obj.has("promozioni") || !obj.has("ts")) {
-                System.out.println("[DataCache] ⚠ Promozioni cache malformato");
+                ConsoleColors.printErr("[DataCache] Promozioni cache malformato");
                 return null;
             }
 
@@ -210,18 +209,18 @@ public final class DataCache {
             long ts = obj.get("ts").getAsLong();
             long ageSeconds = (System.currentTimeMillis() - ts) / 1000;
             if (ageSeconds > CACHE_TTL_SECONDS) {
-                System.out.println("[DataCache] ⚠ Promozioni cache scaduto");
+                ConsoleColors.printWarn("[DataCache] Promozioni cache scaduto");
                 return null;
             }
 
             JsonArray promozionJson = obj.get("promozioni").getAsJsonArray();
             List<Promotion> promos = Promotion.listFromJsonArray(promozionJson);
 
-            System.out.println("[DataCache] ✓ Promozioni caricate da cache (" + promos.size() + ")");
+            ConsoleColors.printInfo("[DataCache] Promozioni caricate da cache (" + promos.size() + ")");
             return promos;
 
         } catch (Exception e) {
-            System.err.println("[DataCache] ✗ Errore caricamento promozioni: " + e.getMessage());
+            ConsoleColors.printErr("[DataCache] Errore caricamento promozioni: " + e.getMessage());
             RemoteLogger.error("DataCache", "loadPromotionsFromCache error", e);
             return null;
         }
@@ -243,9 +242,9 @@ public final class DataCache {
             Files.writeString(PROMOTIONS_CACHE_PATH, out.toString(), StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
-            System.out.println("[DataCache] ✓ Promozioni salvate in cache (" + promos.size() + ")");
+            ConsoleColors.printSuccess("[DataCache] Promozioni salvate in cache (" + promos.size() + ")");
         } catch (IOException e) {
-            System.err.println("[DataCache] ✗ Errore salvataggio promozioni: " + e.getMessage());
+            ConsoleColors.printErr("[DataCache] Errore salvataggio promozioni: " + e.getMessage());
             RemoteLogger.error("DataCache", "savePromotions error", e);
         }
     }
@@ -288,9 +287,9 @@ public final class DataCache {
             Files.deleteIfExists(MENU_CACHE_PATH);
             Files.deleteIfExists(INGREDIENTS_CACHE_PATH);
             Files.deleteIfExists(PROMOTIONS_CACHE_PATH);
-            System.out.println("[DataCache] ✓ Tutte le cache cancellate");
+            ConsoleColors.printSuccess("[DataCache] Tutte le cache cancellate");
         } catch (IOException e) {
-            System.err.println("[DataCache] ✗ Errore cancellazione cache: " + e.getMessage());
+            ConsoleColors.printErr("[DataCache] Errore cancellazione cache: " + e.getMessage());
             RemoteLogger.error("DataCache", "clearAllCaches error", e);
         }
     }

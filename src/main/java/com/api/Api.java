@@ -10,7 +10,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Map;
-
+import com.util.ConsoleColors;
 /**
  * Client HTTP base.
  * Retry automatico fino a 3 volte su IOException (connection reset, ecc.)
@@ -46,9 +46,9 @@ public class Api {
         if (status >= 200 && status < 300)
             return result;
         // Log corpo completo per debug (utile per 422 Unprocessable Entity)
-        System.err.println("[Api] HTTP " + status + " body: " + body);
-        System.err.println("[Api] Richiesta: " + response.request().toString());
-        System.err.println("[Api] Header Authorization inviato: " + response.request().headers().firstValue("Authorization"));
+        ConsoleColors.printErr("[Api] HTTP " + status + " body: " + body);
+        ConsoleColors.printErr("[Api] Richiesta: " + response.request().toString());
+        ConsoleColors.printErr("[Api] Header Authorization inviato: " + response.request().headers().firstValue("Authorization"));
         String msg = result.has("message") ? result.get("message").getAsString()
                 : result.has("error") ? result.get("error").getAsString()
                 : result.has("messaggio") ? result.get("messaggio").getAsString()
@@ -81,7 +81,7 @@ public class Api {
                 return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             } catch (java.io.IOException e) {
                 last = e;
-                System.err.println("[Api] Tentativo " + attempt + "/" + maxTries + " fallito: " + e.getMessage());
+                ConsoleColors.printErr("[Api] Tentativo " + attempt + "/" + maxTries + " fallito: " + e.getMessage());
                 if (attempt < maxTries)
                     Thread.sleep(600L * attempt);
             }
@@ -97,7 +97,7 @@ public class Api {
 
     public static JsonObject apiPostPublic(String endpoint, JsonObject data,
             Map<String, String> extra) throws Exception {
-        System.out.println("[Api] POST " + BASE_URL + endpoint);
+        ConsoleColors.printInfo("[Api] POST " + BASE_URL + endpoint);
         String body = data != null ? data.toString() : "{}";
         HttpRequest.Builder b = HttpRequest.newBuilder()
                 .uri(URI.create(BASE_URL + endpoint))
@@ -106,18 +106,18 @@ public class Api {
         if (extra != null)
             extra.forEach(b::header);
         JsonObject result = handleResponse(send(b.build()));
-        System.out.println("[Api]   ✓ POST " + endpoint + " completato");
+        ConsoleColors.printInfo("[Api] POST " + endpoint + " completato");
         return result;
     }
 
     public static JsonObject apiGetPublic(String endpoint) throws Exception {
-        System.out.println("[Api] GET " + BASE_URL + endpoint);
+        ConsoleColors.printInfo("[Api] GET " + BASE_URL + endpoint);
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(BASE_URL + endpoint))
                 .header("Content-Type", "application/json")
                 .GET().build();
         JsonObject result = handleResponse(send(req));
-        System.out.println("[Api]   ✓ GET " + endpoint + " completato");
+        ConsoleColors.printInfo("[Api] GET " + endpoint + " completato");
         return result;
     }
 
@@ -125,20 +125,20 @@ public class Api {
 
     public static JsonObject apiGet(String endpoint) throws Exception {
         requireToken();
-        System.out.println("[Api] GET " + BASE_URL + endpoint);
+        ConsoleColors.printInfo("[Api] GET " + BASE_URL + endpoint);
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
                         .uri(URI.create(BASE_URL + endpoint))
                         .GET())
                 .build();
         JsonObject result = handleResponse(send(req));
-        System.out.println("[Api]   ✓ GET " + endpoint + " completato");
+        ConsoleColors.printInfo("[Api] GET " + endpoint + " completato");
         return result;
     }
 
     public static JsonObject apiPost(String endpoint, JsonObject data) throws Exception {
         requireToken();
-        System.out.println("[Api] POST " + BASE_URL + endpoint);
+        ConsoleColors.printInfo("[Api] POST " + BASE_URL + endpoint);
         String body = data != null ? data.toString() : "{}";
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
@@ -146,13 +146,13 @@ public class Api {
                         .POST(HttpRequest.BodyPublishers.ofString(body)))
                 .build();
         JsonObject result = handleResponse(send(req));
-        System.out.println("[Api]   ✓ POST " + endpoint + " completato");
+        ConsoleColors.printInfo("[Api] POST " + endpoint + " completato");
         return result;
     }
 
     public static JsonObject apiPut(String endpoint, JsonObject data) throws Exception {
         requireToken();
-        System.out.println("[Api] PUT " + BASE_URL + endpoint);
+        ConsoleColors.printInfo("[Api] PUT " + BASE_URL + endpoint);
         String body = data != null ? data.toString() : "{}";
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
@@ -160,13 +160,13 @@ public class Api {
                         .PUT(HttpRequest.BodyPublishers.ofString(body)))
                 .build();
         JsonObject result = handleResponse(send(req));
-        System.out.println("[Api]   ✓ PUT " + endpoint + " completato");
+        ConsoleColors.printInfo("[Api] PUT " + endpoint + " completato");
         return result;
     }
 
     public static JsonObject apiPatch(String endpoint, JsonObject data) throws Exception {
         requireToken();
-        System.out.println("[Api] PATCH " + BASE_URL + endpoint);
+        ConsoleColors.printInfo("[Api] PATCH " + BASE_URL + endpoint);
         String body = data != null ? data.toString() : "{}";
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
@@ -174,20 +174,20 @@ public class Api {
                         .method("PATCH", HttpRequest.BodyPublishers.ofString(body)))
                 .build();
         JsonObject result = handleResponse(send(req));
-        System.out.println("[Api]   ✓ PATCH " + endpoint + " completato");
+        ConsoleColors.printInfo("[Api] PATCH " + endpoint + " completato");
         return result;
     }
 
     public static JsonObject apiDelete(String endpoint) throws Exception {
         requireToken();
-        System.out.println("[Api] DELETE " + BASE_URL + endpoint);
+        ConsoleColors.printWarn("[Api] DELETE " + BASE_URL + endpoint);
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
                         .uri(URI.create(BASE_URL + endpoint))
                         .DELETE())
                 .build();
         JsonObject result = handleResponse(send(req));
-        System.out.println("[Api]   ✓ DELETE " + endpoint + " completato");
+        ConsoleColors.printWarn("[Api] DELETE " + endpoint + " completato");
         return result;
     }
 }

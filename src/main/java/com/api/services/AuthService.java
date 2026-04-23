@@ -3,15 +3,14 @@ package com.api.services;
 import com.api.Api;
 import com.api.SessionManager;
 import com.google.gson.JsonObject;
-
 import java.util.Map;
-
+import com.util.ConsoleColors;
 public class AuthService {
 
     private static final String ENDPOINT = "auth/login";
 
     public static JsonObject loginTotem(String apiKey) throws Exception {
-        System.out.println("[AuthService] → POST /auth/login");
+        ConsoleColors.printInfo("[AuthService] --> LOGIN");
         JsonObject body = new JsonObject();
         body.addProperty("api_key", apiKey);
         JsonObject result = Api.apiPostPublic(ENDPOINT, body, Map.of("X-Api-Key", apiKey));
@@ -21,27 +20,22 @@ public class AuthService {
             if (data.has("token")) {
                 String token = data.get("token").getAsString();
                 SessionManager.setToken(token);
-                System.out.println("[AuthService]   ✓ Token ricevuto e salvato in SessionManager");
+                ConsoleColors.printSuccess("[AuthService] TOKEN SALVATO IN SessionManager");
             }
         }
         return result;
     }
 
-    public static JsonObject login(String email, String password) throws Exception {
-        System.out.println("[AuthService] → POST /auth/login (email)");
-        return loginTotem(email);
-    }
-
     public static JsonObject refreshToken() throws Exception {
-        System.out.println("[AuthService] → POST /auth/refresh");
+        ConsoleColors.printInfo("[AuthService] --> REFRESH");
         return Api.apiPost("auth/refresh", new JsonObject());
     }
 
     public static JsonObject ping() throws Exception {
-        System.out.println("[AuthService] → POST /auth/ping");
+        ConsoleColors.printInfo("[AuthService] --> PING");
         JsonObject body = buildPingPayload();
         JsonObject result = Api.apiPost("auth/ping", body);
-        System.out.println("[AuthService]   ✓ Ping risposto (server online)");
+        ConsoleColors.printSuccess("[AuthService]   ✓ Ping risposto (server online)");
         return result;
     }
 
@@ -68,7 +62,7 @@ public class AuthService {
             payload.addProperty("disco_libero_mb", freeSpace);
             
         } catch (Exception e) {
-            System.err.println("[AuthService] Errore building ping payload: " + e.getMessage());
+            ConsoleColors.printErr("[AuthService] Errore building ping payload: " + e.getMessage());
         }
         return payload;
     }

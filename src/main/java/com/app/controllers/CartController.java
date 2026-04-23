@@ -109,8 +109,8 @@ public class CartController extends BaseController implements Navigator.ScreenRe
         if (rootStack == null) return;
 
         // Handler per mouse e tastiera che resetta il timer
-        inactivityResetMouseHandler = event -> com.util.InactivityManager.resetTimer();
-        inactivityResetKeyHandler = event -> com.util.InactivityManager.resetTimer();
+        inactivityResetMouseHandler = event -> com.util.InactivityManager.resetTimer("CartScreen MouseEvent");
+        inactivityResetKeyHandler = event -> com.util.InactivityManager.resetTimer("CartScreen KeyEvent");
 
         // Aggiungi event filter al rootStack per catturare tutte le interazioni
         rootStack.addEventFilter(MouseEvent.ANY, inactivityResetMouseHandler);

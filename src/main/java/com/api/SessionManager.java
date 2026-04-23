@@ -1,7 +1,7 @@
 package com.api;
 
 import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import com.util.ConsoleColors;
 
 public class SessionManager {
     private static volatile String token = null;
@@ -16,7 +16,7 @@ public class SessionManager {
     }
 
     public static synchronized void clearToken() {
-        System.out.println("[SessionManager] clearToken");
+        ConsoleColors.printInfo("[SessionManager] clearToken");
         token = null;
     }
 
@@ -27,7 +27,7 @@ public class SessionManager {
     public static synchronized void setKdsDevices(JsonArray devices) {
         if (devices != null) {
             kdsDevices = devices;
-            System.out.println("[SessionManager] KDS devices updated. Total: " + kdsDevices.size());
+            ConsoleColors.printInfo("[SessionManager] KDS devices updated. Total: " + kdsDevices.size());
         }
     }
 

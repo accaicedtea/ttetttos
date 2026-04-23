@@ -35,15 +35,17 @@ public class InactivityManager {
      * Avvia il monitoraggio dell'inattività per la schermata corrente.
      */
     public static void startMonitoring(Navigator.Screen screen, StackPane rootStack) {
+        ConsoleColors.printInfo("[InactivityManager] Avvio monitoraggio per schermata: " + screen);
         currentScreen = screen;
         currentRootStack = rootStack;
-        resetTimer();
+        resetTimer(screen.name());
     }
 
     /**
      * Avvia il monitoraggio senza StackPane (fallback per compatibilità).
      */
     public static void startMonitoring(Navigator.Screen screen) {
+        ConsoleColors.printInfo("[InactivityManager] Avvio monitoraggio per schermata: " + screen + " (no StackPane)");
         startMonitoring(screen, null);
     }
 
@@ -51,6 +53,7 @@ public class InactivityManager {
      * Ferma il monitoraggio dell'inattività.
      */
     public static void stopMonitoring() {
+        ConsoleColors.printWarn("[InactivityManager] Stop monitoraggio per schermata: " + currentScreen);
         if (inactivityTimer != null) {
             inactivityTimer.stop();
             inactivityTimer = null;
@@ -62,7 +65,8 @@ public class InactivityManager {
     /**
      * Resetta il timer di inattività (chiamare ad ogni interazione dell'utente).
      */
-    public static void resetTimer() {
+    public static void resetTimer(String source) {
+        ConsoleColors.printInfo("[InactivityManager] Timer resettato da " + source);
         // Ferma il timer precedente
         if (inactivityTimer != null) {
             inactivityTimer.stop();
@@ -103,6 +107,7 @@ public class InactivityManager {
      * Mostra un dialogo di conferma con 10 secondi di countdown.
      */
     private static void onInactivityTimeout() {
+        ConsoleColors.printInfo("[InactivityManager] Timeout inattività raggiunto per schermata: " + currentScreen);
         Platform.runLater(() -> {
             if (currentRootStack != null) {
                 // Mostra dialogo di conferma con countdown
@@ -114,7 +119,7 @@ public class InactivityManager {
                     // onContinue: verde - continua l'ordine (nessuna azione)
                     () -> {
                         // Reset timer e continua normalmente
-                        resetTimer();
+                        resetTimer("onInactivityTimeout");
                     },
                     // onClose: rosso - annulla ordine e torna a WELCOME
                     () -> returnToWelcome()
@@ -130,6 +135,7 @@ public class InactivityManager {
      * Cancella l'ordine e ritorna a WELCOME.
      */
     private static void returnToWelcome() {
+        ConsoleColors.printWarn("[InactivityManager] Utente inattivo. Annullamento ordine e ritorno a WELCOME.");
         CartManager.get().clear();
         Navigator.goTo(Navigator.Screen.WELCOME);
         stopMonitoring();

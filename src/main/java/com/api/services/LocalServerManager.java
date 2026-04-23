@@ -1,6 +1,7 @@
 package com.api.services;
 
 import com.app.model.OrderQueue;
+import com.util.ConsoleColors;
 import com.util.SystemManager;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -43,7 +44,7 @@ public class LocalServerManager {
 
     private static void setDevicesConnected(int count) {
         LocalServerManager.devicesConnected = count;
-        System.out.println("[LocalServerManager] Connected tablets: " + count);
+        ConsoleColors.printInfo("[LocalServerManager] Connected tablets: " + count);
     }
     
     public static int getDevicesConnected() {
@@ -55,7 +56,7 @@ public class LocalServerManager {
             return;
         }
         
-        System.out.println("[LocalServerManager] Starting local Wi-Fi API Server for Android on port " + port + "...");
+        ConsoleColors.printInfo("[LocalServerManager] Starting local Wi-Fi API Server for Android on port " + port + "...");
 
         // Initializza il server - ascolta su tutti gli indirizzi IPv4
         app = Javalin.create(config -> {
@@ -93,7 +94,7 @@ public class LocalServerManager {
         app.before("/api/*", ctx -> {
             // Controllo 1: Il totem è lucchettato dal server remoto?
             if (com.util.SystemManager.isAppLocked()) {
-                System.out.println("[LocalServerManager] Access denied. Totem is locked/disabled.");
+                ConsoleColors.printErr("[LocalServerManager] Access denied. Totem is locked/disabled.");
                 ctx.status(HttpStatus.FORBIDDEN).result("Totem attualmente disabilitato o bloccato dal server.");
                 return; // Ferma il proseguimento
             }
@@ -142,7 +143,7 @@ public class LocalServerManager {
 
                 ctx.json(res.toString());
             } catch (Exception e) {
-                System.err.println("[LocalServerManager] Errore recupero catalog: " + e.getMessage());
+                ConsoleColors.printErr("[LocalServerManager] Errore recupero catalog: " + e.getMessage());
                 ctx.status(HttpStatus.INTERNAL_SERVER_ERROR).result("Errore recupero catalogo");
             }
         });
@@ -170,12 +171,12 @@ public class LocalServerManager {
                 
                 testOrder.add("prodotti", prodotti);
                 
-                System.out.println("[LocalServerManager TEST] Aggiungendo ordine di test: " + testOrder);
+                ConsoleColors.printInfo("[LocalServerManager TEST] Aggiungendo ordine di test: " + testOrder);
                 com.app.model.OrderQueue.enqueueForTablets(testOrder, testOrder.get("tablet_order_id").getAsString());
                 
                 ctx.status(HttpStatus.OK).result("Ordine di test aggiunto alla coda");
             } catch (Exception e) {
-                System.err.println("[LocalServerManager TEST] Errore: " + e.getMessage());
+                ConsoleColors.printErr("[LocalServerManager TEST] Errore: " + e.getMessage());
                 e.printStackTrace();
                 ctx.status(HttpStatus.INTERNAL_SERVER_ERROR).result("Errore: " + e.getMessage());
             }
@@ -187,7 +188,7 @@ public class LocalServerManager {
                 // Imposta un timeout elevato affinché non cada la connessione ad ogni respiro
                 ctx.session.setIdleTimeout(Duration.ofDays(30));
 
-                System.out.println("[LocalServerManager] Tablet connected: " + ctx.sessionId());
+                ConsoleColors.printInfo("[LocalServerManager] Tablet connected: " + ctx.sessionId());
                 tabletWebSockets.put(ctx, ctx.sessionId());
                 
                 // Invia la coda attuale appena il tablet si connette
@@ -195,7 +196,7 @@ public class LocalServerManager {
             });
             
             ws.onClose(ctx -> {
-                System.out.println("[LocalServerManager] Tablet disconnected: " + ctx.sessionId());
+                ConsoleColors.printInfo("[LocalServerManager] Tablet disconnected: " + ctx.sessionId());
                 tabletWebSockets.remove(ctx);
                 if (authenticatedTablets.remove(ctx) != null) {
                     broadcastTabletOrders(); // Reassign remaining orders
@@ -218,7 +219,7 @@ public class LocalServerManager {
                         try {
                             com.google.gson.JsonObject authResponse = OrdersService.kdsLogin(pin);
                             if (authResponse != null) {
-                                System.out.println("[LocalServerManager] KDS Logged in successfully, session: " + ctx.sessionId());
+                                ConsoleColors.printInfo("[LocalServerManager] KDS Logged in successfully, session: " + ctx.sessionId());
                                 authenticatedTablets.put(ctx, ctx.sessionId());
                                 ctx.send("{\"action\":\"login_response\", \"success\":true}");
                                 broadcastTabletOrders(); // Trigger assign and sync
@@ -227,7 +228,7 @@ public class LocalServerManager {
                             }
                         } catch (Exception e) {
                             ctx.send("{\"action\":\"login_response\", \"success\":false, \"message\":\"Autorizzazione fallita\"}");
-                            System.err.println("[LocalServerManager] Login error: " + e.getMessage());
+                            ConsoleColors.printErr("[LocalServerManager] Login error: " + e.getMessage());
                         }
                     }
 
@@ -239,15 +240,15 @@ public class LocalServerManager {
                         // Prova a PRENDERE l'ordine (mutual exclusion / the first one wins)
                         boolean success = com.app.model.OrderQueue.takeOrderFromTablets(orderId);
                         if (success) {
-                            System.out.println("[LocalServerManager] Tablet " + ctx.sessionId() + " took/completed order " + orderId);
+                            ConsoleColors.printInfo("[LocalServerManager] Tablet " + ctx.sessionId() + " took/completed order " + orderId);
                             // Se rimosso con successo, aggiorna in broadcast tutti per farglielo togliere dallo schermo
                             broadcastTabletOrders();
                         } else {
-                            System.out.println("[LocalServerManager] Tablet " + ctx.sessionId() + " tried to take order " + rawOrderId + " but it was already taken/removed.");
+                            ConsoleColors.printInfo("[LocalServerManager] Tablet " + ctx.sessionId() + " tried to take order " + rawOrderId + " but it was already taken/removed.");
                         }
                     }
                 } catch (Exception e) {
-                    System.err.println("[LocalServerManager] WS Message Error: " + e.getMessage());
+                    ConsoleColors.printErr("[LocalServerManager] WS Message Error: " + e.getMessage());
                 }
             });
         });
@@ -258,7 +259,7 @@ public class LocalServerManager {
         if (app != null) {
             app.stop();
             app = null;
-            System.out.println("[LocalServerManager] Server stopped safely.");
+            ConsoleColors.printInfo("[LocalServerManager] Server stopped safely.");
         }
     }
 }

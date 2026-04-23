@@ -52,9 +52,10 @@ public class NetworkWatchdog {
     private static Thread thread = null;
     private static volatile boolean running = false;
     private static volatile boolean online = false;
-    
+
     // Sostituito Consumer con BooleanProperty per permettere binding multipli
-    public static final javafx.beans.property.BooleanProperty onlineProperty = new javafx.beans.property.SimpleBooleanProperty(true);
+    public static final javafx.beans.property.BooleanProperty onlineProperty = new javafx.beans.property.SimpleBooleanProperty(
+            true);
 
     // -- API pubblica --
 
@@ -70,8 +71,8 @@ public class NetworkWatchdog {
         // Esegui un primo ping subito, così lo stato è aggiornato all'avvio.
         online = sendPing();
         Platform.runLater(() -> onlineProperty.set(online));
-        
-        System.out.println("[Watchdog] Avviato. Stato iniziale: " + (online ? "ONLINE" : "OFFLINE"));
+
+        ConsoleColors.printInfo("[Watchdog] Avviato. Stato iniziale: " + (online ? "ONLINE" : "OFFLINE"));
 
         thread = new Thread(() -> {
             while (running) {
@@ -80,7 +81,7 @@ public class NetworkWatchdog {
                 online = isOnline;
 
                 if (isOnline != wasOnline) {
-                    System.out.println("[Watchdog] -> " + (isOnline ? "ONLINE" : "OFFLINE"));
+                    ConsoleColors.printInfo("[Watchdog] -> " + (isOnline ? "ONLINE" : "OFFLINE"));
                     final boolean onlineFinal = isOnline;
                     Platform.runLater(() -> onlineProperty.set(onlineFinal));
                 }
@@ -92,7 +93,7 @@ public class NetworkWatchdog {
                     break;
                 }
             }
-            System.out.println("[Watchdog] Fermato.");
+            ConsoleColors.printWarn("[Watchdog] Fermato.");
         }, "network-watchdog");
 
         thread.setDaemon(true);
@@ -125,31 +126,30 @@ public class NetworkWatchdog {
 
         try {
             JsonObject payload = buildHeartbeat();
-            
+
             // Simula un update se il parametro di debug è attivo
             if (DEBUG_SIMULATE_UPDATE) {
                 JsonObject debugData = new JsonObject();
                 debugData.addProperty("versione_a", "1.1-DEBUG");
                 debugData.addProperty("aggiornamento_id", 9999L);
-                
+
                 JsonObject debugResponse = new JsonObject();
                 debugResponse.add("data", debugData);
-                
+
                 System.out.println("[Watchdog] Trovato aggiornamento (simulato)! Versione target: 1.1-DEBUG");
                 SystemManager.showUpdatePrompt("1.1-DEBUG", 9999L);
                 return true;
             }
-            
+
             // Invia dati al server con Authorization: Bearer (non public)
             JsonObject response = com.api.Api.apiPost("auth/ping", payload);
-            
+
             // Aggiorna e resetta il timer del blocco offline
             checkOfflineLock(true, response);
 
-
             return true;
         } catch (Exception e) {
-            System.err.println("[Watchdog] Errore API: " + e.getMessage());
+            ConsoleColors.printErr("[Watchdog] Errore API: " + e.getMessage());
             checkOfflineLock(false, null);
             return false;
         }
@@ -157,72 +157,57 @@ public class NetworkWatchdog {
 
     /**
      * Usa le java.util.prefs persistenti su disco per resistere ai riavvii
-     * e valutare se il Kiosk è rimasto disconnesso senza permessi per un tot di giorni.
+     * e valutare se il Kiosk è rimasto disconnesso senza permessi per un tot di
+     * giorni.
      */
     private static void checkOfflineLock(boolean isOnlineNow, JsonObject serverResponse) {
         Preferences prefs = Preferences.userNodeForPackage(NetworkWatchdog.class);
         long nowMs = System.currentTimeMillis();
-        
+
         if (isOnlineNow) {
             // Aggiorna e salva permanentemente il timestamp
             prefs.putLong("last_online_timestamp", nowMs);
-            
+
             // Reagisce attivamente in base al database remoto
-            boolean lockedByDb = serverResponse != null && serverResponse.has("is_locked") && serverResponse.get("is_locked").getAsBoolean();
-            
+            boolean lockedByDb = serverResponse != null && serverResponse.has("is_locked")
+                    && serverResponse.get("is_locked").getAsBoolean();
+
             // Salva dispositivi KDS per l'App Android
             if (serverResponse != null && serverResponse.has("kds_devices")) {
                 com.api.SessionManager.setKdsDevices(serverResponse.getAsJsonArray("kds_devices"));
             }
 
             if (lockedByDb) {
-                String lockMessage = serverResponse.has("lock_message") ? serverResponse.get("lock_message").getAsString() : "Totem sospeso dal server.";
+                String lockMessage = serverResponse.has("lock_message")
+                        ? serverResponse.get("lock_message").getAsString()
+                        : "Totem sospeso dal server.";
                 Platform.runLater(() -> SystemManager.lockApp(lockMessage));
             } else {
-                // Se il db lo dà come sbloccato e non è offline, rimuoviamo un eventuale blocco pregresso
-                Platform.runLater(() -> SystemManager.unlockApp());
+                // Se il db lo dà come sbloccato e non è offline, rimuoviamo un eventuale blocco
+                // pregresso, prima controlla che non sia già sbloccato per evitare log ridondanti
+                if (SystemManager.isAppLocked()) {
+                    Platform.runLater(() -> SystemManager.unlockApp());
+                }
             }
 
         } else {
             // Se offline, calcola da quanto tempo
             long lastOnlineMs = prefs.getLong("last_online_timestamp", nowMs);
-            
+
             // Caso in cui non fosse ma stato online da quando installato
             if (lastOnlineMs == nowMs && !prefs.getBoolean("has_initialized", false)) {
                 prefs.putLong("last_online_timestamp", nowMs);
                 prefs.putBoolean("has_initialized", true);
             }
-            
+
             long daysOffline = TimeUnit.MILLISECONDS.toDays(nowMs - lastOnlineMs);
             if (daysOffline > MAX_OFFLINE_DAYS) {
-                System.out.println("[Watchdog] Kiosk offline da " + daysOffline + " gg. Innesco blocco di sicurezza.");
-                Platform.runLater(() -> SystemManager.lockApp("Dispositivo bloccato per sicurezza.\nRimasto offline per più di " + MAX_OFFLINE_DAYS + " giorni consecutivi."));
+                ConsoleColors
+                        .printWarn("[Watchdog] Kiosk offline da " + daysOffline + " gg. Innesco blocco di sicurezza.");
+                Platform.runLater(
+                        () -> SystemManager.lockApp("Dispositivo bloccato per sicurezza.\nRimasto offline per più di "
+                                + MAX_OFFLINE_DAYS + " giorni consecutivi."));
             }
-        }
-    }
-
-    private static boolean isNetworkReachable() {
-        try (java.net.Socket socket = new java.net.Socket()) {
-            socket.connect(new java.net.InetSocketAddress("8.8.8.8", 53), PING_TIMEOUT_MS);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    /** Ping HTTP grezzo senza autenticazione (fallback se non loggati). */
-    private static boolean rawPing() {
-        try {
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create("https://hasanabdelaziz.altervista.org/api/v1/totem/auth/ping"))
-                    .method("HEAD", HttpRequest.BodyPublishers.noBody())
-                    .timeout(Duration.ofMillis(PING_TIMEOUT_MS))
-                    .build();
-            HttpResponse<Void> resp = CLIENT.send(req,
-                    HttpResponse.BodyHandlers.discarding());
-            return resp.statusCode() > 0;
-        } catch (Exception e) {
-            return false;
         }
     }
 

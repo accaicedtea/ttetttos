@@ -140,8 +140,8 @@ public class ShopPageController extends BaseController
         if (rootStack == null) return;
 
         // Handler per mouse e tastiera che resetta il timer
-        inactivityResetMouseHandler = e -> com.util.InactivityManager.resetTimer();
-        inactivityResetKeyHandler = e -> com.util.InactivityManager.resetTimer();
+        inactivityResetMouseHandler = e -> com.util.InactivityManager.resetTimer("ShopPage MouseEvent");
+        inactivityResetKeyHandler = e -> com.util.InactivityManager.resetTimer("ShopPage KeyEvent");
 
         // Aggiungi event filter al rootStack per catturare tutte le interazioni
         rootStack.addEventFilter(MouseEvent.ANY, inactivityResetMouseHandler);
