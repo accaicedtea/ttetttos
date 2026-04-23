@@ -10,6 +10,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Map;
+
+import com.util.ConfigManager;
 import com.util.ConsoleColors;
 /**
  * Client HTTP base.
@@ -17,7 +19,7 @@ import com.util.ConsoleColors;
  */
 public class Api {
 
-    private static final String BASE_URL = "http://localhost:8080/api/v1/totem/";
+    private static final String BASE_URL = ConfigManager.get("BASE_URL");
 
     // HttpClient standard — identico alla versione originale che funzionava
     private static final HttpClient httpClient = HttpClient.newHttpClient();
@@ -97,7 +99,7 @@ public class Api {
 
     public static JsonObject apiPostPublic(String endpoint, JsonObject data,
             Map<String, String> extra) throws Exception {
-        ConsoleColors.printInfo("[Api] POST " + BASE_URL + endpoint);
+        // ConsoleColors.printInfo("[Api] POST " + BASE_URL + endpoint);
         String body = data != null ? data.toString() : "{}";
         HttpRequest.Builder b = HttpRequest.newBuilder()
                 .uri(URI.create(BASE_URL + endpoint))
@@ -111,7 +113,7 @@ public class Api {
     }
 
     public static JsonObject apiGetPublic(String endpoint) throws Exception {
-        ConsoleColors.printInfo("[Api] GET " + BASE_URL + endpoint);
+        // ConsoleColors.printInfo("[Api] GET " + BASE_URL + endpoint);
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(BASE_URL + endpoint))
                 .header("Content-Type", "application/json")
@@ -125,7 +127,7 @@ public class Api {
 
     public static JsonObject apiGet(String endpoint) throws Exception {
         requireToken();
-        ConsoleColors.printInfo("[Api] GET " + BASE_URL + endpoint);
+        //ConsoleColors.printInfo("[Api] GET " + BASE_URL + endpoint);
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
                         .uri(URI.create(BASE_URL + endpoint))
@@ -152,7 +154,7 @@ public class Api {
 
     public static JsonObject apiPut(String endpoint, JsonObject data) throws Exception {
         requireToken();
-        ConsoleColors.printInfo("[Api] PUT " + BASE_URL + endpoint);
+        // ConsoleColors.printInfo("[Api] PUT " + BASE_URL + endpoint);
         String body = data != null ? data.toString() : "{}";
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
@@ -166,7 +168,7 @@ public class Api {
 
     public static JsonObject apiPatch(String endpoint, JsonObject data) throws Exception {
         requireToken();
-        ConsoleColors.printInfo("[Api] PATCH " + BASE_URL + endpoint);
+        // ConsoleColors.printInfo("[Api] PATCH " + BASE_URL + endpoint);
         String body = data != null ? data.toString() : "{}";
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
@@ -180,7 +182,7 @@ public class Api {
 
     public static JsonObject apiDelete(String endpoint) throws Exception {
         requireToken();
-        ConsoleColors.printWarn("[Api] DELETE " + BASE_URL + endpoint);
+        // ConsoleColors.printWarn("[Api] DELETE " + BASE_URL + endpoint);
         HttpRequest req = applyAuthHeaders(
                 HttpRequest.newBuilder()
                         .uri(URI.create(BASE_URL + endpoint))

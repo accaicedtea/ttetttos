@@ -1,6 +1,7 @@
 package com.util;
 
 import com.api.Api;
+import com.api.services.AuthService;
 import com.google.gson.JsonObject;
 import javafx.application.Platform;
 
@@ -32,17 +33,20 @@ import java.util.prefs.Preferences;
  */
 public class NetworkWatchdog {
 
-    public static final String APP_VERSION = "1.0";
+    public static final String APP_VERSION = ConfigManager.get("APP_VERSION");
 
     // ===== CONFIGURAZIONE PARAMETRICA E DEBUG =====
-    public static boolean DEBUG_SIMULATE_UPDATE = false;
-    public static boolean DEBUG_SIMULATE_OFFLINE = false;
-    public static int MAX_OFFLINE_DAYS = 30;
+    public static boolean DEBUG_SIMULATE_UPDATE = ConfigManager.getBoolean("DEBUG_SIMULATE_UPDATE");
+    public static boolean DEBUG_SIMULATE_OFFLINE = ConfigManager.getBoolean("DEBUG_SIMULATE_OFFLINE");
+    public static int MAX_OFFLINE_DAYS = ConfigManager.getInt("MAX_OFFLINE_DAYS");
     // ==============================================
 
-    private static final int INTERVAL_ONLINE_MS = 15_000;
-    private static final int INTERVAL_OFFLINE_MS = 5_000;
-    private static final int PING_TIMEOUT_MS = 6_000;
+    
+    private static final int INTERVAL_ONLINE_MS = ConfigManager.getInt("INTERVAL_ONLINE_MS");
+    private static final int INTERVAL_OFFLINE_MS = ConfigManager.getInt("INTERVAL_OFFLINE_MS");
+    private static final int PING_TIMEOUT_MS = ConfigManager.getInt("PING_TIMEOUT_MS");
+
+
 
     private static final HttpClient CLIENT = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
@@ -151,6 +155,13 @@ public class NetworkWatchdog {
         } catch (Exception e) {
             ConsoleColors.printErr("[Watchdog] Errore API: " + e.getMessage());
             checkOfflineLock(false, null);
+            // Non è stato possibile raggiungere il server, retry al prossimo intervallo
+            try {
+                ConsoleColors.printWarn("[Watchdog] Tentativo di login per testare la connessione...");
+                AuthService.loginTotem(ConfigManager.get("TOTEM_API_KEY"));
+            } catch (Exception e1) {
+                e1.printStackTrace();
+            }
             return false;
         }
     }

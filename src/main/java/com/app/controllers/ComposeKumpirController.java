@@ -31,7 +31,7 @@ import com.api.repository.DataRepository;
 import com.api.repository.DataRepository;
 import com.util.Animations;
 import com.util.RemoteLogger;
-
+// TODO: AGGIUNGERE METODO STATICO PER CHIUDERE IL MODAL
 /**
  * Controllore dedicato al compositore Kumpir in modal.
  *
@@ -549,7 +549,7 @@ public class ComposeKumpirController extends BaseController {
         resetKumpirModalState();
         if (!rootStack.getChildren().contains(kumpirOverlay))
             rootStack.getChildren().add(kumpirOverlay);
-            
+
         // Applica l'effetto blur allo sfondo (primo figlio dello stack)
         if (!rootStack.getChildren().isEmpty() && rootStack.getChildren().get(0) != kumpirOverlay) {
             rootStack.getChildren().get(0).setEffect(new javafx.scene.effect.GaussianBlur(10));
@@ -709,7 +709,7 @@ public class ComposeKumpirController extends BaseController {
                             new KeyValue(kumpirCard.opacityProperty(), 0.0, Interpolator.EASE_IN),
                             new KeyValue(kumpirCard.scaleXProperty(), 0.94, Interpolator.EASE_IN),
                             new KeyValue(kumpirCard.scaleYProperty(), 0.94, Interpolator.EASE_IN)));
-            
+
             out.setOnFinished(ev -> {
                 kumpirOverlay.setVisible(false);
                 kumpirOverlay.setManaged(false); // FIX: Rilascia lo spazio quando nascosto
@@ -735,12 +735,12 @@ public class ComposeKumpirController extends BaseController {
                 return;
             }
             double finalTotal = KUMPIR_BASE_PRICE + selectedIngredientsTotal;
-            
+
             List<String> selectedNames = selectedIds.stream()
-                .map(ingNodeById::get)
-                .filter(java.util.Objects::nonNull)
-                .map(node -> node.ing().nome)
-                .collect(java.util.stream.Collectors.toList());
+                    .map(ingNodeById::get)
+                    .filter(java.util.Objects::nonNull)
+                    .map(node -> node.ing().nome)
+                    .collect(java.util.stream.Collectors.toList());
 
             CartItem item = CartItem.builder(0, "Kumpir personalizzato",
                     formatPrice(finalTotal), finalTotal)

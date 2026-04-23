@@ -7,6 +7,7 @@ import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
 import com.app.model.CartManager;
 import com.app.components.ModalDialog;
+import com.app.controllers.ShopPageController;
 
 /**
  * InactivityManager — Gestisce i timeout di inattività per il totem.
@@ -66,7 +67,7 @@ public class InactivityManager {
      * Resetta il timer di inattività (chiamare ad ogni interazione dell'utente).
      */
     public static void resetTimer(String source) {
-        ConsoleColors.printInfo("[InactivityManager] Timer resettato da " + source);
+        // ConsoleColors.printInfo("[InactivityManager] Timer resettato da " + source);
         // Ferma il timer precedente
         if (inactivityTimer != null) {
             inactivityTimer.stop();
@@ -137,6 +138,9 @@ public class InactivityManager {
     private static void returnToWelcome() {
         ConsoleColors.printWarn("[InactivityManager] Utente inattivo. Annullamento ordine e ritorno a WELCOME.");
         CartManager.get().clear();
+        
+        //TODO: CHIDERE IL MODAL DELLA COMPOSIZIONE KUMPIR SE APERTO
+
         Navigator.goTo(Navigator.Screen.WELCOME);
         stopMonitoring();
     }

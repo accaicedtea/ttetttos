@@ -1,1 +1,3 @@
 // FIXME: [InactivityManager] -> troppe chiamate a resetTimer senza indicare la fonte, rendendo difficile il debug. Aggiungere un parametro "source" per identificare da dove viene chiamato il reset.
+// TODO : [LocalServerManager] -> gestire multi-server se ho più totem (es. più chioschi in un ristorante) - attualmente è hardcoded su localhost:8080, ma in futuro potrebbe essere necessario configurarlo o scoprirlo dinamicamente.
+// TODO : aggiorgere variabili d'ambiente e configurazione per supportare più ambienti (dev, staging, prod) con URL e chiavi diverse. (cifretente per prod, localhost per dev, ecc.)

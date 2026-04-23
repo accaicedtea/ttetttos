@@ -37,8 +37,7 @@ public class SplashController extends BaseController {
     @FXML
     private ProgressBar progressBar;
 
-    private static final String API_KEY = System.getProperty("totem.api.key",
-            System.getenv().getOrDefault("TOTEM_API_KEY", "api_key_totem_1"));
+    private static final String API_KEY = com.util.ConfigManager.get("TOTEM_API_KEY");
 
     @FXML
     private void initialize() {

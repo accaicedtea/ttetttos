@@ -12,6 +12,8 @@ import javafx.util.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.app.controllers.ShopPageController;
+
 /**
  * Gestisce la navigazione tra le schermate del totem.
  *
@@ -241,5 +243,13 @@ public class Navigator {
 
     public static Screen getCurrentScreen() {
         return currentScreen;
+    }
+
+    public static ShopPageController getController(Class<ShopPageController> class1) {
+        Object controller = controllerCache.get(Screen.MENU);
+        if (controller != null && class1.isInstance(controller)) {
+            return class1.cast(controller);
+        }
+        return null;
     }
 }

@@ -18,5 +18,6 @@ Thumbs.db
 
 # Configurazioni e dati locali
 *.json
-
+*.properties
+.env
 # dist/ è tracciato — contiene il JAR finale e le librerie JavaFX bundled
