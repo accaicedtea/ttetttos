@@ -1,0 +1,463 @@
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  .root {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+    background: #f0f0f0;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  /* ── PREVIEW ── */
+  .preview {
+    display: flex;
+    align-items: center;
+    background: #f0f0f0;
+    padding: 40px 48px;
+    transition: padding 0.3s;
+  }
+
+  .left-area {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+
+  .box {
+    border-radius: 22px;
+    background: #f0f0f0;
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+    box-shadow: 12px 12px 20px #bbbbbb, -8px -8px 16px #ffffff;
+    transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1), height 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .img-side {
+    height: 100%;
+    overflow: hidden;
+    flex-shrink: 0;
+    transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .img-side img {
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 0.5s ease;
+  }
+
+  .img-side img.fade {
+    opacity: 0;
+  }
+
+  .content-side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    opacity: 0;
+    transform: translateX(16px);
+    min-width: 0;
+    overflow: hidden;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+
+  .content-side.show {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .content-side h2 {
+    font-weight: 500;
+    color: #444;
+    margin-bottom: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .inner-card {
+    background: #f0f0f0;
+    border-radius: 14px;
+    margin-bottom: 10px;
+    box-shadow: 4px 4px 8px #cccccc, -4px -4px 8px #ffffff;
+  }
+
+  .inner-card:last-child {
+    margin-bottom: 0;
+  }
+
+  .inner-card h3 {
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 3px;
+  }
+
+  .inner-card p {
+    color: #888;
+    line-height: 1.45;
+  }
+
+  .dots {
+    display: flex;
+    gap: 7px;
+    padding-left: 2px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ccc;
+    transition: background 0.3s, transform 0.2s;
+  }
+
+  .dot.active {
+    background: #777;
+    transform: scale(1.25);
+  }
+
+  .right-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* ── PANEL ── */
+  .panel {
+    background: #e8e8e8;
+    border-top: 1px solid #ddd;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .panel-title {
+    font-size: 11px;
+    font-weight: 500;
+    color: #999;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 24px;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .row label {
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+    min-width: 130px;
+  }
+
+  .row input[type=range] {
+    flex: 1;
+    accent-color: #777;
+  }
+
+  .row .val {
+    font-size: 11px;
+    font-weight: 500;
+    color: #555;
+    min-width: 36px;
+    text-align: right;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #aaa;
+    letter-spacing: 0.06em;
+    grid-column: 1/-1;
+    margin-top: 4px;
+  }
+</style>
+
+<div class="root">
+  <div class="preview" id="preview">
+    <div class="left-area" id="leftArea">
+      <div class="box" id="box">
+        <div class="img-side" id="imgSide">
+          <img id="slideImg" src="https://picsum.photos/seed/nature/520/520" alt="">
+        </div>
+        <div class="content-side" id="contentSide">
+          <h2 id="slideTitle"></h2>
+          <div class="inner-card" id="card1">
+            <h3 id="d1t"></h3>
+            <p id="d1p"></p>
+          </div>
+          <div class="inner-card" id="card2">
+            <h3 id="d2t"></h3>
+            <p id="d2p"></p>
+          </div>
+        </div>
+      </div>
+      <div class="dots" id="dots"></div>
+    </div>
+    <div class="right-area" id="rightArea">
+      <h1 id="fixedText" style="font-weight:500;color:#777;letter-spacing:0.04em;">TESTO FISSO</h1>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Parametri</div>
+    <div class="grid">
+
+      <div class="section-label">📐 Layout sezioni</div>
+
+      <div class="row">
+        <label>Larghezza sezione sinistra</label>
+        <input type="range" id="p-left-pct" min="30" max="80" value="55" step="1">
+        <span class="val" id="v-left-pct">55%</span>
+      </div>
+      <div class="row">
+        <label>Padding preview (px)</label>
+        <input type="range" id="p-padding" min="10" max="80" value="40" step="2">
+        <span class="val" id="v-padding">40px</span>
+      </div>
+
+      <div class="section-label">📦 Box — stato chiuso</div>
+
+      <div class="row">
+        <label>Dimensione box chiusa (px)</label>
+        <input type="range" id="p-box-small" min="120" max="360" value="260" step="4">
+        <span class="val" id="v-box-small">260px</span>
+      </div>
+      <div class="row">
+        <label>Border radius box (px)</label>
+        <input type="range" id="p-radius" min="0" max="40" value="22" step="1">
+        <span class="val" id="v-radius">22px</span>
+      </div>
+
+      <div class="section-label">📦 Box — stato aperto</div>
+
+      <div class="row">
+        <label>Larghezza box aperta (px)</label>
+        <input type="range" id="p-box-wide" min="300" max="700" value="560" step="4">
+        <span class="val" id="v-box-wide">560px</span>
+      </div>
+      <div class="row">
+        <label>Altezza box aperta (px)</label>
+        <input type="range" id="p-box-tall" min="160" max="480" value="300" step="4">
+        <span class="val" id="v-box-tall">300px</span>
+      </div>
+      <div class="row">
+        <label>Larghezza immagine aperta (px)</label>
+        <input type="range" id="p-img-open" min="80" max="320" value="220" step="4">
+        <span class="val" id="v-img-open">220px</span>
+      </div>
+
+      <div class="section-label">🃏 Card contenuto</div>
+
+      <div class="row">
+        <label>Padding card (px)</label>
+        <input type="range" id="p-card-pad" min="6" max="28" value="11" step="1">
+        <span class="val" id="v-card-pad">11px</span>
+      </div>
+      <div class="row">
+        <label>Padding contenuto laterale (px)</label>
+        <input type="range" id="p-content-pad" min="8" max="48" value="24" step="2">
+        <span class="val" id="v-content-pad">24px</span>
+      </div>
+      <div class="row">
+        <label>Font titolo (px)</label>
+        <input type="range" id="p-title-size" min="10" max="22" value="14" step="1">
+        <span class="val" id="v-title-size">14px</span>
+      </div>
+      <div class="row">
+        <label>Font card label (px)</label>
+        <input type="range" id="p-card-h" min="8" max="18" value="11" step="1">
+        <span class="val" id="v-card-h">11px</span>
+      </div>
+      <div class="row">
+        <label>Font card testo (px)</label>
+        <input type="range" id="p-card-p" min="8" max="16" value="10" step="1">
+        <span class="val" id="v-card-p">10px</span>
+      </div>
+
+      <div class="section-label">⏱ Timing animazione</div>
+
+      <div class="row">
+        <label>Durata espansione (ms)</label>
+        <input type="range" id="p-anim-dur" min="200" max="1600" value="800" step="50">
+        <span class="val" id="v-anim-dur">800ms</span>
+      </div>
+      <div class="row">
+        <label>Pausa con contenuto visibile (ms)</label>
+        <input type="range" id="p-hold" min="1000" max="8000" value="3800" step="200">
+        <span class="val" id="v-hold">3800ms</span>
+      </div>
+      <div class="row">
+        <label>Pausa tra slide (ms)</label>
+        <input type="range" id="p-between" min="400" max="3000" value="1000" step="100">
+        <span class="val" id="v-between">1000ms</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  const slides = [
+    { seed: 'nature', title: 'Natura e Paesaggi', d1t: 'Foreste', d1p: 'Ecosistemi ricchi di biodiversità.', d2t: 'Oceani', d2p: 'Coprono il 71% della superficie.' },
+    { seed: 'city', title: 'Vita Urbana', d1t: 'Architettura', d1p: 'Strutture che definiscono le città.', d2t: 'Cultura', d2p: 'Arte e tradizioni che uniscono.' },
+    { seed: 'tech', title: 'Tecnologia', d1t: 'Innovazione', d1p: 'Soluzioni per i problemi di domani.', d2t: 'Connettività', d2p: 'Il mondo sempre più vicino.' },
+    { seed: 'food', title: 'Cucina', d1t: 'Sapori', d1p: 'Ingredienti da ogni angolo del pianeta.', d2t: 'Tradizione', d2p: 'Ricette di generazione in generazione.' },
+  ];
+
+  let current = 0, cycleTimer = null;
+
+  const box = document.getElementById('box');
+  const imgSide = document.getElementById('imgSide');
+  const contentSide = document.getElementById('contentSide');
+  const slideImg = document.getElementById('slideImg');
+  const dotsEl = document.getElementById('dots');
+  const preview = document.getElementById('preview');
+  const leftArea = document.getElementById('leftArea');
+  const rightArea = document.getElementById('rightArea');
+
+  // params with defaults
+  const P = {
+    leftPct: 55, padding: 40,
+    boxSmall: 260, radius: 22,
+    boxWide: 560, boxTall: 300, imgOpen: 220,
+    cardPad: 11, contentPad: 24, titleSize: 14, cardH: 11, cardP: 10,
+    animDur: 800, hold: 3800, between: 1000
+  };
+
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    dotsEl.appendChild(d);
+  });
+
+  function updateDots() { [...dotsEl.children].forEach((d, i) => d.className = 'dot' + (i === current ? ' active' : '')); }
+
+  function fillContent(s) {
+    document.getElementById('slideTitle').textContent = s.title;
+    document.getElementById('d1t').textContent = s.d1t;
+    document.getElementById('d1p').textContent = s.d1p;
+    document.getElementById('d2t').textContent = s.d2t;
+    document.getElementById('d2p').textContent = s.d2p;
+  }
+
+  function applyLayout() {
+    preview.style.padding = P.padding + 'px 48px';
+    leftArea.style.width = P.leftPct + '%';
+    rightArea.style.width = (100 - P.leftPct) + '%';
+    box.style.borderRadius = P.radius + 'px';
+    imgSide.style.borderRadius = P.radius + 'px 0 0 ' + P.radius + 'px';
+    contentSide.style.padding = '0 ' + P.contentPad + 'px';
+    document.getElementById('slideTitle').style.fontSize = P.titleSize + 'px';
+    ['card1', 'card2'].forEach(id => {
+      const c = document.getElementById(id);
+      c.style.padding = P.cardPad + 'px ' + (P.cardPad + 3) + 'px';
+      c.style.borderRadius = Math.min(P.radius, 14) + 'px';
+      c.querySelector('h3').style.fontSize = P.cardH + 'px';
+      c.querySelector('p').style.fontSize = P.cardP + 'px';
+    });
+    box.style.transition = `width ${P.animDur}ms cubic-bezier(0.16,1,0.3,1), height ${P.animDur}ms cubic-bezier(0.16,1,0.3,1)`;
+    imgSide.style.transition = `width ${P.animDur}ms cubic-bezier(0.16,1,0.3,1)`;
+  }
+
+  function setSmall() {
+    box.style.width = P.boxSmall + 'px';
+    box.style.height = P.boxSmall + 'px';
+    imgSide.style.width = P.boxSmall + 'px';
+    slideImg.style.width = P.boxSmall + 'px';
+  }
+  function setOpen() {
+    box.style.width = P.boxWide + 'px';
+    box.style.height = P.boxTall + 'px';
+    imgSide.style.width = P.imgOpen + 'px';
+    slideImg.style.width = P.imgOpen + 'px';
+  }
+
+  function expand() {
+    fillContent(slides[current]);
+    setOpen();
+    setTimeout(() => contentSide.classList.add('show'), P.animDur * 0.6);
+  }
+  function collapse() {
+    contentSide.classList.remove('show');
+    setTimeout(() => setSmall(), 300);
+  }
+  function nextSlide() {
+    slideImg.classList.add('fade');
+    setTimeout(() => {
+      current = (current + 1) % slides.length;
+      slideImg.src = `https://picsum.photos/seed/${slides[current].seed}/520/520`;
+      updateDots();
+      slideImg.onload = () => slideImg.classList.remove('fade');
+      setTimeout(() => slideImg.classList.remove('fade'), 100);
+    }, 500);
+  }
+
+  function cycle() {
+    clearTimeout(cycleTimer);
+    expand();
+    cycleTimer = setTimeout(() => {
+      collapse();
+      setTimeout(() => {
+        nextSlide();
+        cycleTimer = setTimeout(cycle, P.between);
+      }, 750);
+    }, P.hold);
+  }
+
+  // wire sliders
+  const sliders = [
+    ['p-left-pct', 'v-left-pct', 'leftPct', '%'],
+    ['p-padding', 'v-padding', 'padding', 'px'],
+    ['p-box-small', 'v-box-small', 'boxSmall', 'px'],
+    ['p-radius', 'v-radius', 'radius', 'px'],
+    ['p-box-wide', 'v-box-wide', 'boxWide', 'px'],
+    ['p-box-tall', 'v-box-tall', 'boxTall', 'px'],
+    ['p-img-open', 'v-img-open', 'imgOpen', 'px'],
+    ['p-card-pad', 'v-card-pad', 'cardPad', 'px'],
+    ['p-content-pad', 'v-content-pad', 'contentPad', 'px'],
+    ['p-title-size', 'v-title-size', 'titleSize', 'px'],
+    ['p-card-h', 'v-card-h', 'cardH', 'px'],
+    ['p-card-p', 'v-card-p', 'cardP', 'px'],
+    ['p-anim-dur', 'v-anim-dur', 'animDur', 'ms'],
+    ['p-hold', 'v-hold', 'hold', 'ms'],
+    ['p-between', 'v-between', 'between', 'ms'],
+  ];
+
+  sliders.forEach(([sid, vid, key, unit]) => {
+    const el = document.getElementById(sid);
+    const vl = document.getElementById(vid);
+    el.addEventListener('input', () => {
+      P[key] = parseFloat(el.value);
+      vl.textContent = el.value + unit;
+      applyLayout();
+    });
+  });
+
+  fillContent(slides[0]);
+  updateDots();
+  applyLayout();
+  setSmall();
+  setTimeout(cycle, 1200);
+</script>

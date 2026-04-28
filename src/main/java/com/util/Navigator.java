@@ -97,7 +97,7 @@ public class Navigator {
                 // ── Prima visita: carica l'FXML ───────────────────────────
                 String fxml = switch (screen) {
                     case SPLASH -> "/com/app/screens/SplashScreen.fxml";
-                    case PRESENTATION -> "/com/app/screens/PresentationScreen.fxml";
+                    case PRESENTATION -> "/com/app/screens/Webview.fxml";
                     case WELCOME -> "/com/app/screens/WelcomeScreen.fxml";
                     case MENU -> "/com/app/ShopPage.fxml";
                     case CART -> "/com/app/screens/CartScreen.fxml";

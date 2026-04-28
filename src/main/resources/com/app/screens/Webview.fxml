@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.web.*?>
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane id="AnchorPane" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/8" fx:controller="com.app.webview.FXMLDocumentController">
+    <children>
+        <!-- WebView fullscreen (click per navigare a Welcome) -->
+        <WebView fx:id="mywebview" AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" />
+        
+        <!-- Hidden UI Elements -->
+        <Button fx:id="button" visible="false" managed="false" layoutX="23.0" layoutY="24.0" text="Click Me!" />
+        <Label fx:id="label" visible="false" managed="false" layoutX="126" layoutY="120" minHeight="16" minWidth="69" />
+    </children>
+</AnchorPane>

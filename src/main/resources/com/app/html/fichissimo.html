@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Animated Carousel Box</title>
+    <style>
+        :root {
+            --anim-duration: 10s;
+            --anim-easing: cubic-bezier(0.16, 1, 0.3, 1);
+            --anim-delay: 1s;
+            --image-width: 300px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #ebebeb;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            padding: 20px;
+            justify-content: space-between;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .left-section {
+            width: 60%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .right-section {
+            width: 40%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .right-section h1 {
+            font-size: 2rem;
+            color: #888;
+            letter-spacing: 0.12em;
+            font-weight: 300;
+        }
+
+        /* ── BOX ──────────────────────────────────────────── */
+        .box {
+            position: relative;
+            overflow: hidden;
+            border-radius: 24px;
+            width: var(--image-width);
+            height: var(--image-width);
+            background: #ebebeb;
+            box-shadow:
+                0 0 0 #d0d0d0, 0 0 0 #ffffff,
+                12px 12px 16px #d0d0d0 inset, -12px -12px 16px #ffffff inset;
+            animation: anime var(--anim-duration) var(--anim-easing) var(--anim-delay) infinite alternate;
+        }
+
+        /* ── CAROUSEL ITEMS ───────────────────────────────── */
+        .carousel-item {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            pointer-events: none;
+        }
+
+        .carousel-item.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* ── IMAGE PANEL ──────────────────────────────────── */
+        /* Always 300px wide — fills box when collapsed, becomes left panel when expanded */
+        .item-image {
+            width: var(--image-width);
+            flex-shrink: 0;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .item-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.6s ease;
+        }
+
+        .carousel-item.active .item-image img {
+            transform: scale(1.03);
+        }
+
+        /* subtle gradient overlay on image edge */
+        .item-image::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to right, transparent 60%, rgba(235, 235, 235, 0.5) 100%);
+            pointer-events: none;
+        }
+
+        /* ── CONTENT PANEL ────────────────────────────────── */
+        .item-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 18px;
+            padding: 36px 30px 36px 24px;
+            opacity: 0;
+            animation: contentReveal var(--anim-duration) var(--anim-easing) var(--anim-delay) infinite alternate;
+            animation-fill-mode: both;
+            min-width: 0;
+        }
+
+        .item-content .label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: #aaa;
+        }
+
+        .item-content h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #444;
+            letter-spacing: 0.01em;
+            line-height: 1.3;
+        }
+
+        /* ── INNER CARDS ──────────────────────────────────── */
+        .inner-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .inner-card {
+            background: #f2f2f2;
+            border-radius: 14px;
+            padding: 13px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow:
+                4px 4px 8px #d8d8d8,
+                -3px -3px 7px #ffffff;
+            transition: transform 0.2s ease;
+        }
+
+        .inner-card:hover {
+            transform: translateX(3px);
+        }
+
+        .card-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+        }
+
+        .inner-card .card-text h3 {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #666;
+            letter-spacing: 0.05em;
+            margin-bottom: 2px;
+        }
+
+        .inner-card .card-text p {
+            font-size: 0.78rem;
+            color: #999;
+            line-height: 1.4;
+        }
+
+        /* ── CAROUSEL NAV DOTS ────────────────────────────── */
+        .carousel-nav {
+            position: absolute;
+            bottom: 14px;
+            right: 20px;
+            display: flex;
+            gap: 7px;
+            align-items: center;
+            opacity: 0;
+            animation: contentReveal var(--anim-duration) var(--anim-easing) var(--anim-delay) infinite alternate;
+            animation-fill-mode: both;
+            z-index: 20;
+        }
+
+        .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #ccc;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.3s;
+            border: none;
+            padding: 0;
+        }
+
+        .dot.active {
+            background: #888;
+            transform: scale(1.3);
+        }
+
+        /* ── ARROW BUTTONS ────────────────────────────────── */
+        .arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(4px);
+            border: none;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            font-size: 1.2rem;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 20;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            animation: contentReveal var(--anim-duration) var(--anim-easing) var(--anim-delay) infinite alternate;
+            animation-fill-mode: both;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .arrow:hover {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+        }
+
+        /* place arrows inside the content panel, not on the image */
+        .arrow.prev {
+            left: calc(var(--image-width) + 8px);
+        }
+
+        .arrow.next {
+            right: 12px;
+        }
+
+        /* ── KEYFRAMES ─────────────────────────────────────── */
+        @keyframes anime {
+            0% {
+                width: 300px;
+                height: 300px;
+                background: #ebebeb;
+                border-radius: 24px;
+                box-shadow:
+                    0 0 0 #d0d0d0, 0 0 0 #ffffff,
+                    12px 12px 16px #d0d0d0 inset, -12px -12px 16px #ffffff inset;
+            }
+
+            25% {
+                width: 300px;
+                height: 300px;
+                background: #f0f0f0;
+                box-shadow:
+                    10px 10px 20px #d0d0d0, -2px -2px 10px #ffffff,
+                    0 0 0 #d0d0d0 inset, 0 0 0 #ffffff inset;
+            }
+
+            35% {
+                width: 300px;
+                height: 600px;
+                background: #f2f2f2;
+                border-radius: 24px;
+                box-shadow:
+                    14px 14px 24px #d0d0d0, -4px -4px 10px #ffffff,
+                    0 0 0 #d0d0d0 inset, 0 0 0 #ffffff inset;
+            }
+
+            55%,
+            100% {
+                width: 820px;
+                height: 600px;
+                background: #f5f5f5;
+                border-radius: 24px;
+                box-shadow:
+                    30px 30px 50px #c8c8c8, -6px -6px 16px #ffffff,
+                    0 0 0 #d0d0d0 inset, 2px 2px 2px #ffffff inset;
+            }
+        }
+
+        @keyframes contentReveal {
+
+            0%,
+            45% {
+                opacity: 0;
+                transform: translateX(10px);
+            }
+
+            65%,
+            100% {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <div class="left-section">
+            <div class="box" id="box">
+
+                <!-- ── ITEM 1: Architettura ───────────────────── -->
+                <div class="carousel-item active">
+                    <div class="item-image">
+                        <img src="https://picsum.photos/seed/arch22/600/800" alt="Architettura" />
+                    </div>
+                    <div class="item-content">
+                        <span class="label">Architettura</span>
+                        <h2>Spazi che<br>ispirano</h2>
+                        <div class="inner-cards">
+                            <div class="inner-card">
+                                <div class="card-icon" style="background:#e8f0fe;">🏛</div>
+                                <div class="card-text">
+                                    <h3>Superficie</h3>
+                                    <p>4.200 m² di ambienti modulari</p>
+                                </div>
+                            </div>
+                            <div class="inner-card">
+                                <div class="card-icon" style="background:#e8f5e9;">🌿</div>
+                                <div class="card-text">
+                                    <h3>Sostenibilità</h3>
+                                    <p>Certificazione LEED Platinum</p>
+                                </div>
+                            </div>
+                            <div class="inner-card">
+                                <div class="card-icon" style="background:#fff3e0;">✦</div>
+                                <div class="card-text">
+                                    <h3>Premio</h3>
+                                    <p>Design Award Milano 2024</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── ITEM 2: Natura ────────────────────────── -->
+                <div class="carousel-item">
+                    <div class="item-image">
+                        <img src="https://picsum.photos/seed/forest77/600/800" alt="Natura" />
+                    </div>
+                    <div class="item-content">
+                        <span class="label">Natura</span>
+                        <h2>Ecosistemi<br>in equilibrio</h2>
+                        <div class="inner-cards">
+                            <div class="inner-card">
+                                <div class="card-icon" style="background:#e8f5e9;">🌲</div>
+                                <div class="card-text">
+                                    <h3>Biodiversità</h3>
+                                    <p>1.200 specie censite nell'area</p>
+                                </div>
+                            </div>
+                            <div class="inner-card">
+                                <div class="card-icon" style="background:#e3f2fd;">💧</div>
+                                <div class="card-text">
+                                    <h3>Acqua</h3>
+                                    <p>Ciclo idrico completamente chiuso</p>
+                                </div>
+                            </div>
+                            <div class="inner-card">
+                                <div class="card-icon" style="background:#fce4ec;">🦋</div>
+                                <div class="card-text">
+                                    <h3>Fauna</h3>
+                                    <p>Corridoio ecologico attivo 24/7</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── ITEM 3: Città ─────────────────────────── -->
+                <div class="carousel-item">
+                    <div class="item-image">
+                        <img src="https://picsum.photos/seed/city55/600/800" alt="Città" />
+                    </div>
+                    <div class="item-content">
+                        <span class="label">Urbanistica</span>
+                        <h2>Città che<br>respirano</h2>
+                        <div class="inner-cards">
+                            <div class="inner-card">
+                                <div class="card-icon" style="background:#ede7f6;">🚇</div>
+                                <div class="card-text">
+                                    <h3>Mobilità</h3>
+                                    <p>84% degli spostamenti sostenibili</p>
+                                </div>
+                            </div>
+                            <div class="inner-card">
+                                <div class="card-icon" style="background:#fff8e1;">☀️</div>
+                                <div class="card-text">
+                                    <h3>Energia</h3>
+                                    <p>Rete solare integrata nei tetti</p>
+                                </div>
+                            </div>
+                            <div class="inner-card">
+                                <div class="card-icon" style="background:#e0f2f1;">🧑‍🤝‍🧑</div>
+                                <div class="card-text">
+                                    <h3>Comunità</h3>
+                                    <p>32 quartieri, 1 visione condivisa</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── NAV ───────────────────────────────────── -->
+                <button class="arrow prev" onclick="move(-1)">&#8249;</button>
+                <button class="arrow next" onclick="move(+1)">&#8250;</button>
+
+                <div class="carousel-nav">
+                    <button class="dot active" onclick="goTo(0)"></button>
+                    <button class="dot" onclick="goTo(1)"></button>
+                    <button class="dot" onclick="goTo(2)"></button>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="right-section">
+            <h1>TESTO FISSO</h1>
+        </div>
+
+    </div>
+
+    <script>
+        const items = document.querySelectorAll('.carousel-item');
+        const dots = document.querySelectorAll('.dot');
+        let current = 0;
+        let timer = setInterval(() => move(+1), 4500);
+
+        function goTo(index) {
+            items[current].classList.remove('active');
+            dots[current].classList.remove('active');
+            current = (index + items.length) % items.length;
+            items[current].classList.add('active');
+            dots[current].classList.add('active');
+            clearInterval(timer);
+            timer = setInterval(() => move(+1), 4500);
+        }
+
+        function move(dir) { goTo(current + dir); }
+    </script>
+</body>
+
+</html>

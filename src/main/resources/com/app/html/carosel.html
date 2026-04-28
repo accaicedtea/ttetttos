@@ -1,0 +1,91 @@
+<style>
+
+    .carousel {
+        width: min(1200px, 90vw);
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 50px;
+        margin: 0 auto;
+    }
+
+    .slider {
+        width: var(--width);
+        height: 100%;
+        overflow: hidden;
+        mask-image: linear-gradient(to bottom,
+                transparent,
+                #000 10% 90%,
+                transparent);
+    }
+
+    .slider .list {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: calc(var(--height) * var(--quantity));
+        position: relative;
+    }
+
+    .slider .list .item {
+        width: var(--width);
+        height: var(--height);
+        position: absolute;
+        top: 100%;
+        animation: autoRun 60s linear infinite;
+        transition: filter 0.5s;
+        animation-delay: calc((60s / var(--quantity)) * (var(--position) - 1) - 60s) !important;
+    }
+
+    .slider .list .item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 10px;
+    }
+
+    @keyframes autoRun {
+        from {
+            top: 100%;
+        }
+
+        to {
+            top: calc(var(--height) * -1);
+        }
+    }
+</style>
+
+<head>
+    <title>Carosello</title>
+
+</head>
+
+<body>
+    <section class="carousel">
+        <div class="slider" style="--width: 500px;--height: 300px;--quantity: 5;">
+            <div class="list">
+                <div class="item" style="--position: 1">
+                    <img src="https://www.wsupercars.com/thumbnails/Audi/2023-Audi-R8-Coupe-V10-GT-RWD-001.jpg"
+                        alt="Audi R8" />
+                </div>
+                <div class="item" style="--position: 2">
+                    <img src="https://www.wsupercars.com/thumbnails/Lamborghini/2022-Lamborghini-Aventador-LP780-4-Ultimae-Roadster-001.jpg"
+                        alt="Lamborghini Aventador" />
+                </div>
+                <div class="item" style="--position: 3">
+                    <img src="https://www.wsupercars.com/thumbnails/BMW/2025-BMW-M4-CS-001.jpg" alt="BMW M4" />
+                </div>
+                <div class="item" style="--position: 4">
+                    <img src="https://www.wsupercars.com/wp-content/uploads/2024-Rolls-Royce-Droptail-Arcadia-001.jpg"
+                        alt="Rolls Royce Droptail" />
+                </div>
+                <div class="item" style="--position: 5">
+                    <img src="https://www.wsupercars.com/wp-content/uploads/2024-Aston-Martin-Vantage-GT3-001.jpg"
+                        alt="Aston Martin Vantage GT3" />
+                </div>
+            </div>
+        </div>
+
+    </section>
+</body>

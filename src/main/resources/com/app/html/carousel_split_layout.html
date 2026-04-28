@@ -1,0 +1,313 @@
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    background: #f0f0f0;
+  }
+
+  .wrap {
+    display: flex;
+    width: 100%;
+    min-height: 520px;
+    background: #f0f0f0;
+    border-radius: 16px;
+    overflow: hidden;
+    align-items: center;
+    padding: 30px 20px;
+    gap: 0;
+  }
+
+  .left {
+    flex: 0 0 55%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 0 30px;
+    gap: 16px;
+    overflow: hidden;
+  }
+
+  .right h1 {
+    font-size: 1.8rem;
+    font-weight: 500;
+    color: #777;
+    letter-spacing: 0.04em;
+  }
+
+  .box {
+    border-radius: 22px;
+    background: #f0f0f0;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    cursor: pointer;
+    width: 300px;
+    height: 300px;
+    box-shadow: 10px 10px 12px #cccccc inset, -10px -10px 12px #ffffff inset;
+    transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1), height 0.8s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.7s ease;
+  }
+
+  .img-side {
+    flex: 0 0 auto;
+    width: 300px;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    border-radius: 20px;
+    transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .img-side img {
+    width: 300px;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.6s ease;
+  }
+
+  .content-side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 24px;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.5s ease 0.3s, transform 0.5s ease 0.3s;
+    min-width: 0;
+  }
+
+  .content-side h2 {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #444;
+    margin-bottom: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .inner-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .inner-card {
+    background: #f0f0f0;
+    border-radius: 14px;
+    padding: 12px 14px;
+    box-shadow: 4px 4px 8px #cccccc, -4px -4px 8px #ffffff;
+  }
+
+  .inner-card h3 {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 4px;
+  }
+
+  .inner-card p {
+    font-size: 0.75rem;
+    color: #888;
+    line-height: 1.45;
+  }
+
+  .dots {
+    display: flex;
+    gap: 7px;
+    margin-top: 4px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ccc;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+  }
+
+  .dot.active {
+    background: #888;
+    transform: scale(1.2);
+  }
+
+  .nav {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .nav button {
+    background: #f0f0f0;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #666;
+    box-shadow: 4px 4px 8px #cccccc, -4px -4px 8px #ffffff;
+    transition: box-shadow 0.2s;
+  }
+
+  .nav button:active {
+    box-shadow: 2px 2px 4px #cccccc inset, -2px -2px 4px #ffffff inset;
+  }
+</style>
+
+<div class="wrap">
+  <div class="left">
+    <div class="box" id="box">
+      <div class="img-side" id="imgSide">
+        <img id="slideImg" src="https://picsum.photos/seed/nature/600/600" alt="">
+      </div>
+      <div class="content-side" id="contentSide">
+        <h2 id="slideTitle">Natura e Paesaggi</h2>
+        <div class="inner-cards">
+          <div class="inner-card">
+            <h3 id="d1t">Foreste</h3>
+            <p id="d1p">Ecosistemi ricchi di biodiversità e vita selvatica.</p>
+          </div>
+          <div class="inner-card">
+            <h3 id="d2t">Oceani</h3>
+            <p id="d2p">Coprono il 71% della superficie terrestre.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right">
+    <h1>TESTO FISSO</h1>
+    <div class="dots" id="dots"></div>
+    <div class="nav">
+      <button id="btnPrev">‹</button>
+      <button id="btnNext">›</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const slides = [
+    { seed: 'nature', title: 'Natura e Paesaggi', d1t: 'Foreste', d1p: 'Ecosistemi ricchi di biodiversità e vita selvatica.', d2t: 'Oceani', d2p: 'Coprono il 71% della superficie terrestre.' },
+    { seed: 'city', title: 'Vita Urbana', d1t: 'Architettura', d1p: 'Strutture che definiscono il carattere delle città.', d2t: 'Cultura', d2p: 'Arte, musica e tradizioni che uniscono le persone.' },
+    { seed: 'tech', title: 'Tecnologia', d1t: 'Innovazione', d1p: 'Nuove soluzioni per i problemi di domani.', d2t: 'Connettività', d2p: 'Il mondo sempre più vicino e interconnesso.' },
+    { seed: 'food', title: 'Cucina del Mondo', d1t: 'Sapori', d1p: 'Ingredienti unici da ogni angolo del pianeta.', d2t: 'Tradizione', d2p: 'Ricette tramandate di generazione in generazione.' },
+  ];
+
+  let current = 0;
+  let expanded = false;
+  let autoTimer = null;
+  let collapseTimer = null;
+
+  const box = document.getElementById('box');
+  const imgSide = document.getElementById('imgSide');
+  const contentSide = document.getElementById('contentSide');
+  const slideImg = document.getElementById('slideImg');
+  const dotsEl = document.getElementById('dots');
+
+  // Build dots
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.addEventListener('click', () => goTo(i));
+    dotsEl.appendChild(d);
+  });
+
+  document.getElementById('btnPrev').addEventListener('click', () => goTo((current - 1 + slides.length) % slides.length));
+  document.getElementById('btnNext').addEventListener('click', () => goTo((current + 1) % slides.length));
+
+  function updateDots() {
+    [...dotsEl.children].forEach((d, i) => d.className = 'dot' + (i === current ? ' active' : ''));
+  }
+
+  function loadSlide(idx) {
+    const s = slides[idx];
+    slideImg.src = `https://picsum.photos/seed/${s.seed}/600/600`;
+    document.getElementById('slideTitle').textContent = s.title;
+    document.getElementById('d1t').textContent = s.d1t;
+    document.getElementById('d1p').textContent = s.d1p;
+    document.getElementById('d2t').textContent = s.d2t;
+    document.getElementById('d2p').textContent = s.d2p;
+  }
+
+  function expand() {
+    expanded = true;
+    box.style.width = '580px';
+    box.style.height = '340px';
+    box.style.boxShadow = '14px 14px 24px #bbbbbb,-6px -6px 14px #ffffff';
+    imgSide.style.width = '220px';
+    contentSide.style.opacity = '1';
+    contentSide.style.transform = 'translateX(0)';
+    // Auto collapse after 3.5s
+    collapseTimer = setTimeout(collapse, 3500);
+  }
+
+  function collapse(nextIdx) {
+    expanded = false;
+    contentSide.style.opacity = '0';
+    contentSide.style.transform = 'translateX(20px)';
+    setTimeout(() => {
+      box.style.width = '300px';
+      box.style.height = '300px';
+      box.style.boxShadow = '10px 10px 12px #cccccc inset,-10px -10px 12px #ffffff inset';
+      imgSide.style.width = '300px';
+      if (nextIdx !== undefined) {
+        setTimeout(() => { loadSlide(nextIdx); updateDots(); }, 400);
+      }
+    }, 200);
+  }
+
+  function goTo(idx) {
+    clearTimeout(autoTimer);
+    clearTimeout(collapseTimer);
+    if (idx === current && expanded) { return; }
+    if (expanded) {
+      collapse(idx === current ? undefined : idx);
+      current = idx;
+      clearTimeout(autoTimer);
+      autoTimer = setTimeout(startCycle, 900);
+    } else {
+      current = idx;
+      loadSlide(current);
+      updateDots();
+      clearTimeout(autoTimer);
+      autoTimer = setTimeout(startCycle, 800);
+    }
+  }
+
+  function startCycle() {
+    clearTimeout(autoTimer);
+    expand();
+    // After collapse, move to next and restart
+    autoTimer = setTimeout(() => {
+      clearTimeout(collapseTimer);
+      collapse();
+      setTimeout(() => {
+        current = (current + 1) % slides.length;
+        loadSlide(current);
+        updateDots();
+        autoTimer = setTimeout(startCycle, 800);
+      }, 700);
+    }, 5000);
+  }
+
+  // Init
+  loadSlide(0);
+  updateDots();
+  setTimeout(startCycle, 1500);
+</script>
