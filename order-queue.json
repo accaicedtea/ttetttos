@@ -1,0 +1,137 @@
+[
+    {
+        "prodotti": [
+            {
+                "id": 1,
+                "nome": "Kumpir Large",
+                "sku": "",
+                "quantita": 1,
+                "prezzo_unitario": 11.9,
+                "iva": 10,
+                "totale_riga": 11.9,
+                "ingredienti": [
+                    {
+                        "nome": "Pomodoro"
+                    }
+                ]
+            }
+        ],
+        "subtotale": 11.9,
+        "sconto": 0,
+        "totale": 11.9,
+        "pagamento_tipo": "contanti",
+        "lingua": "it",
+        "sessione_id": "22c94eaf-0ca1-4a79-89f1-c4db1238e107",
+        "_numero_locale": "LOC-0092",
+        "_stato_coda": "pending",
+        "_salvato_il": "2026-04-19T19:20:48.549682"
+    },
+    {
+        "prodotti": [
+            {
+                "id": 1,
+                "nome": "Kumpir Large",
+                "sku": "",
+                "quantita": 1,
+                "prezzo_unitario": 11.9,
+                "iva": 10,
+                "totale_riga": 11.9,
+                "ingredienti": [
+                    {
+                        "nome": "Pomodoro"
+                    }
+                ]
+            }
+        ],
+        "subtotale": 11.9,
+        "sconto": 0,
+        "totale": 11.9,
+        "pagamento_tipo": "contanti",
+        "lingua": "it",
+        "sessione_id": "6523d733-046b-418f-a8d9-d0b3708a8973",
+        "_numero_locale": "LOC-0077",
+        "_stato_coda": "pending",
+        "_salvato_il": "2026-04-19T19:23:22.812811838"
+    },
+    {
+        "prodotti": [
+            {
+                "id": 1,
+                "nome": "Kumpir Large",
+                "sku": "",
+                "quantita": 1,
+                "prezzo_unitario": 11.9,
+                "iva": 10,
+                "totale_riga": 11.9,
+                "ingredienti": [
+                    {
+                        "nome": "Pomodoro"
+                    }
+                ]
+            }
+        ],
+        "subtotale": 11.9,
+        "sconto": 0,
+        "totale": 11.9,
+        "pagamento_tipo": "contanti",
+        "lingua": "it",
+        "sessione_id": "6523d733-046b-418f-a8d9-d0b3708a8973",
+        "_numero_locale": "LOC-0078",
+        "_stato_coda": "pending",
+        "_salvato_il": "2026-04-19T19:23:33.017665859"
+    },
+    {
+        "prodotti": [
+            {
+                "id": 1,
+                "nome": "Kumpir Medium",
+                "sku": "",
+                "quantita": 1,
+                "prezzo_unitario": 9.5,
+                "iva": 10,
+                "totale_riga": 9.5,
+                "ingredienti": [
+                    {
+                        "nome": "Pomodoro"
+                    }
+                ]
+            }
+        ],
+        "subtotale": 9.5,
+        "sconto": 0,
+        "totale": 9.5,
+        "pagamento_tipo": "contanti",
+        "lingua": "it",
+        "sessione_id": "f81c36cf-c74d-4b69-bc52-8af9efdcf693",
+        "_numero_locale": "LOC-0036",
+        "_stato_coda": "pending",
+        "_salvato_il": "2026-04-19T19:24:57.397731832"
+    },
+    {
+        "prodotti": [
+            {
+                "id": 1,
+                "nome": "Kumpir Piccante",
+                "sku": "",
+                "quantita": 1,
+                "prezzo_unitario": 7.0,
+                "iva": 10,
+                "totale_riga": 7.0,
+                "ingredienti": [
+                    {
+                        "nome": "Salsiccia"
+                    }
+                ]
+            }
+        ],
+        "subtotale": 7.0,
+        "sconto": 0,
+        "totale": 7.0,
+        "pagamento_tipo": "contanti",
+        "lingua": "it",
+        "sessione_id": "4cae8e14-7ee1-45e8-8705-b7fafd944bdc",
+        "_numero_locale": "LOC-0014",
+        "_stato_coda": "pending",
+        "_salvato_il": "2026-04-19T19:38:16.049798332"
+    }
+]

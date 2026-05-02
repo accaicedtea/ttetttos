@@ -1,0 +1,28 @@
+[
+  {
+    "prodotti": [
+      {
+        "id": 1,
+        "nome": "Kumpir Small",
+        "sku": "",
+        "quantita": 1,
+        "prezzo_unitario": 7.5,
+        "iva": 10,
+        "totale_riga": 7.5,
+        "ingredienti": [
+          {
+            "nome": "Pomodoro"
+          }
+        ]
+      }
+    ],
+    "subtotale": 7.5,
+    "sconto": 0,
+    "totale": 7.5,
+    "pagamento_tipo": "pos_esterno",
+    "lingua": "it",
+    "sessione_id": "e82508ad-571c-47e9-b59e-cc6abdfc8cc5",
+    "tablet_order_id": "RT-1776864833316",
+    "assigned_to": "761ac570-77d9-41e4-b1d1-096ee398a027"
+  }
+]
